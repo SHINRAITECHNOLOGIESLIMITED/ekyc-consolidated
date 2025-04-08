@@ -1,0 +1,182 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: |
+  backend
+  Sample SAM Template for backend
+
+Globals:
+  Function:
+    Timeout: 3
+    MemorySize: 128
+    Tracing: Active
+    Runtime: python3.11
+    Architectures:
+      - x86_64
+    LoggingConfig:
+      LogFormat: JSON
+Resources:
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub
+        - ${ResourceName} From Stack ${AWS::StackName}
+        - ResourceName: ApiGateway
+      Description: Application entry point
+      StageName: Prod
+      DefinitionBody:
+        openapi: '3.0'
+        info: {}
+        paths:
+          /faceliveness:
+            post:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFunction.Arn}/invocations
+              responses: {}
+          /uploaddocument:
+            post:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadDocumentFunction.Arn}/invocations
+              responses: {}
+      EndpointConfiguration: REGIONAL
+      TracingEnabled: true
+      Cors:
+        MaxAge: 5
+  UploadDocumentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Process for handling KYC document upload
+      CodeUri: process/functions/updloaddocument
+      Handler: app.handler
+      Environment:
+        Variables:
+          DOCUMENTSUPLOAD_BUCKET_NAME: !Ref DocumentsUpload
+          DOCUMENTSUPLOAD_BUCKET_ARN: !GetAtt DocumentsUpload.Arn
+      Events:
+        ApiGatewayPOSTuploaddocument:
+          Type: Api
+          Properties:
+            Path: /uploaddocument
+            Method: POST
+            RestApiId: !Ref ApiGateway
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:GetObjectAcl
+                - s3:GetObjectLegalHold
+                - s3:GetObjectRetention
+                - s3:GetObjectTorrent
+                - s3:GetObjectVersion
+                - s3:GetObjectVersionAcl
+                - s3:GetObjectVersionForReplication
+                - s3:GetObjectVersionTorrent
+                - s3:ListBucket
+                - s3:ListBucketMultipartUploads
+                - s3:ListBucketVersions
+                - s3:ListMultipartUploadParts
+                - s3:AbortMultipartUpload
+                - s3:DeleteObject
+                - s3:DeleteObjectVersion
+                - s3:PutObject
+                - s3:PutObjectLegalHold
+                - s3:PutObjectRetention
+                - s3:RestoreObject
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::${DocumentsUpload}
+                - !Sub arn:${AWS::Partition}:s3:::${DocumentsUpload}/*
+  UploadDocumentFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy:  Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${UploadDocumentFunction}
+      RetentionInDays: 30
+  FaceLivenessFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Process for checking faceliveness
+      CodeUri: process/functions/faceliveness
+      Handler: app.handler
+      Environment:
+        Variables:
+          FACELIVENESSRESULTS_TABLE_NAME: !Ref FaceLivenessResults
+          FACELIVENESSRESULTS_TABLE_ARN: !GetAtt FaceLivenessResults.Arn
+      Events:
+        ApiGatewayPOSTfaceliveness:
+          Type: Api
+          Properties:
+            Path: /faceliveness
+            Method: POST
+            RestApiId: !Ref ApiGateway
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FaceLivenessResults
+  FaceLivenessFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy:  Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${FaceLivenessFunction}
+      RetentionInDays: 30
+  FaceLivenessResults:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: session_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: session_id
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+  DocumentsUpload:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-documents-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+      PublicAccessBlockConfiguration:
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  DocumentsUploadBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref DocumentsUpload
+      PolicyDocument:
+        Id: RequireEncryptionInTransit
+        Version: '2012-10-17'
+        Statement:
+          - Principal: '*'
+            Action: '*'
+            Effect: Deny
+            Resource:
+              - !GetAtt DocumentsUpload.Arn
+              - !Sub ${DocumentsUpload.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+Metadata:
+  AWS::Composer::Groups:
+    Group:
+      Label: 'Layer1: API Gateway'
+      Members:
+        - ApiGateway
+    Group2:
+      Label: 'Layer2: Process orchestration'
+      Members:
+        - FaceLivenessFunction
+        - UploadDocumentFunction
+    Group3:
+      Label: 'Layer3a: KYC Capture'
+      Members:
+        - FaceLivenessResults
+        - DocumentsUpload
