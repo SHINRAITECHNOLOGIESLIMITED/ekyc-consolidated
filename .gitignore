@@ -1,0 +1,81 @@
+# Python-specific
+__pycache__/
+*.pyc
+*.pyo
+*.egg
+*.egg-info
+dist/
+build/
+sdist/
+*.whl
+pip-log.txt
+pip-delete-this-directory.txt
+.Python
+_build/
+venv/
+env/
+.venv/
+Envs/
+*.manifest
+*.spec
+
+# Byte-compiled / optimized / DLL files (C extensions)
+*.pyd
+*.so
+
+# AWS-specific - Adjust based on your AWS services
+.aws/ # Local AWS CLI configuration (sensitive info, be careful!)
+aws-sam/build/ # SAM CLI build artifacts
+template.yaml # If you generate it
+packaged.yaml # If you generate it
+cdk.out/ # AWS CDK build output
+.terraform/ # Terraform state if used for infrastructure
+terraform.tfstate* # Terraform state files
+serverless.yml # If you generate it
+.serverless/ # Serverless Framework deployment artifacts
+
+# General OS/Editor/IDE specific
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+*.swo
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+/target/
+/node_modules/
+yarn-error.log
+
+# Logs and temporary files
+*.log
+*.tmp
+temp/
+tmp/
+cache/
+.cache/
+
+# Sensitive information - Add any other files with secrets
+*.env
+.envrc
+secrets.json
+credentials.csv
+config.ini
+auth.json
+
+# Optional: Jupyter Notebook related
+.ipynb_checkpoints/
+
+# Optional: Test and coverage reports
+coverage/
+.coverage
+nosetests.xml
+pytest_cache/
+htmlcov/
+
+#automactions
+auto_commit.py
