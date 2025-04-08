@@ -4,7 +4,7 @@ version = 0.1
 
 [default]
 [default.global.parameters]
-stack_name = "backend"
+stack_name = "jubilee-ekyc-backend"
 
 [default.build.parameters]
 cached = true
@@ -17,6 +17,8 @@ lint = true
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
+profile = "shinrai.devpost"
+region = "eu-west-1"
 
 [default.package.parameters]
 resolve_s3 = true
