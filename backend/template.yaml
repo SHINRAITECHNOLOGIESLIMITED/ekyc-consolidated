@@ -1,8 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: |
-  backend
-  Sample SAM Template for backend
+  Jubilee eKYC backend
 
 Globals:
   Function:
@@ -183,6 +182,20 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${SafaricomPhoneVerificationFunction}
       RetentionInDays: 30
+  DocumentExtractFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Extract of form fields from documents
+      CodeUri: core/functions/documentextract
+      Handler: app.handler
+      Environment: {}
+  DocumentExtractFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${DocumentExtractFunction}
+      RetentionInDays: 30
   FaceLivenessResults:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -224,9 +237,68 @@ Resources:
             Condition:
               Bool:
                 aws:SecureTransport: 'false'
+  NewDocumentRegistrationStateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      Policies:
+        - PolicyName: StepFunctionsExecutionPolicy-IPRS
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: states:StartExecution
+                Resource: !GetAtt IPRSIdentityVerification.Arn
+        - PolicyName: StepFunctionsExecutionPolicy-LexisNexis
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: states:StartExecution
+                Resource: !GetAtt LexisNexisBackgroundChecks.Arn
+        - PolicyName: StepFunctionsExecutionPolicy-Safaricom
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: states:StartExecution
+                Resource: !GetAtt SafaricomPhoneVerification.Arn
+        - PolicyName: StepFunctionsDescribeAndStopExecution
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:DescribeExecution
+                  - states:StopExecution
+                Resource: '*'
+        - PolicyName: StepFunctionsEventBridgePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - events:PutRule
+                  - events:PutTargets
+                  - events:DeleteRule
+                  - events:RemoveTargets
+                  - events:DescribeRule
+                Resource:
+                  - !Sub arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule*
   NewDocumentRegistration:
     Type: AWS::Serverless::StateMachine
+    DependsOn: NewDocumentRegistrationStateMachineRole
     Properties:
+      Role: !GetAtt NewDocumentRegistrationStateMachineRole.Arn
       Definition:
         StartAt: DocumentExtraction
         States:
@@ -293,26 +365,6 @@ Resources:
         Destinations:
           - CloudWatchLogsLogGroup:
               LogGroupArn: !GetAtt NewDocumentRegistrationLogGroup.Arn
-      Policies:
-        - AWSXrayWriteOnlyAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - logs:CreateLogDelivery
-                - logs:GetLogDelivery
-                - logs:UpdateLogDelivery
-                - logs:DeleteLogDelivery
-                - logs:ListLogDeliveries
-                - logs:PutResourcePolicy
-                - logs:DescribeResourcePolicies
-                - logs:DescribeLogGroups
-              Resource: '*'
-        - StepFunctionsExecutionPolicy:
-            StateMachineName: !GetAtt IPRSIdentityVerification.Name
-        - StepFunctionsExecutionPolicy:
-            StateMachineName: !GetAtt LexisNexisBackgroundChecks.Name
-        - StepFunctionsExecutionPolicy:
-            StateMachineName: !GetAtt SafaricomPhoneVerification.Name
       Tracing:
         Enabled: true
       Type: STANDARD
@@ -361,11 +413,13 @@ Resources:
                 - logs:DescribeResourcePolicies
                 - logs:DescribeLogGroups
               Resource: '*'
+        - LambdaInvokePolicy:
+            FunctionName: !Ref DocumentExtractFunction
       Tracing:
         Enabled: true
       Type: EXPRESS
       DefinitionSubstitutions:
-        LambdaFunction1: !Ref AWS::NoValue
+        LambdaFunction1: !GetAtt DocumentExtractFunction.Arn
   DocumentExtractLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
