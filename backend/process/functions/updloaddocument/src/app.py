@@ -12,7 +12,6 @@ ALLOWED_EXTENSIONS = {'.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx'}
 DOCUMENTSUPLOAD_BUCKET_NAME = os.getenv('DOCUMENTSUPLOAD_BUCKET_NAME', None)
 
 # Validation
-assert DOCUMENTSUPLOAD_BUCKET_NAME is not None, 'DOCUMENTSUPLOAD_BUCKET_NAME env variable is missing'
 
 # Initialize AWS clients
 s3 = boto3.resource('s3')
@@ -94,6 +93,9 @@ def handler(event, context):
     """
     Lambda handler to process document uploads to S3
     """
+    #ensure enviromental variables have been loaded
+    assert DOCUMENTSUPLOAD_BUCKET_NAME is not None, 'DOCUMENTSUPLOAD_BUCKET_NAME env variable is missing'
+
     print(f"Processing request: {context.aws_request_id}")
     print(f"Event: {json.dumps(event)}")
 

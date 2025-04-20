@@ -5,7 +5,6 @@ import boto3
 from botocore.exceptions import ClientError
 
 FACELIVENESSRESULTS_TABLE_NAME = os.getenv('FACELIVENESSRESULTS_TABLE_NAME', None)
-assert FACELIVENESSRESULTS_TABLE_NAME is not None, 'FACELIVENESSRESULTS_TABLE_NAME env variable is missing'
 FACE_LIVENESS_CONFIDENCE_THRESHOLD = os.getenv('FACE_LIVENESS_CONFIDENCE_THRESHOLD', 90)  # Adjust this threshold as needed
 
 rekognition_client = boto3.client('rekognition')
@@ -121,18 +120,46 @@ def handler(event, context):
     """
     Main handler that routes to appropriate function based on action
     """
-    # Extract action from event
-    body = json.loads(event.get('body', '{}'))
-    action = body.get('action', '')
+    try:
+        # ensure that environmental variables should have been loaded
+        assert FACELIVENESSRESULTS_TABLE_NAME is not None, 'FACELIVENESSRESULTS_TABLE_NAME env variable is missing'
 
-    if action == 'create':
-        return create_face_liveness_session(event, context)
-    elif action == 'get_results':
-        return get_face_liveness_results(event, context)
-    else:
+        # Extract action from event
+        try:
+            body = json.loads(event.get('body', '{}'))
+            if not body:
+                return {
+                    'statusCode': 400,
+                    'body': json.dumps({
+                        'message': 'Empty request body'
+                    })
+                }
+        except json.JSONDecodeError:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({
+                    'message': 'Invalid JSON in request body'
+                })
+            }
+
+        action = body.get('action', '')
+
+        if action == 'create':
+            return create_face_liveness_session(event, context)
+        elif action == 'get_results':
+            return get_face_liveness_results(event, context)
+        else:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({
+                    'message': 'Invalid action specified'
+                })
+            }
+
+    except Exception as e:
         return {
-            'statusCode': 400,
+            'statusCode': 500,
             'body': json.dumps({
-                'message': 'Invalid action specified'
+                'message': f'Internal server error: {str(e)}'
             })
         }
