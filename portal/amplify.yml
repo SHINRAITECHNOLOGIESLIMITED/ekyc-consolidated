@@ -4,17 +4,18 @@ applications:
       phases:
         preBuild:
           commands:
+            - npm install -g pnpm
             - cd portal
-            - npm ci
+            - pnpm install
         build:
           commands:
-            - npm run build
+            - pnpm build
       artifacts:
-        baseDirectory: .next
+        baseDirectory: portal/.next
         files:
           - '**/*'
       cache:
         paths:
-          - .next/cache/**/*
-          - node_modules/**/*
+          - portal/.next/cache/**/*
+          - portal/node_modules/**/*
     appRoot: portal
