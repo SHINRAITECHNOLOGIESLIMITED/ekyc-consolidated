@@ -1,0 +1,35 @@
+{
+  "name": "Jubilee eKYC Portal",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@aws-amplify/adapter-nextjs": "^1.4.1",
+    "@aws-amplify/ui-react": "^6.9.1",
+    "@cloudscape-design/collection-hooks": "^1.0.59",
+    "@cloudscape-design/components": "^3.0.874",
+    "@cloudscape-design/global-styles": "^1.0.34",
+    "aws-amplify": "^6.12.1",
+    "next": "15.1.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@aws-amplify/backend": "^1.13.0",
+    "@aws-amplify/backend-cli": "^1.4.7",
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^20",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "eslint": "^9",
+    "eslint-config-next": "15.1.6",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.7.3"
+  }
+}
