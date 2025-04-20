@@ -6,6 +6,7 @@ from botocore.exceptions import ClientError
 
 FACELIVENESSRESULTS_TABLE_NAME = os.getenv('FACELIVENESSRESULTS_TABLE_NAME', None)
 assert FACELIVENESSRESULTS_TABLE_NAME is not None, 'FACELIVENESSRESULTS_TABLE_NAME env variable is missing'
+FACE_LIVENESS_CONFIDENCE_THRESHOLD = os.getenv('FACE_LIVENESS_CONFIDENCE_THRESHOLD', 90)  # Adjust this threshold as needed
 
 rekognition_client = boto3.client('rekognition')
 dynamodb = boto3.resource('dynamodb')
@@ -93,8 +94,7 @@ def get_face_liveness_results(event, context):
         )
 
         # Determine if the liveness check passed based on confidence threshold
-        CONFIDENCE_THRESHOLD = 90  # Adjust this threshold as needed
-        is_live = confidence >= CONFIDENCE_THRESHOLD if confidence is not None else False
+        is_live = confidence >= FACE_LIVENESS_CONFIDENCE_THRESHOLD if confidence is not None else False
 
         return {
             'statusCode': 200,

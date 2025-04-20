@@ -24,7 +24,7 @@ Resources:
       StageName: Prod
       DefinitionBody:
         openapi: '3.0'
-        info: {}
+        info: { }
         paths:
           /faceliveness:
             post:
@@ -32,14 +32,14 @@ Resources:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFunction.Arn}/invocations
-              responses: {}
+              responses: { }
           /uploaddocument:
             post:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadDocumentFunction.Arn}/invocations
-              responses: {}
+              responses: { }
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
       Cors:
@@ -109,6 +109,7 @@ Resources:
         Variables:
           FACELIVENESSRESULTS_TABLE_NAME: !Ref FaceLivenessResults
           FACELIVENESSRESULTS_TABLE_ARN: !GetAtt FaceLivenessResults.Arn
+          FACE_LIVENESS_CONFIDENCE_THRESHOLD: 95
       Events:
         ApiGatewayPOSTfaceliveness:
           Type: Api
@@ -132,7 +133,7 @@ Resources:
       Description: IPRS Identity Verification Process
       CodeUri: core/functions/iprsidentityverification/src
       Handler: app.handler
-      Environment: {}
+      Environment: { }
   IPRSIdentityVerificationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -146,7 +147,7 @@ Resources:
       Description: KRA TAX compliace check
       CodeUri: core/functions/krataxcomplianceverification/src
       Handler: app.handler
-      Environment: {}
+      Environment: { }
   KRATaxComplianceVerificationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -160,7 +161,7 @@ Resources:
       Description: LexisNexis Background Checks
       CodeUri: core/functions/lexisnexisbackgroundchecks/src
       Handler: app.handler
-      Environment: {}
+      Environment: { }
   LexisNexisBackgroundChecksFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -174,7 +175,7 @@ Resources:
       Description: Safaricom Phone Verification
       CodeUri: core/functions/safaricomphoneverification/src
       Handler: app.handler
-      Environment: {}
+      Environment: { }
   SafaricomPhoneVerificationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -188,7 +189,7 @@ Resources:
       Description: Extract of form fields from documents
       CodeUri: core/functions/documentextract/src
       Handler: app.handler
-      Environment: {}
+      Environment: { }
   DocumentExtractFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
