@@ -48,7 +48,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: Process for handling KYC document upload
-      CodeUri: process/functions/updloaddocument
+      CodeUri: process/functions/updloaddocument/src
       Handler: app.handler
       Environment:
         Variables:
@@ -103,7 +103,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: Process for checking faceliveness
-      CodeUri: process/functions/faceliveness
+      CodeUri: process/functions/faceliveness/src
       Handler: app.handler
       Environment:
         Variables:
@@ -130,7 +130,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: IPRS Identity Verification Process
-      CodeUri: core/functions/iprsidentityverification
+      CodeUri: core/functions/iprsidentityverification/src
       Handler: app.handler
       Environment: {}
   IPRSIdentityVerificationFunctionLogGroup:
@@ -144,7 +144,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: KRA TAX compliace check
-      CodeUri: core/functions/krataxcomplianceverification
+      CodeUri: core/functions/krataxcomplianceverification/src
       Handler: app.handler
       Environment: {}
   KRATaxComplianceVerificationFunctionLogGroup:
@@ -158,7 +158,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: LexisNexis Background Checks
-      CodeUri: core/functions/lexisnexisbackgroundchecks
+      CodeUri: core/functions/lexisnexisbackgroundchecks/src
       Handler: app.handler
       Environment: {}
   LexisNexisBackgroundChecksFunctionLogGroup:
@@ -172,7 +172,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: Safaricom Phone Verification
-      CodeUri: core/functions/safaricomphoneverification
+      CodeUri: core/functions/safaricomphoneverification/src
       Handler: app.handler
       Environment: {}
   SafaricomPhoneVerificationFunctionLogGroup:
@@ -186,7 +186,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: Extract of form fields from documents
-      CodeUri: core/functions/documentextract
+      CodeUri: core/functions/documentextract/src
       Handler: app.handler
       Environment: {}
   DocumentExtractFunctionLogGroup:
@@ -296,7 +296,6 @@ Resources:
                   - !Sub arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule*
   NewDocumentRegistration:
     Type: AWS::Serverless::StateMachine
-    DependsOn: NewDocumentRegistrationStateMachineRole
     Properties:
       Role: !GetAtt NewDocumentRegistrationStateMachineRole.Arn
       Definition:
