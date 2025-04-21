@@ -1,7 +1,7 @@
 "use client"
 
 // import type { Metadata } from "next";
-import Auth from "@/components/auth/Auth";
+import Auth from "@/components/Auth";
 import {useAuthenticator} from "@aws-amplify/ui-react";
 import {
     Box,
@@ -47,7 +47,7 @@ const Navigation = () => {
         <SideNavigation
             header={{
                 href: '/',
-                text: 'Portal',
+                text: 'Jubilee eKYC Portal',
                 logo: {
                     src: '/assets/logo.svg',
                     alt: 'Portal'
@@ -132,10 +132,10 @@ function MainLayout2({
                             <TopNavigation
                                 identity={{
                                     href: "/",
-                                    title: "NgombeBot",
+                                    title: "Jubilee eKYC Portal",
                                     logo: {
                                         src: "/assets/logo.svg",
-                                        alt: "NgombeBot"
+                                        alt: "Jubilee eKYC Portal"
                                     }
                                 }}
                                 utilities={[
