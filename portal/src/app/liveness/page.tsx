@@ -30,7 +30,7 @@ const columnDefinitions =
 
 
 const listingProps: ListingProps<LivenessSession> = {
-    title: "FaceLiveness",
+    title: "FaceLiveness Sessions",
     getAll: fetchLivenessSessions,
     pageSize: 100,
     columnDefinitions,

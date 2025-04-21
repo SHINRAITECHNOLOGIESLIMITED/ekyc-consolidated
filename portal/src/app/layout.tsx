@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
     title: "Jubilee eKYC Portal",
-    description: "Portal for results projection of EKYC backend processing",
+    description: "Monitor and review the outcomes of eKYC backend processing",
 };
 
 export default async function RootLayout({
