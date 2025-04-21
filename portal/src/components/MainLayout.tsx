@@ -2,7 +2,7 @@
 
 // import type { Metadata } from "next";
 import Auth from "@/components/Auth";
-import {useAuthenticator} from "@aws-amplify/ui-react";
+import {Badge, useAuthenticator} from "@aws-amplify/ui-react";
 import {
     Box,
     BreadcrumbGroup,
@@ -43,6 +43,7 @@ const LoadingOverlay = () => (
 // Navigation Component
 const Navigation = () => {
     const router = useRouter();
+
     return (
         <SideNavigation
             header={{
@@ -50,12 +51,83 @@ const Navigation = () => {
                 text: 'Jubilee eKYC Portal',
                 logo: {
                     src: '/assets/logo.svg',
-                    alt: 'Portal'
+                    alt: 'Jubilee eKYC Portal Logo'
                 }
             }}
             items={[
-                {type: 'link', text: 'Face Liveness Sessions', href: '/liveness'},
-                {type: 'link', text: 'KYC Documents', href: '/documents'}
+                // Main Dashboard Section
+                {
+                    type: 'link',
+                    text: 'Dashboard',
+                    href: '/',
+                    info: <Badge color="red" size="small">WIP</Badge>
+                },
+                {type: "divider"},
+                // KYC Operations Section
+                {
+                    type: 'section-group',
+                    title: 'KYC Operations',
+                    items: [
+                        {
+                            type: 'link',
+                            text: 'Capture new FaceLiveness',
+                            href: '/captureliveness',
+                            info: <Badge color="red" size="small">WIP</Badge>
+
+                        },
+                        {
+                            type: 'link',
+                            text: 'Upload new KYC Document',
+                            href: '/uploadkycdocument',
+                            info: <Badge color="red" size="small">WIP</Badge>
+                        }
+                    ]
+                },
+                {type: "divider"},
+                // Reports Section
+                {
+                    type: 'section-group',
+                    title: 'Results & Analytics',
+                    items: [
+                        {
+                            type: 'link',
+                            text: 'Face Liveness Sessions',
+                            href: '/liveness',
+                        },
+                        {
+                            type: 'link',
+                            text: 'KYC Documents',
+                            href: '/documents',
+                        },
+                        {
+                            type: 'link',
+                            text: 'Verification History',
+                            href: '/documentverification',
+                            info: <Badge color="red" size="small">WIP</Badge>
+                        }
+                    ]
+                },
+                {type: "divider"},
+                // Administration Section
+                {
+                    type: 'section-group',
+                    title: 'Administration',
+
+                    items: [
+                        {
+                            type: 'link',
+                            text: 'Users',
+                            href: '/users',
+                            info: <Badge color="red" size="small">WIP</Badge>
+                        },
+                        {
+                            type: 'link',
+                            text: 'System Settings',
+                            href: '/settings',
+                            info: <Badge color="red" size="small">WIP</Badge>
+                        }
+                    ]
+                }
             ]}
             onFollow={event => {
                 event.preventDefault();
