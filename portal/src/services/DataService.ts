@@ -2,9 +2,10 @@ import type {Schema} from "@/../amplify/data/resource";
 import type {KYCDocument, LivenessSession} from '@/types/models';
 import {generateClient} from 'aws-amplify/api';
 import {CognitoUser} from "@/types/interfaces";
-import { CognitoIdentityProviderClient, ListUsersCommand } from '@aws-sdk/client-cognito-identity-provider';
+import {CognitoIdentityProviderClient, ListUsersCommand} from '@aws-sdk/client-cognito-identity-provider';
 import {fetchAuthSession} from 'aws-amplify/auth';
-import amplifyConfig from '@/../amplify_outputs.json' assert { type: 'json' };
+import amplifyConfig from '@/../amplify_outputs.json' assert {type: 'json'};
+
 interface AmplifyConfig {
     auth: {
         user_pool_id: string;
@@ -17,10 +18,11 @@ interface AmplifyConfig {
         unauthenticated_identities_enabled: boolean;
     };
     data: {
-        // Add data structure if needed
+    aws_region: string;
     };
     version: string;
 }
+
 const config = amplifyConfig as AmplifyConfig;
 
 export const client = generateClient<Schema>();
@@ -72,7 +74,7 @@ const listUsers = async (limit = 20, paginationToken?: string): Promise<{
             throw new Error('Region not found in Amplify configuration');
         }
 
-        const { credentials } = await fetchAuthSession();
+        const {credentials} = await fetchAuthSession();
 
         const client = new CognitoIdentityProviderClient({
             credentials,
