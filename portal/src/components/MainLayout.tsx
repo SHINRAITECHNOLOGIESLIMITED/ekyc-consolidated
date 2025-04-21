@@ -117,8 +117,7 @@ const Navigation = () => {
                         {
                             type: 'link',
                             text: 'Users',
-                            href: '/users',
-                            info: <Badge color="red" size="small">WIP</Badge>
+                            href: '/users'
                         },
                         {
                             type: 'link',

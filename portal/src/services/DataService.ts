@@ -110,7 +110,7 @@ const listUsers = async (limit = 20, paginationToken?: string): Promise<{
 };
 export const fetchUsers = async (): Promise<CognitoUser[]> => {
     try {
-        const {users} = await listUsers(5000);
+        const {users} = await listUsers(30);
         return users
     } catch (error) {
         // Handle error
