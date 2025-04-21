@@ -1,16 +1,12 @@
 "use client";
 
-import NotImplemented from "@/components/NotImplemented";
+import {SpaceBetween} from "@cloudscape-design/components";
+import LivenessDetection from "@/components/LivenessDetection";
 
-
-const CaptureFaceLiveness = () => {
+export default function LivenessPage() {
     return (
-        <NotImplemented
-            title="Capture Face Liveness"
-            description="Caturing of Face Liveness sessions in not implmented"
-        />
+        <SpaceBetween size="l">
+            <LivenessDetection/>
+        </SpaceBetween>
     );
-};
-
-
-export default CaptureFaceLiveness;
+}

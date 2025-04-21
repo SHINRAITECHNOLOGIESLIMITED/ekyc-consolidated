@@ -10,20 +10,24 @@
   },
   "dependencies": {
     "@aws-amplify/adapter-nextjs": "^1.4.1",
-    "@aws-amplify/ui-react": "^6.9.1",
+    "@aws-amplify/ui-react": "^6.11.0",
+    "@aws-amplify/ui-react-liveness": "^3.3.7",
     "@aws-sdk/client-cognito-identity-provider": "^3.787.0",
     "@cloudscape-design/collection-hooks": "^1.0.59",
     "@cloudscape-design/components": "^3.0.874",
     "@cloudscape-design/global-styles": "^1.0.34",
     "aws-amplify": "^6.12.1",
-    "next": "15.1.6",
+    "next": "^15.3.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.5.0"
   },
+  "overrides": {
+    "@tensorflow/tfjs-core": "4.22.0"
+  },
   "devDependencies": {
-    "@aws-amplify/backend": "^1.13.0",
-    "@aws-amplify/backend-cli": "^1.4.7",
+    "@aws-amplify/backend": "^1.15.0",
+    "@aws-amplify/backend-cli": "^1.5.0",
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
     "@types/react": "^18.2.0",
