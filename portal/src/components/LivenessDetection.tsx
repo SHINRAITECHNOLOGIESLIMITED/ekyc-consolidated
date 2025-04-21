@@ -67,11 +67,11 @@ const LivenessDetection = () => {
         }
     };
 
-    const handleError = (error: Error): void => {
-        setError(error.message);
-        console.error("Liveness detection error:", error);
-        setProcessing(false);
-    };
+    // const handleError = (error: Error): void => {
+    //     setError(error.message);
+    //     console.error("Liveness detection error:", error);
+    //     setProcessing(false);
+    // };
 
     const renderResult = () => {
         if (!result) return null;
