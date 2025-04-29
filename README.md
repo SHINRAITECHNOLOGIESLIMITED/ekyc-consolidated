@@ -110,41 +110,77 @@ To get started with this project, follow these steps:
 
 ### Contributing using Gitflow
 
-Here's how to contribute to this project using the Gitflow workflow:
+How to contribute using the Gitflow workflow and the `git flow` command-line tool.
 
-1.  **Ensure you have the latest `develop` branch:**
+**1. Install Git Flow**
+
+First, ensure you have Git installed. Then, install the Git Flow extension based on your operating system:
+
+* **macOS (using Homebrew):**
     ```bash
-    git checkout develop
-    git pull origin develop
+    brew install git-flow-avh
     ```
-
-2.  **Create a new feature branch:** Name your branch following the `feature/<feature-name>` convention, where `<feature-name>` is a concise description of the feature you're working on.
+* **Linux (Debian/Ubuntu):**
     ```bash
-    git checkout -b feature/your-new-feature develop
+    sudo apt-get install git-flow
     ```
+* **Windows:**
+  Git for Windows now often includes Git Flow. You can check by opening your Git Bash or command prompt and typing `git flow version`. If it's not installed, you might need to download it separately or use a package manager like Chocolatey (`choco install git-flow`). Refer to the official Git Flow installation guides for detailed instructions if needed.
 
-3.  **Develop your feature:** Make your changes, commit them locally, and regularly push your work to your remote feature branch.
-    ```bash
-    git add .
-    git commit -m "feat: Implement your new feature"
-    git push origin feature/your-new-feature
-    ```
+**2. Initialize Git Flow in your Repository**
 
-4.  **Open a Pull Request (PR):** Once your feature is complete and you're ready for review, create a pull request from your `feature/your-new-feature` branch to the `develop` branch on the main repository.
-    -   Provide a clear and descriptive title for your PR.
-    -   Explain the purpose of your feature and any relevant details.
-    -   Reference any related issues or design documents.
+If Git Flow hasn't been initialized in the repository, you'll need to do it once:
 
-5.  **Code Review:** Your pull request will be reviewed by other team members. Address any feedback and make necessary changes. Push the updated commits to your feature branch; the PR will automatically update.
+```bash
+git flow init -d
+```
+The -d flag initializes with the default branch names (main for production, develop for development, feature/, release/, hotfix/ prefixes). You can omit -d if you want to customize these names.
 
-6.  **Merge to `develop`:** Once your pull request is approved, a maintainer will merge your `feature` branch into the `develop` branch.
+**3. Ensure you have the latest develop branch:**
 
-7.  **Clean up:** After your feature branch has been merged, you can safely delete your local and remote feature branch.
-    ```bash
-    git checkout develop
-    git pull origin develop
-    git branch -d feature/your-new-feature
-    git push origin --delete feature/your-new-feature
-    ```
+It's a good practice to start with an up-to-date develop branch.
 
-For release preparation, hotfixes, and other Gitflow-related tasks, please refer to the project's DevOps standards documentation in the `devops` directory.
+```bash
+git checkout develop
+git pull origin develop
+```
+
+**4. Create a new feature branch:**
+
+Use git flow feature start to create a new feature branch based on develop. Replace <feature-name> with a concise description of your feature (e.g., add-user-authentication).
+
+```
+git flow feature start <feature-name>
+```
+
+This command will create and switch you to a new branch named feature/<feature-name>.
+
+**5. Develop your feature:**
+
+Make your changes, commit them locally, and regularly push your work to your remote feature branch.
+
+```bash
+git add .
+git commit -m "feat: Implement your new feature"
+git push origin feature/<feature-name>
+```
+
+**6. Open a Pull Request (PR):**
+
+Once your feature is complete and you're ready for review, create a pull request from your feature/<feature-name> branch to the develop branch on the main repository.
+
+    1. Provide a clear and descriptive title for your PR.
+    2. Explain the purpose of your feature and any relevant details.
+    3. Reference any related issues or design documents.
+
+**7. Code Review:**
+
+Your pull request will be reviewed by other team members. Address any feedback and make necessary changes. Push the updated commits to your feature branch; the PR will automatically update.
+
+**8. Finish the feature:**
+
+Once your pull request is approved and merged (typically by a maintainer via the PR interface), you can use git flow feature finish to clean up locally.
+
+```
+git flow feature finish <feature-name>
+```
