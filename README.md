@@ -6,7 +6,7 @@ This platform automates and enhances the KYC process by allowing customers to up
 
 In addition to document verification, the backend provides an endpoint for face liveness detection using AWS Rekognition. This module analyzes user-submitted video or image sequences to determine if the person is physically present and not a spoof. The results of both the document verification and liveness checks are stored in a DynamoDB database. Upon successful verification, a digital KYC certificate summarizing the results is generated and stored in an S3 bucket.
 
-The frontend portal, an AWS Amplify Gen 2 project, provides a user-friendly interface for customers to interact with the backend APIs. Data within the portal is managed using AppSync.
+The frontend portal, an AWS Amplify Gen 2 project, provides a user interface for customers to interact with the backend APIs. Data within the portal is managed using AppSync.
 
 ## Repository Structure
 
