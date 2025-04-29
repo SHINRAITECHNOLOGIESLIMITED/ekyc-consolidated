@@ -333,17 +333,6 @@ Resources:
                         StatePayload: Hello from Step Functions!
                         AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$: $$.Execution.Id
                     End: true
-              - StartAt: SafaricomPhoneVerification
-                States:
-                  SafaricomPhoneVerification:
-                    Type: Task
-                    Resource: arn:aws:states:::states:startExecution.sync:2
-                    Parameters:
-                      StateMachineArn: ${SafaricomPhoneVerificationArn}
-                      Input:
-                        StatePayload: Hello from Step Functions!
-                        AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$: $$.Execution.Id
-                    End: true
             End: true
       Logging:
         Level: ALL
@@ -356,9 +345,9 @@ Resources:
       Type: STANDARD
       DefinitionSubstitutions:
         DocumentExtractArn: !GetAtt DocumentExtract.Arn
-        KRATaxComplianceVerificationArn: !GetAtt KRATaxComplianceVerification.Arn
-        IPRSIdentityVerificationArn: !Ref IPRSIdentityVerification
-        LexisNexisBackgroundChecksArn: !Ref LexisNexisBackgroundChecks
+        KRATaxComplianceVerificationArn: !Ref AWS::NoValue
+        IPRSIdentityVerificationArn: !Ref AWS::NoValue
+        LexisNexisBackgroundChecksArn: !Ref AWS::NoValue
         SafaricomPhoneVerificationArn: !Ref AWS::NoValue
   NewDocumentRegistrationLogGroup:
     Type: AWS::Logs::LogGroup
@@ -412,145 +401,6 @@ Resources:
       LogGroupName: !Sub
         - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
         - ResourceId: DocumentExtract
-  KRATaxComplianceVerification:
-    Type: AWS::Serverless::StateMachine
-    Properties:
-      Definition:
-        StartAt: LambdaTask
-        States:
-          LambdaTask:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            Parameters:
-              Payload.$: $
-              FunctionName: ${LambdaFunction1}
-            End: true
-      Logging:
-        Level: ALL
-        IncludeExecutionData: true
-        Destinations:
-          - CloudWatchLogsLogGroup:
-              LogGroupArn: !GetAtt KRATaxComplianceVerificationLogGroup.Arn
-      Policies:
-        - AWSXrayWriteOnlyAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - logs:CreateLogDelivery
-                - logs:GetLogDelivery
-                - logs:UpdateLogDelivery
-                - logs:DeleteLogDelivery
-                - logs:ListLogDeliveries
-                - logs:PutResourcePolicy
-                - logs:DescribeResourcePolicies
-                - logs:DescribeLogGroups
-              Resource: '*'
-        - LambdaInvokePolicy:
-            FunctionName: !Ref KRATaxComplianceVerificationFunction
-      Tracing:
-        Enabled: true
-      Type: EXPRESS
-      DefinitionSubstitutions:
-        LambdaFunction1: !GetAtt KRATaxComplianceVerificationFunction.Arn
-  KRATaxComplianceVerificationLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub
-        - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
-        - ResourceId: KRATaxComplianceVerification
-  IPRSIdentityVerification:
-    Type: AWS::Serverless::StateMachine
-    Properties:
-      Definition:
-        StartAt: LambdaTask
-        States:
-          LambdaTask:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            Parameters:
-              Payload.$: $
-              FunctionName: ${LambdaFunction1}
-            End: true
-      Logging:
-        Level: ALL
-        IncludeExecutionData: true
-        Destinations:
-          - CloudWatchLogsLogGroup:
-              LogGroupArn: !GetAtt IPRSIdentityVerificationLogGroup.Arn
-      Policies:
-        - AWSXrayWriteOnlyAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - logs:CreateLogDelivery
-                - logs:GetLogDelivery
-                - logs:UpdateLogDelivery
-                - logs:DeleteLogDelivery
-                - logs:ListLogDeliveries
-                - logs:PutResourcePolicy
-                - logs:DescribeResourcePolicies
-                - logs:DescribeLogGroups
-              Resource: '*'
-        - LambdaInvokePolicy:
-            FunctionName: !Ref IPRSIdentityVerificationFunction
-      Tracing:
-        Enabled: true
-      Type: EXPRESS
-      DefinitionSubstitutions:
-        LambdaFunction1: !GetAtt IPRSIdentityVerificationFunction.Arn
-  IPRSIdentityVerificationLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub
-        - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
-        - ResourceId: IPRSIdentityVerification
-
-  LexisNexisBackgroundChecks:
-    Type: AWS::Serverless::StateMachine
-    Properties:
-      Definition:
-        StartAt: LambdaTask
-        States:
-          LambdaTask:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            Parameters:
-              Payload.$: $
-              FunctionName: ${LambdaFunction1}
-            End: true
-      Logging:
-        Level: ALL
-        IncludeExecutionData: true
-        Destinations:
-          - CloudWatchLogsLogGroup:
-              LogGroupArn: !GetAtt LexisNexisBackgroundChecksLogGroup.Arn
-      Policies:
-        - AWSXrayWriteOnlyAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - logs:CreateLogDelivery
-                - logs:GetLogDelivery
-                - logs:UpdateLogDelivery
-                - logs:DeleteLogDelivery
-                - logs:ListLogDeliveries
-                - logs:PutResourcePolicy
-                - logs:DescribeResourcePolicies
-                - logs:DescribeLogGroups
-              Resource: '*'
-        - LambdaInvokePolicy:
-            FunctionName: !Ref LexisNexisBackgroundChecksFunction
-      Tracing:
-        Enabled: true
-      Type: EXPRESS
-      DefinitionSubstitutions:
-        LambdaFunction1: !GetAtt LexisNexisBackgroundChecksFunction.Arn
-  LexisNexisBackgroundChecksLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub
-        - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
-        - ResourceId: LexisNexisBackgroundChecks
 Metadata:
   AWS::Composer::Groups:
     Group:
@@ -572,6 +422,6 @@ Metadata:
     Group4:
       Label: 'Layer3b: KYC Validation'
       Members:
-        - IPRSIdentityVerification
-        - KRATaxComplianceVerification
-        - LexisNexisBackgroundChecks
+        - IPRSIdentityVerificationFunction
+        - KRATaxComplianceVerificationFunction
+        - LexisNexisBackgroundChecksFunction
