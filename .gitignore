@@ -79,3 +79,6 @@ htmlcov/
 
 #automactions
 auto_commit.py
+
+#word documents background files
+.~docx
