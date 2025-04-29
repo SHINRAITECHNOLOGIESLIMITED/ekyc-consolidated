@@ -24,7 +24,7 @@ Resources:
       StageName: Prod
       DefinitionBody:
         openapi: '3.0'
-        info: { }
+        info: {}
         paths:
           /faceliveness:
             post:
@@ -32,14 +32,14 @@ Resources:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFunction.Arn}/invocations
-              responses: { }
+              responses: {}
           /uploaddocument:
             post:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadDocumentFunction.Arn}/invocations
-              responses: { }
+              responses: {}
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
       Cors:
@@ -133,7 +133,7 @@ Resources:
       Description: IPRS Identity Verification Process
       CodeUri: core/functions/iprsidentityverification/src
       Handler: app.handler
-      Environment: { }
+      Environment: {}
   IPRSIdentityVerificationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -147,7 +147,7 @@ Resources:
       Description: KRA TAX compliace check
       CodeUri: core/functions/krataxcomplianceverification/src
       Handler: app.handler
-      Environment: { }
+      Environment: {}
   KRATaxComplianceVerificationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -161,7 +161,7 @@ Resources:
       Description: LexisNexis Background Checks
       CodeUri: core/functions/lexisnexisbackgroundchecks/src
       Handler: app.handler
-      Environment: { }
+      Environment: {}
   LexisNexisBackgroundChecksFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -169,27 +169,13 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${LexisNexisBackgroundChecksFunction}
       RetentionInDays: 30
-  SafaricomPhoneVerificationFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Description: Safaricom Phone Verification
-      CodeUri: core/functions/safaricomphoneverification/src
-      Handler: app.handler
-      Environment: { }
-  SafaricomPhoneVerificationFunctionLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${SafaricomPhoneVerificationFunction}
-      RetentionInDays: 30
   DocumentExtractFunction:
     Type: AWS::Serverless::Function
     Properties:
       Description: Extract of form fields from documents
       CodeUri: core/functions/documentextract/src
       Handler: app.handler
-      Environment: { }
+      Environment: {}
   DocumentExtractFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -373,7 +359,7 @@ Resources:
         KRATaxComplianceVerificationArn: !GetAtt KRATaxComplianceVerification.Arn
         IPRSIdentityVerificationArn: !Ref IPRSIdentityVerification
         LexisNexisBackgroundChecksArn: !Ref LexisNexisBackgroundChecks
-        SafaricomPhoneVerificationArn: !Ref SafaricomPhoneVerification
+        SafaricomPhoneVerificationArn: !Ref AWS::NoValue
   NewDocumentRegistrationLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -565,52 +551,6 @@ Resources:
       LogGroupName: !Sub
         - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
         - ResourceId: LexisNexisBackgroundChecks
-  SafaricomPhoneVerification:
-    Type: AWS::Serverless::StateMachine
-    Properties:
-      Definition:
-        StartAt: LambdaTask
-        States:
-          LambdaTask:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            Parameters:
-              Payload.$: $
-              FunctionName: ${LambdaFunction1}
-            End: true
-      Logging:
-        Level: ALL
-        IncludeExecutionData: true
-        Destinations:
-          - CloudWatchLogsLogGroup:
-              LogGroupArn: !GetAtt SafaricomPhoneVerificationLogGroup.Arn
-      Policies:
-        - AWSXrayWriteOnlyAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - logs:CreateLogDelivery
-                - logs:GetLogDelivery
-                - logs:UpdateLogDelivery
-                - logs:DeleteLogDelivery
-                - logs:ListLogDeliveries
-                - logs:PutResourcePolicy
-                - logs:DescribeResourcePolicies
-                - logs:DescribeLogGroups
-              Resource: '*'
-        - LambdaInvokePolicy:
-            FunctionName: !Ref SafaricomPhoneVerificationFunction
-      Tracing:
-        Enabled: true
-      Type: EXPRESS
-      DefinitionSubstitutions:
-        LambdaFunction1: !GetAtt SafaricomPhoneVerificationFunction.Arn
-  SafaricomPhoneVerificationLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub
-        - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
-        - ResourceId: SafaricomPhoneVerification
 Metadata:
   AWS::Composer::Groups:
     Group:
@@ -635,4 +575,3 @@ Metadata:
         - IPRSIdentityVerification
         - KRATaxComplianceVerification
         - LexisNexisBackgroundChecks
-        - SafaricomPhoneVerification
