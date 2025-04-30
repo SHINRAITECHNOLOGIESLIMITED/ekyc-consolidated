@@ -127,61 +127,61 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${FaceLivenessFunction}
       RetentionInDays: 30
-  IPRSIdentityVerificationFunction:
+  IPRSSearchFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: IPRS Identity Verification Process
-      CodeUri: core/functions/iprsidentityverification/src
+      CodeUri: core/functions/iprs_search/src
       Handler: app.handler
       Environment: {}
-  IPRSIdentityVerificationFunctionLogGroup:
+  IPRSSearchFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${IPRSIdentityVerificationFunction}
+      LogGroupName: !Sub /aws/lambda/${IPRSSearchFn}
       RetentionInDays: 30
-  KRATaxComplianceVerificationFunction:
+  KRAValidateIDNumber:
     Type: AWS::Serverless::Function
     Properties:
       Description: KRA TAX compliace check
-      CodeUri: core/functions/krataxcomplianceverification/src
+      CodeUri: core/functions/kra_validate_id_number/src
       Handler: app.handler
       Environment: {}
-  KRATaxComplianceVerificationFunctionLogGroup:
+  KRAValidateIDNumberLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${KRATaxComplianceVerificationFunction}
+      LogGroupName: !Sub /aws/lambda/${KRAValidateIDNumber}
       RetentionInDays: 30
-  LexisNexisBackgroundChecksFunction:
+  LexisNexisSearchRecordFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: LexisNexis Background Checks
-      CodeUri: core/functions/lexisnexisbackgroundchecks/src
+      CodeUri: core/functions/lexisnexis_search_record/src
       Handler: app.handler
       Environment: {}
-  LexisNexisBackgroundChecksFunctionLogGroup:
+  LexisNexisSearchRecordFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${LexisNexisBackgroundChecksFunction}
+      LogGroupName: !Sub /aws/lambda/${LexisNexisSearchRecordFn}
       RetentionInDays: 30
-  DocumentExtractFunction:
+  DocumentTextract:
     Type: AWS::Serverless::Function
     Properties:
       Description: Extract of form fields from documents
-      CodeUri: core/functions/documentextract/src
+      CodeUri: core/functions/document_textract/src
       Handler: app.handler
       Environment: {}
-  DocumentExtractFunctionLogGroup:
+  DocumentTextractLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${DocumentExtractFunction}
+      LogGroupName: !Sub /aws/lambda/${DocumentTextract}
       RetentionInDays: 30
   FaceLivenessResults:
     Type: AWS::DynamoDB::Table
@@ -238,27 +238,6 @@ Resources:
         - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
         - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
       Policies:
-        - PolicyName: StepFunctionsExecutionPolicy-IPRS
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: states:StartExecution
-                Resource: !GetAtt IPRSIdentityVerification.Arn
-        - PolicyName: StepFunctionsExecutionPolicy-LexisNexis
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: states:StartExecution
-                Resource: !GetAtt LexisNexisBackgroundChecks.Arn
-        - PolicyName: StepFunctionsExecutionPolicy-Safaricom
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: states:StartExecution
-                Resource: !GetAtt SafaricomPhoneVerification.Arn
         - PolicyName: StepFunctionsDescribeAndStopExecution
           PolicyDocument:
             Version: '2012-10-17'
@@ -300,38 +279,62 @@ Resources:
           DocumentValidation:
             Type: Parallel
             Branches:
-              - StartAt: IPRSIdentityVerification
+              - StartAt: SearchIPRS
                 States:
-                  IPRSIdentityVerification:
+                  SearchIPRS:
                     Type: Task
-                    Resource: arn:aws:states:::states:startExecution.sync:2
+                    Resource: arn:aws:states:::lambda:invoke
+                    OutputPath: $.Payload
                     Parameters:
-                      StateMachineArn: ${IPRSIdentityVerificationArn}
-                      Input:
-                        StatePayload: Hello from Step Functions!
-                        AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$: $$.Execution.Id
+                      Payload.$: $
+                      FunctionName: ${IPRSIdentityVerificationArn}
+                    Retry:
+                      - ErrorEquals:
+                          - Lambda.ServiceException
+                          - Lambda.AWSLambdaException
+                          - Lambda.SdkClientException
+                          - Lambda.TooManyRequestsException
+                        IntervalSeconds: 1
+                        MaxAttempts: 3
+                        BackoffRate: 2
                     End: true
-              - StartAt: KRATaxComplianceVerification
+              - StartAt: LexisNexisSearchRecord
                 States:
-                  KRATaxComplianceVerification:
+                  LexisNexisSearchRecord:
                     Type: Task
-                    Resource: arn:aws:states:::states:startExecution.sync:2
+                    Resource: arn:aws:states:::lambda:invoke
+                    OutputPath: $.Payload
                     Parameters:
-                      StateMachineArn: ${KRATaxComplianceVerificationArn}
-                      Input:
-                        StatePayload: Hello from Step Functions!
-                        AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$: $$.Execution.Id
+                      Payload.$: $
+                      FunctionName: ${LexisNexisBackgroundChecksArn}
+                    Retry:
+                      - ErrorEquals:
+                          - Lambda.ServiceException
+                          - Lambda.AWSLambdaException
+                          - Lambda.SdkClientException
+                          - Lambda.TooManyRequestsException
+                        IntervalSeconds: 1
+                        MaxAttempts: 3
+                        BackoffRate: 2
                     End: true
-              - StartAt: LexisNexisBackgroundChecks
+              - StartAt: KRAValidateIDNumber
                 States:
-                  LexisNexisBackgroundChecks:
+                  KRAValidateIDNumber:
                     Type: Task
-                    Resource: arn:aws:states:::states:startExecution.sync:2
+                    Resource: arn:aws:states:::lambda:invoke
+                    OutputPath: $.Payload
                     Parameters:
-                      StateMachineArn: ${LexisNexisBackgroundChecksArn}
-                      Input:
-                        StatePayload: Hello from Step Functions!
-                        AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$: $$.Execution.Id
+                      Payload.$: $
+                      FunctionName: ${KRATaxComplianceVerificationArn}
+                    Retry:
+                      - ErrorEquals:
+                          - Lambda.ServiceException
+                          - Lambda.AWSLambdaException
+                          - Lambda.SdkClientException
+                          - Lambda.TooManyRequestsException
+                        IntervalSeconds: 1
+                        MaxAttempts: 3
+                        BackoffRate: 2
                     End: true
             End: true
       Logging:
@@ -345,10 +348,10 @@ Resources:
       Type: STANDARD
       DefinitionSubstitutions:
         DocumentExtractArn: !GetAtt DocumentExtract.Arn
-        KRATaxComplianceVerificationArn: !Ref AWS::NoValue
-        IPRSIdentityVerificationArn: !Ref AWS::NoValue
-        LexisNexisBackgroundChecksArn: !Ref AWS::NoValue
-        SafaricomPhoneVerificationArn: !Ref AWS::NoValue
+        KRATaxComplianceVerificationArn: !Ref KRAValidateIDNumber
+        IPRSIdentityVerificationArn: !Ref IPRSSearchFn
+        LexisNexisBackgroundChecksArn: !Ref LexisNexisSearchRecordFn
+
   NewDocumentRegistrationLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -389,12 +392,12 @@ Resources:
                 - logs:DescribeLogGroups
               Resource: '*'
         - LambdaInvokePolicy:
-            FunctionName: !Ref DocumentExtractFunction
+            FunctionName: !Ref DocumentTextract
       Tracing:
         Enabled: true
       Type: EXPRESS
       DefinitionSubstitutions:
-        LambdaFunction1: !GetAtt DocumentExtractFunction.Arn
+        LambdaFunction1: !GetAtt DocumentTextract.Arn
   DocumentExtractLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -422,6 +425,6 @@ Metadata:
     Group4:
       Label: 'Layer3b: KYC Validation'
       Members:
-        - IPRSIdentityVerificationFunction
-        - KRATaxComplianceVerificationFunction
-        - LexisNexisBackgroundChecksFunction
+        - IPRSSearchFn
+        - LexisNexisSearchRecordFn
+        - KRAValidateIDNumber
