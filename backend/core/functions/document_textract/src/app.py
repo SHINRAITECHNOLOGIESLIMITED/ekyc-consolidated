@@ -6,6 +6,6 @@ def handler(event, context):
     return {
         'statusCode': 400,
         'body': json.dumps({
-            'message': 'Not implemented: iprsidentityverification'
+            'message': 'Not implemented: document_textract'
         })
     }

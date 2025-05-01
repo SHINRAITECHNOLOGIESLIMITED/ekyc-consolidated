@@ -6,6 +6,6 @@ def handler(event, context):
     return {
         'statusCode': 400,
         'body': json.dumps({
-            'message': 'Not implemented: krataxcomplianceverification'
+            'message': 'Not implemented: lexisnexis_search_record'
         })
     }

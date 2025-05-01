@@ -6,6 +6,6 @@ def handler(event, context):
     return {
         'statusCode': 400,
         'body': json.dumps({
-            'message': 'Not implemented: lexisnexisbackgroundchecks'
+            'message': 'Not implemented: iprs_search'
         })
     }

@@ -31,20 +31,20 @@ Resources:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
-                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFunction.Arn}/invocations
+                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFn.Arn}/invocations
               responses: {}
           /uploaddocument:
             post:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
-                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadDocumentFunction.Arn}/invocations
+                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadDocumentFn.Arn}/invocations
               responses: {}
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
       Cors:
         MaxAge: 5
-  UploadDocumentFunction:
+  UploadDocumentFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: Process for handling KYC document upload
@@ -92,14 +92,14 @@ Resources:
                 - !Sub arn:${AWS::Partition}:s3:::${DocumentsUpload}/*
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt NewDocumentRegistration.Name
-  UploadDocumentFunctionLogGroup:
+  UploadDocumentFunctionLn:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${UploadDocumentFunction}
+      LogGroupName: !Sub /aws/lambda/${UploadDocumentFn}
       RetentionInDays: 30
-  FaceLivenessFunction:
+  FaceLivenessFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: Process for checking faceliveness
@@ -120,68 +120,74 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref FaceLivenessResults
-  FaceLivenessFunctionLogGroup:
+  FaceLivenessFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${FaceLivenessFunction}
+      LogGroupName: !Sub /aws/lambda/${FaceLivenessFn}
       RetentionInDays: 30
-  IPRSIdentityVerificationFunction:
+  IPRSSearchFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: IPRS Identity Verification Process
-      CodeUri: core/functions/iprsidentityverification/src
+      CodeUri: core/functions/iprs_search/src
       Handler: app.handler
       Environment: {}
-  IPRSIdentityVerificationFunctionLogGroup:
+      Layers:
+        - !Ref JubileeESBAPILayer
+  IPRSSearchFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${IPRSIdentityVerificationFunction}
+      LogGroupName: !Sub /aws/lambda/${IPRSSearchFn}
       RetentionInDays: 30
-  KRATaxComplianceVerificationFunction:
+  KRAValidateIDNumberFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: KRA TAX compliace check
-      CodeUri: core/functions/krataxcomplianceverification/src
+      CodeUri: core/functions/kra_validate_id_number/src
       Handler: app.handler
       Environment: {}
-  KRATaxComplianceVerificationFunctionLogGroup:
+      Layers:
+        - !Ref JubileeESBAPILayer
+  KRAValidateIDNumberFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${KRATaxComplianceVerificationFunction}
+      LogGroupName: !Sub /aws/lambda/${KRAValidateIDNumberFn}
       RetentionInDays: 30
-  LexisNexisBackgroundChecksFunction:
+  LexisNexisSearchRecordFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: LexisNexis Background Checks
-      CodeUri: core/functions/lexisnexisbackgroundchecks/src
+      CodeUri: core/functions/lexisnexis_search_record/src
       Handler: app.handler
       Environment: {}
-  LexisNexisBackgroundChecksFunctionLogGroup:
+      Layers:
+        - !Ref JubileeESBAPILayer
+  LexisNexisSearchRecordFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${LexisNexisBackgroundChecksFunction}
+      LogGroupName: !Sub /aws/lambda/${LexisNexisSearchRecordFn}
       RetentionInDays: 30
-  DocumentExtractFunction:
+  DocumentTextract:
     Type: AWS::Serverless::Function
     Properties:
       Description: Extract of form fields from documents
-      CodeUri: core/functions/documentextract/src
+      CodeUri: core/functions/document_textract/src
       Handler: app.handler
       Environment: {}
-  DocumentExtractFunctionLogGroup:
+  DocumentTextractLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${DocumentExtractFunction}
+      LogGroupName: !Sub /aws/lambda/${DocumentTextract}
       RetentionInDays: 30
   FaceLivenessResults:
     Type: AWS::DynamoDB::Table
@@ -238,27 +244,6 @@ Resources:
         - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
         - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
       Policies:
-        - PolicyName: StepFunctionsExecutionPolicy-IPRS
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: states:StartExecution
-                Resource: !GetAtt IPRSIdentityVerification.Arn
-        - PolicyName: StepFunctionsExecutionPolicy-LexisNexis
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: states:StartExecution
-                Resource: !GetAtt LexisNexisBackgroundChecks.Arn
-        - PolicyName: StepFunctionsExecutionPolicy-Safaricom
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: states:StartExecution
-                Resource: !GetAtt SafaricomPhoneVerification.Arn
         - PolicyName: StepFunctionsDescribeAndStopExecution
           PolicyDocument:
             Version: '2012-10-17'
@@ -296,42 +281,64 @@ Resources:
               Input:
                 StatePayload: Hello from Step Functions!
                 AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$: $$.Execution.Id
-            Next: DocumentValidation
-          DocumentValidation:
+            Next: SearchIPRS
+          SearchIPRS:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            OutputPath: $.Payload
+            Parameters:
+              Payload.$: $
+              FunctionName: ${IPRSIdentityVerificationArn}
+            Retry:
+              - ErrorEquals:
+                  - Lambda.ServiceException
+                  - Lambda.AWSLambdaException
+                  - Lambda.SdkClientException
+                  - Lambda.TooManyRequestsException
+                IntervalSeconds: 1
+                MaxAttempts: 3
+                BackoffRate: 2
+            Next: Parallel
+          Parallel:
             Type: Parallel
             Branches:
-              - StartAt: IPRSIdentityVerification
+              - StartAt: LexisNexisSearchRecord
                 States:
-                  IPRSIdentityVerification:
+                  LexisNexisSearchRecord:
                     Type: Task
-                    Resource: arn:aws:states:::states:startExecution.sync:2
+                    Resource: arn:aws:states:::lambda:invoke
+                    OutputPath: $.Payload
                     Parameters:
-                      StateMachineArn: ${IPRSIdentityVerificationArn}
-                      Input:
-                        StatePayload: Hello from Step Functions!
-                        AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$: $$.Execution.Id
+                      Payload.$: $
+                      FunctionName: ${LexisNexisBackgroundChecksArn}
+                    Retry:
+                      - ErrorEquals:
+                          - Lambda.ServiceException
+                          - Lambda.AWSLambdaException
+                          - Lambda.SdkClientException
+                          - Lambda.TooManyRequestsException
+                        IntervalSeconds: 1
+                        MaxAttempts: 3
+                        BackoffRate: 2
                     End: true
-              - StartAt: KRATaxComplianceVerification
+              - StartAt: KRAValidateIDNumberFn
                 States:
-                  KRATaxComplianceVerification:
+                  KRAValidateIDNumberFn:
                     Type: Task
-                    Resource: arn:aws:states:::states:startExecution.sync:2
+                    Resource: arn:aws:states:::lambda:invoke
+                    OutputPath: $.Payload
                     Parameters:
-                      StateMachineArn: ${KRATaxComplianceVerificationArn}
-                      Input:
-                        StatePayload: Hello from Step Functions!
-                        AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$: $$.Execution.Id
-                    End: true
-              - StartAt: LexisNexisBackgroundChecks
-                States:
-                  LexisNexisBackgroundChecks:
-                    Type: Task
-                    Resource: arn:aws:states:::states:startExecution.sync:2
-                    Parameters:
-                      StateMachineArn: ${LexisNexisBackgroundChecksArn}
-                      Input:
-                        StatePayload: Hello from Step Functions!
-                        AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$: $$.Execution.Id
+                      Payload.$: $
+                      FunctionName: ${KRATaxComplianceVerificationArn}
+                    Retry:
+                      - ErrorEquals:
+                          - Lambda.ServiceException
+                          - Lambda.AWSLambdaException
+                          - Lambda.SdkClientException
+                          - Lambda.TooManyRequestsException
+                        IntervalSeconds: 1
+                        MaxAttempts: 3
+                        BackoffRate: 2
                     End: true
             End: true
       Logging:
@@ -345,10 +352,10 @@ Resources:
       Type: STANDARD
       DefinitionSubstitutions:
         DocumentExtractArn: !GetAtt DocumentExtract.Arn
-        KRATaxComplianceVerificationArn: !Ref AWS::NoValue
-        IPRSIdentityVerificationArn: !Ref AWS::NoValue
-        LexisNexisBackgroundChecksArn: !Ref AWS::NoValue
-        SafaricomPhoneVerificationArn: !Ref AWS::NoValue
+        KRATaxComplianceVerificationArn: !Ref KRAValidateIDNumberFn
+        IPRSIdentityVerificationArn: !Ref IPRSSearchFn
+        LexisNexisBackgroundChecksArn: !Ref LexisNexisSearchRecordFn
+
   NewDocumentRegistrationLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -389,18 +396,28 @@ Resources:
                 - logs:DescribeLogGroups
               Resource: '*'
         - LambdaInvokePolicy:
-            FunctionName: !Ref DocumentExtractFunction
+            FunctionName: !Ref DocumentTextract
       Tracing:
         Enabled: true
       Type: EXPRESS
       DefinitionSubstitutions:
-        LambdaFunction1: !GetAtt DocumentExtractFunction.Arn
+        LambdaFunction1: !GetAtt DocumentTextract.Arn
   DocumentExtractLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub
         - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
         - ResourceId: DocumentExtract
+  JubileeESBAPILayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: !Sub
+        - Stack ${AWS::StackName} Layer ${ResourceName}
+        - ResourceName: JubileeESBAPILayer
+      ContentUri: core/layers/jubilee_esb_api_layer/src
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: python3.11
 Metadata:
   AWS::Composer::Groups:
     Group:
@@ -410,8 +427,8 @@ Metadata:
     Group2:
       Label: 'Layer2: Process orchestration'
       Members:
-        - FaceLivenessFunction
-        - UploadDocumentFunction
+        - FaceLivenessFn
+        - UploadDocumentFn
         - NewDocumentRegistration
         - DocumentsUpload
         - FaceLivenessResults
@@ -422,6 +439,7 @@ Metadata:
     Group4:
       Label: 'Layer3b: KYC Validation'
       Members:
-        - IPRSIdentityVerificationFunction
-        - KRATaxComplianceVerificationFunction
-        - LexisNexisBackgroundChecksFunction
+        - IPRSSearchFn
+        - LexisNexisSearchRecordFn
+        - KRAValidateIDNumberFn
+        - JubileeESBAPILayer
