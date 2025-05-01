@@ -182,17 +182,21 @@ class JubileeESBUtilities:
             return None
 
     @tracer.capture_method
-    def _make_api_call(self,
-                       service: str,
-                       url: str,
-                       data: Dict[str, Any], is_post: bool = True):
+    def make_api_call(self,
+                      service: str,
+                      api_method: str,
+                      url: str,
+                      data: Dict[str, Any], is_post: bool = True):
         """
         Make API call with error handling and logging
 
         Args:
-            service: Service name for logging
+            service: Service name for logging eg IPRS,KRA,NexisLexis,
+            api_method: Method of API being called for logging eg SearchById,validate_id
             url: API endpoint URL
             data: Request payload
+            is_post: true if http method is POST other it will call GET
+            :param :
         """
         try:
             headers = {
@@ -213,7 +217,7 @@ class JubileeESBUtilities:
                     timeout=30
                 )
 
-            self._project_api_call_to_portal(response)
+            self._project_api_call_to_portal(response, api_name=service, api_method=api_method)
             response.raise_for_status()
 
             logger.info(f"Jubilee ESB: {service} API call successful")

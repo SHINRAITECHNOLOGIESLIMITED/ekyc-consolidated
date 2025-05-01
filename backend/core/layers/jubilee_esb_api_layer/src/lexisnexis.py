@@ -34,11 +34,11 @@ class LexisNexis:
             }
             validate(event=data, schema=schema)
 
-            return self._make_api_call(
-                "LexisNexis",
-                f"{self.lexisnexis_base_url}/search",
-                data,
-                self.lexisnexis_credentials
+            return self.utilities.make_api_call(
+                service="LexisNexis",
+                api_method="search",
+                url=f"{self.lexisnexis_base_url}/search",
+                data=data
             )
         except Exception as e:
             logger.error(f"LexisNexis search failed: {str(e)}")

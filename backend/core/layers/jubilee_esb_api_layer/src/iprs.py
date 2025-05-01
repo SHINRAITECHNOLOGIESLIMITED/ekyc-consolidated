@@ -31,10 +31,11 @@ class IPRS:
             }
             validate(event=data, schema=schema)
 
-            return self._make_api_call(
+            return self.utilities.make_api_call(
                 "IPRS",
-                f"/iprs/searchV2/{self.business}",
-                data
+                api_method="search",
+                url=f"/iprs/searchV2/{self.business}",
+                data=data
             )
         except Exception as e:
             logger.error(f"IPRS search failed: {str(e)}")

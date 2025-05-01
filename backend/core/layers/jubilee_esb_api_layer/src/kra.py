@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.validation import validate
@@ -35,10 +35,11 @@ class KRA:
             validate(event=data, schema=schema)
             idNo = data['idNo']
             country = data['country']
-            return self._make_api_call(
+            return self.utilities.make_api_call(
                 "KRA",
-                f"/api/v1/kra/validate-id?typeOfTaxpayer={country}&taxpayerID={idNo}",
-                None,
+                api_method="validate_id",
+                url=f"/api/v1/kra/validate-id?typeOfTaxpayer={country}&taxpayerID={idNo}",
+                data={},
                 is_post=False
             )
         except Exception as e:
