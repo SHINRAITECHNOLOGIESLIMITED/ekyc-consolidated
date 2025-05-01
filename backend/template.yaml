@@ -134,6 +134,8 @@ Resources:
       CodeUri: core/functions/iprs_search/src
       Handler: app.handler
       Environment: {}
+      Layers:
+        - !Ref JubileeESBAPILayer
   IPRSSearchFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -148,6 +150,8 @@ Resources:
       CodeUri: core/functions/kra_validate_id_number/src
       Handler: app.handler
       Environment: {}
+      Layers:
+        - !Ref JubileeESBAPILayer
   KRAValidateIDNumberFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -162,6 +166,8 @@ Resources:
       CodeUri: core/functions/lexisnexis_search_record/src
       Handler: app.handler
       Environment: {}
+      Layers:
+        - !Ref JubileeESBAPILayer
   LexisNexisSearchRecordFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -275,29 +281,27 @@ Resources:
               Input:
                 StatePayload: Hello from Step Functions!
                 AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$: $$.Execution.Id
-            Next: DocumentValidation
-          DocumentValidation:
+            Next: SearchIPRS
+          SearchIPRS:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            OutputPath: $.Payload
+            Parameters:
+              Payload.$: $
+              FunctionName: ${IPRSIdentityVerificationArn}
+            Retry:
+              - ErrorEquals:
+                  - Lambda.ServiceException
+                  - Lambda.AWSLambdaException
+                  - Lambda.SdkClientException
+                  - Lambda.TooManyRequestsException
+                IntervalSeconds: 1
+                MaxAttempts: 3
+                BackoffRate: 2
+            Next: Parallel
+          Parallel:
             Type: Parallel
             Branches:
-              - StartAt: SearchIPRS
-                States:
-                  SearchIPRS:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${IPRSIdentityVerificationArn}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    End: true
               - StartAt: LexisNexisSearchRecord
                 States:
                   LexisNexisSearchRecord:
@@ -404,6 +408,16 @@ Resources:
       LogGroupName: !Sub
         - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
         - ResourceId: DocumentExtract
+  JubileeESBAPILayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: !Sub
+        - Stack ${AWS::StackName} Layer ${ResourceName}
+        - ResourceName: JubileeESBAPILayer
+      ContentUri: core/layers/jubilee_esb_api_layer/src
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: python3.11
 Metadata:
   AWS::Composer::Groups:
     Group:
@@ -428,3 +442,4 @@ Metadata:
         - IPRSSearchFn
         - LexisNexisSearchRecordFn
         - KRAValidateIDNumberFn
+        - JubileeESBAPILayer
