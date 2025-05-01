@@ -105,6 +105,7 @@ const Navigation = () => {
                             href: '/documentverification',
                             info: <Badge color="red" size="small">WIP</Badge>
                         }
+
                     ]
                 },
                 {type: "divider"},
@@ -118,6 +119,11 @@ const Navigation = () => {
                             type: 'link',
                             text: 'Users',
                             href: '/users'
+                        },
+                        {
+                            type: 'link',
+                            text: 'API Calls',
+                            href: '/apicalls'
                         },
                         {
                             type: 'link',
