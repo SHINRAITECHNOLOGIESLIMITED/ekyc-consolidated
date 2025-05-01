@@ -1,5 +1,5 @@
 import type {Schema} from "@/../amplify/data/resource";
-import type {KYCDocument, LivenessSession} from '@/types/models';
+import type {APICall, KYCDocument, LivenessSession} from '@/types/models';
 import {generateClient} from 'aws-amplify/api';
 import {CognitoUser} from "@/types/interfaces";
 import {CognitoIdentityProviderClient, ListUsersCommand} from '@aws-sdk/client-cognito-identity-provider';
@@ -18,7 +18,7 @@ interface AmplifyConfig {
         unauthenticated_identities_enabled: boolean;
     };
     data: {
-    aws_region: string;
+        aws_region: string;
     };
     version: string;
 }
@@ -49,14 +49,34 @@ export const fetchKYCDocuments = async (): Promise<KYCDocument[]> => {
     const response = await client.models.KYCDocument.list({
         limit: 5000
     });
-    return response.data;
+    const sortedData = response.data.sort((a, b) => {
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+    return sortedData;
 };
 export const fetchDocument = async (documentId: string): Promise<KYCDocument | null> => {
     const response = await client.models.KYCDocument.get({
         documentId: documentId
     });
+
     return response.data;
 };
+export const fetchAPICalls = async (): Promise<APICall[]> => {
+    const response = await client.models.APICall.list({
+        limit: 5000
+    });
+    const sortedData = response.data.sort((a, b) => {
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+    return sortedData;
+};
+export const fetchAPICall = async (apiCallId: string): Promise<APICall | null> => {
+    const response = await client.models.APICall.get({
+        apiCallId: apiCallId
+    });
+    return response.data;
+};
+
 const listUsers = async (limit = 20, paginationToken?: string): Promise<{
     users: CognitoUser[],
     nextToken?: string

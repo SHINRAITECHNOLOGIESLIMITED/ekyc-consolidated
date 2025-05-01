@@ -18,7 +18,21 @@ const schema = a.schema({
     }).authorization(authorize => [
         authorize.authenticated().to(['read']),
         authorize.publicApiKey().to(['create', 'read', 'update', 'delete'])
-    ]).identifier(['documentId'])
+    ]).identifier(['documentId']),
+    APICall: a.model({
+        apiCallId: a.id().required(),
+        userId: a.string().required(),
+        apiName: a.string().required(),
+        apiMethod: a.string().required(),
+        requestIPAddress: a.string(),
+        requestHttpMethod: a.string(),
+        requestTimestamp: a.integer(),
+        responseStatusCode: a.string(),
+        responseResult: a.string(),
+    }).authorization(authorize => [
+        authorize.authenticated().to(['read']),
+        authorize.publicApiKey().to(['create', 'read', 'update', 'delete'])
+    ]).identifier(['apiCallId'])
 });
 
 export const data = defineData({
