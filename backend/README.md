@@ -123,6 +123,28 @@ To run the tests for a specific function, navigate to its `test` directory and e
 cd core/functions/iprs_search/test
 python -m unittest discover .
 ```
+## Deployment
+### Environment Setup
+
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Update the .env file with your credentials:
+
+- JUBILEE_ESB_CREDENTIALS: JSON string containing ESB API credentials
+- PORTAL_GRAPHQL_CREDENTIALS: JSON string containing Portal GraphQL credentials
+
+3. Before deploying, load the environment variables:
+```bash
+source .env
+```
+### Deployment scripts
+```bash
+sam validate --lint #to ensure sam template is valid
+sam build #to prepare the artifacts
+sam deploy #to deploy to aws region as per parameters configure in the environment
+```
 
 ## Cleanup
 
