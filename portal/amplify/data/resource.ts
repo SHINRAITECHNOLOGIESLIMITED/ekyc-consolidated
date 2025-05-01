@@ -21,7 +21,6 @@ const schema = a.schema({
     ]).identifier(['documentId']),
     APICall: a.model({
         apiCallId: a.id().required(),
-        userId: a.string().required(),
         apiName: a.string().required(),
         apiMethod: a.string().required(),
         requestIPAddress: a.string(),
