@@ -13,11 +13,6 @@ const columnDefinitions =
             cell: (item: APICall) => item.apiCallId
         },
         {
-            id: "userId",
-            header: "User Id",
-            cell: (item: APICall) => item.userId
-        },
-        {
             id: "apiName",
             header: "API",
             cell: (item: APICall) => item.apiName
@@ -29,7 +24,7 @@ const columnDefinitions =
         },
         {
             id: "requestIPAddress",
-            header: "requestIPAddress",
+            header: "Source IP",
             cell: (item: APICall) => item.requestIPAddress ?? ""
         },
         {
@@ -49,7 +44,7 @@ const columnDefinitions =
         },
         {
             id: "responseResult",
-            header: "Response Result",
+            header: "Status",
             cell: (item: APICall) => item.responseResult ?? ""
         }
     ];
