@@ -223,13 +223,13 @@ class JubileeESBUtilities:
                     f"{self.base_url}{url}",
                     json=data,
                     headers=headers,
-                    timeout=60
+                    timeout=240
                 )
             else:
                 response = requests.get(
                     f"{self.base_url}{url}",
                     headers=headers,
-                    timeout=60
+                    timeout=240
                 )
             duration_ms = round(time.time() * 1000 - start_time)
             if response.status_code == 500:

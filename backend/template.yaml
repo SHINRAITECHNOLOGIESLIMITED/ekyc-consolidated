@@ -16,7 +16,7 @@ Parameters:
     Description: Port app-sync graphql credentials
 Globals:
   Function:
-    Timeout: 120
+    Timeout: 300
     MemorySize: 128
     Tracing: Disabled
     Runtime: python3.11
