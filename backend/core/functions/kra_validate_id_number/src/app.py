@@ -15,8 +15,7 @@ validator = JubileeESBAPI()
 def handler(event, context):
     try:
         logger.info(f"Received event: {event}")
-        data = dict(idNo=event["idNo"], country=event["country"])
-        kra_result = validator.kra.validate_id(data)
+        kra_result = validator.kra.validate_id(event)
         return {
             "statusCode": 200,
             "body": json.dumps({
