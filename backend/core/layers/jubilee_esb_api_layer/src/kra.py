@@ -27,14 +27,22 @@ class KRA:
             schema = {
                 "type": "object",
                 "properties": {
-                    "country": {"type": "string"},
-                    "idNo": {"type": "string"}
+                    "country": {
+                        "type": "string",
+                        "enum": ["COMP", "KE", "NKE", "NKENR"],
+                        "description": "COMP: Non-Individual – Company, KE: Individual - Kenyan Citizen, NKE: Individual – Non-Kenyan Resident, NKENR: Individual – Non-Kenyan Non-Resident"
+                    },
+                    "idNo": {
+                        "type": "string",
+                        "minLength": 1
+                    }
                 },
                 "required": ["idNo", "country"]
             }
             validate(event=data, schema=schema)
             idNo = data['idNo']
             country = data['country']
+
             return self.utilities.make_api_call(
                 "KRA",
                 api_method="validate_id",

@@ -10,7 +10,7 @@ const columnDefinitions =
         {
             id: "apiCallId",
             header: "API Call ID",
-            cell: (item: APICall) => item.apiCallId
+            cell: (item: APICall) => item.apiCallId ?? ""
         },
         {
             id: "apiName",

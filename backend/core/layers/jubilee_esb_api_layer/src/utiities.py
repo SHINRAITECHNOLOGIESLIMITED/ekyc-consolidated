@@ -42,26 +42,26 @@ class JubileeESBUtilities:
             headers = {
                 "Content-Type": "application/json"
             }
-            logger.info(f"Attempting to retrieve JWT token for {login_data}")
+            # logger.info(f"Attempting to retrieve JWT token for {login_data}")
             response = requests.post(
-                f"{self.base_url}/auth/login",
+                f"{self.base_url}/api/auth/signin",
                 json=login_data,
                 headers=headers,
                 timeout=15
             )
-            logger.info(f"Authentication response: {response.status_code}")
             if response.status_code == HTTPStatus.OK:
-                logger.info(f"Authentication response: {response.json()}")
+                logger.info(f"Authentication response: {response.status_code}")
             else:
                 logger.info(f"Authentication response: {response.text}")
             response.raise_for_status()
 
             token_data = response.json()
-            if not token_data.get('token'):
-                raise JubileeESBError("No token received in authentication response")
-
+            if not token_data.get('tokenType'):
+                raise JubileeESBError("No tokenType received in authentication response")
+            if not token_data.get('accessToken'):
+                raise JubileeESBError("No accessToken received in authentication response")
             logger.info("Successfully retrieved ESB JWT token")
-            return token_data['token']
+            return f"{token_data['tokenType']} {token_data['accessToken']}"
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to retrieve JWT token: {str(e)}")
@@ -78,7 +78,7 @@ class JubileeESBUtilities:
                 logger.error("Failed to load ESB credentials: SecretString not found")
                 raise JubileeESBError("Failed to initialize ESB service: Secret value not found")
             secretString = jubilee_esb_response['SecretString']
-            logger.info(f"Successfully retrieved ESB credentials: {secretString}")
+            # logger.info(f"Successfully retrieved ESB credentials: {secretString}")
             credentials = json.loads(secretString)
             self.base_url = credentials['baseurl']
             self.business = credentials['business']
@@ -131,14 +131,6 @@ class JubileeESBUtilities:
         mutation CreateAPICall($input: CreateAPICallInput!) {
             createAPICall(input: $input) {
                 apiCallId
-                userId
-                apiName
-                apiMethod
-                requestIPAddress
-                requestHttpMethod
-                requestTimestamp
-                responseStatusCode
-                responseResult
             }
         }
         """
@@ -155,7 +147,6 @@ class JubileeESBUtilities:
         # Variables for the mutation
         variables = {
             "input": {
-                "userId": "",
                 "apiName": api_name,
                 "apiMethod": api_method,
                 "requestIPAddress": response.request.headers.get('X-Forwarded-For',
@@ -223,15 +214,17 @@ class JubileeESBUtilities:
                     f"{self.base_url}{url}",
                     json=data,
                     headers=headers,
-                    timeout=30
+                    timeout=10
                 )
             else:
                 response = requests.get(
                     f"{self.base_url}{url}",
                     headers=headers,
-                    timeout=30
+                    timeout=10
                 )
 
+            if response.status_code == 500:
+                logger.error(response.json())
             self._project_api_call_to_portal(response, api_name=service, api_method=api_method)
             response.raise_for_status()
 
