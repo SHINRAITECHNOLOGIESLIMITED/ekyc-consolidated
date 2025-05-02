@@ -18,7 +18,7 @@ JUBILEE_ESB_API_SECRET_ARN = os.getenv('JUBILEE_ESB_API_SECRET_ARN', None)
 assert JUBILEE_ESB_API_SECRET_ARN, "JUBILEE_ESB_API_SECRET_ARN environment variable is not set"
 PORTAL_GRAPHQL_SECRET_ARN = os.getenv('PORTAL_GRAPHQL_SECRET_ARN', None)
 assert PORTAL_GRAPHQL_SECRET_ARN, "PORTAL_GRAPHQL_SECRET_ARN environment variable is not set"
-
+JUBILEE_ESB_TOKEN_VALIDITY_MINS = 4.5
 
 class JubileeESBError(Exception):
     """Custom exception for ESB validation errors"""
@@ -91,6 +91,7 @@ class JubileeESBUtilities:
 
             # Retrieve JWT token through login
             self.authorization_jwt = self._retrieve_jwt_token(username, password)
+            self.authorization_jwt_time = int(time.time())
             logger.info("Successfully loaded Jubilee ESB credentials")
         except ClientError as e:
             if e.response['Error']['Code'] == 'AccessDeniedException':
@@ -168,7 +169,10 @@ class JubileeESBUtilities:
             'query': mutation,
             'variables': variables
         }
-
+        #re-authetincating every four and hald a minute. 
+        # JWT access tokens are valid for 5 mins only
+        if int(time.time()) - self.authorization_jwt_time > 60* JUBILEE_ESB_TOKEN_VALIDITY_MINS:
+            self._load_jubilee_esb_credentials()
         try:
             # Make the request to AppSync
             response = requests.post(
