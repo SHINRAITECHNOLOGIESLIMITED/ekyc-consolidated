@@ -34,7 +34,7 @@ def handler(event, context):
                 result = validator.iprs.search_birth_certificate_number(event)
 
             case "search_death_certificate_number":
-                result = validator.iprs.search_id_number(event)
+                result = validator.iprs.search_death_certificate_number(event)
 
             case "bulk_iprs_search":
                 result = validator.iprs.bulk_iprs_search(event["request_list"])

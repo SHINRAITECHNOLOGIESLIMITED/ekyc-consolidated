@@ -79,7 +79,7 @@ class IPRS:
                 "required": ["identifier", "value"]
             }
             validate(event=data, schema=schema)
-            return self.utilities._make_api_call(
+            return self.utilities.make_api_call(
                 "IPRS",
                 api_method="search_alien_id",
                 url=f"/iprs/searchUsingAlienId/{self.business}",
@@ -110,7 +110,7 @@ class IPRS:
                 "required": ["identifier", "value", "idNumber"]
             }
             validate(event=data, schema=schema)
-            return self.utilities._make_api_call(
+            return self.utilities.make_api_call(
                 "IPRS",
                 api_method="search_passport_number",
                 url=f"/iprs/searchUsingPassportNumber/{self.business}",
@@ -140,7 +140,7 @@ class IPRS:
                 "required": ["identifier", "value"]
             }
             validate(event=data, schema=schema)
-            return self.utilities._make_api_call(
+            return self.utilities.make_api_call(
                 "IPRS",
                 api_method="search_birth_certificate_number",
                 url=f"/iprs/searchUsingBirthCertificateNumber/{self.business}",
@@ -171,7 +171,7 @@ class IPRS:
             }
 
             validate(event=data, schema=schema)
-            return self.utilities._make_api_call(
+            return self.utilities.make_api_call(
                 "IPRS",
                 api_method="search_death_certificate_number",
                 url=f"/iprs/searchUsingDeathCertificateNumber/{self.business}",
