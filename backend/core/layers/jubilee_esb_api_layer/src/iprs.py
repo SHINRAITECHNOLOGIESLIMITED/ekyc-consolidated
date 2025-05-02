@@ -13,12 +13,13 @@ class IPRS:
 
     def __init__(self, utilities: JubileeESBUtilities):
         self.utilities = utilities
+        self.business = utilities.business
 
-    # IPRS Methods
+    # search Interface
     @tracer.capture_method
-    def search(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def iprs_search_generic(self, identifier: str, value: str) -> Dict:
         """
-        This interface searches for an individual in the system.
+        Generic IPRS searches for an individual in the system.(Sec 5-6)
         """
         try:
             schema = {
@@ -29,178 +30,204 @@ class IPRS:
                 },
                 "required": ["identifier", "value"]
             }
+            data = {"identifier": identifier, "value": value}
             validate(event=data, schema=schema)
 
             return self.utilities.make_api_call(
                 "IPRS",
-                api_method="search",
+                api_method="searchV2",
                 url=f"/iprs/searchV2/{self.business}",
-                data=data
+                data=data,
+                is_post=True
             )
+
         except Exception as e:
             logger.error(f"IPRS search failed: {str(e)}")
             raise JubileeESBError(f"IPRS search failed: {str(e)}")
 
+
+   # ping IPRS Interface
     @tracer.capture_method
-    def ping(self) -> Dict[str, Any]:
-        """Check IPRS service availability"""
+    def iprs_ping(self) -> Dict[str, Any]:
+        """Check IPRS service availability. (Sec 7-8) """
         try:
-            return self._make_api_call(
+            return self.utilities._make_api_call(
                 "IPRS",
-                f"{self.base_url}/ping",
-                {},
-                self.credentials
+                api_method="ping",
+                url=f"/iprs/pingIprs/{self.business}",
+                data={},
+                is_post=True
             )
+
         except Exception as e:
             logger.error(f"IPRS ping failed: {str(e)}")
             raise JubileeESBError(f"IPRS ping failed: {str(e)}")
 
-    @tracer.capture_method
-    def search_alien_id(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Search IPRS using Alien ID
 
-        Args:
-            data: Dictionary containing alien ID number
+   # search Alien ID Interface
+    @tracer.capture_method
+    def search_alien_id(self, identifier: str, value: str) -> Dict:
+        """
+        searches for an individual in the system based on the alien id.(Sec 9-10)
         """
         try:
             schema = {
                 "type": "object",
                 "properties": {
-                    "alien_id": {"type": "string"}
+                    "identifier": {"type": "string"},
+                    "value": {"type": "string"}
                 },
-                "required": ["alien_id"]
+
+                "required": ["identifier", "value"]
             }
+
+            data = {"identifier": identifier, "value": value}
             validate(event=data, schema=schema)
 
-            return self._make_api_call(
+            return self.utilities._make_api_call(
                 "IPRS",
-                f"{self.base_url}/search/alien",
-                data,
-                self.credentials
+                api_method="searchAlienId",
+                url=f"/iprs/searchUsingAlienId/{self.business}",
+                data=data,
+                is_post=True
             )
+
         except Exception as e:
             logger.error(f"IPRS alien ID search failed: {str(e)}")
             raise JubileeESBError(f"IPRS alien ID search failed: {str(e)}")
 
-    @tracer.capture_method
-    def search_passport(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Search IPRS using Passport Number
 
-        Args:
-            data: Dictionary containing passport number
+    # search Passport Number Interface
+    @tracer.capture_method
+    def search_passport_number(self, identifier: str, value: str, idNumber: str) -> Dict:
+        """
+        searches for an individual in the system based on the passport number.(Sec 10-12)
         """
         try:
             schema = {
                 "type": "object",
                 "properties": {
-                    "passport_number": {"type": "string"}
+                    "identifier": {"type": "string"},
+                    "value": {"type": "string"},
+                    "idNumber": {"type": "string"}
                 },
-                "required": ["passport_number"]
+
+                "required": ["identifier", "value", "idNumber"]
             }
+
+            data = {"identifier": identifier, "value": value, "idNumber": idNumber}
             validate(event=data, schema=schema)
 
-            return self._make_api_call(
+            return self.utilities._make_api_call(
                 "IPRS",
-                f"{self.base_url}/search/passport",
-                data,
-                self.credentials
+                api_method="searchPassportNumber",
+                url=f"/iprs/searchUsingPassportNumber/{self.business}",
+                data=data,
+                is_post=True
             )
+
         except Exception as e:
-            logger.error(f"IPRS passport search failed: {str(e)}")
-            raise JubileeESBError(f"IPRS passport search failed: {str(e)}")
+            logger.error(f"IPRS passport number search failed: {str(e)}")
+            raise JubileeESBError(f"IPRS passport number search failed: {str(e)}")
 
+
+    #  search Birth Certificate Number Interface
     @tracer.capture_method
-    def search_birth_certificate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def search_birth_certificate_number(self, identifier: str, value: str) -> Dict:
         """
-        Search IPRS using Birth Certificate Number
-
-        Args:
-            data: Dictionary containing birth certificate number
+        Search based on Birth Certificate (Sec 12-13)
         """
         try:
             schema = {
                 "type": "object",
                 "properties": {
-                    "birth_certificate_number": {"type": "string"}
+                    "identifier": {"type": "string"},
+                    "value": {"type": "string"}
                 },
-                "required": ["birth_certificate_number"]
+
+                "required": ["identifier", "value"]
             }
+
+            data = {"identifier": identifier, "value": value}
             validate(event=data, schema=schema)
 
-            return self._make_api_call(
+            return self.utilities._make_api_call(
                 "IPRS",
-                f"{self.base_url}/search/birth",
-                data,
-                self.credentials
+                api_method="searchBirthCertificateNumber",
+                url=f"/iprs/searchUsingBirthCertificateNumber/{self.business}",
+                data=data,
+                is_post=True
             )
+
         except Exception as e:
-            logger.error(f"IPRS birth certificate search failed: {str(e)}")
-            raise JubileeESBError(f"IPRS birth certificate search failed: {str(e)}")
+            logger.error(f"IPRS birth certificate number search failed: {str(e)}")
+            raise JubileeESBError(f"IPRS birth certificate number search failed: {str(e)}")
 
+
+    # search Death Certificate Number Interface
     @tracer.capture_method
-    def search_death_certificate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def search_death_certificate_number(self, identifier: str, value: str) -> Dict:
         """
-        Search IPRS using Death Certificate Number
-
-        Args:
-            data: Dictionary containing death certificate number
+        Search based on Death Certificate (Sec 13-15)
         """
         try:
             schema = {
                 "type": "object",
                 "properties": {
-                    "death_certificate_number": {"type": "string"}
+                    "identifier": {"type": "string"},
+                    "value": {"type": "string"}
                 },
-                "required": ["death_certificate_number"]
+
+                "required": ["identifier", "value"]
             }
+
+            data = {"identifier": identifier, "value": value}
             validate(event=data, schema=schema)
 
-            return self._make_api_call(
+            return self.utilities._make_api_call(
                 "IPRS",
-                f"{self.base_url}/search/death",
-                data,
-                self.credentials
+                api_method="searchDeathCertificateNumber",
+                url=f"/iprs/searchUsingDeathCertificateNumber/{self.business}",
+                data=data,
+                is_post=True
             )
+
         except Exception as e:
-            logger.error(f"IPRS death certificate search failed: {str(e)}")
-            raise JubileeESBError(f"IPRS death certificate search failed: {str(e)}")
+            logger.error(f"IPRS death certificate number search failed: {str(e)}")
+            raise JubileeESBError(f"IPRS death certificate number search failed: {str(e)}")
 
+
+    # Bulk IPRS search Interface
     @tracer.capture_method
-    def bulk_search(self, data: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
+    def bulk_iprs_search(self, id_numbers: List[str]) -> Dict:
         """
-        Perform bulk IPRS search
-
-        Args:
-            data: Dictionary containing list of search requests
+        Bulk IPRS search interface (Sec 5-6), searches for an individual in the system.
         """
         try:
             schema = {
-                "type": "object",
-                "properties": {
-                    "searches": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "id_number": {"type": "string"},
-                                "search_type": {"type": "string"}
-                            },
-                            "required": ["id_number"]
-                        }
-                    }
-                },
-                "required": ["searches"]
+                "type": "array",
+                "items" : {
+                    "type": "object",
+                    "properties": {
+                        "identifier": {"type": "string"},
+                        "value": {"type": "string"}
+                    },
+                    "required": ["identifier", "value"]
+                }
             }
+
+            data = [{"identifier": "ID_NUMBER", "value": id} for id in id_numbers]
             validate(event=data, schema=schema)
 
-            return self._make_api_call(
+            return self.utilities._make_api_call(
                 "IPRS",
-                f"{self.base_url}/search/bulk",
-                data,
-                self.credentials
+                api_method="bulk_search",
+                url=f"/iprs/bulk-search",
+                data=data,
+                is_post=True
             )
+
         except Exception as e:
-            logger.error(f"IPRS bulk search failed: {str(e)}")
-            raise JubileeESBError(f"IPRS bulk search failed: {str(e)}")
+            logger.error(f"IPRS search failed: {str(e)}")
+            raise JubileeESBError(f"IPRS search failed: {str(e)}")
+
