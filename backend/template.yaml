@@ -18,7 +18,7 @@ Globals:
   Function:
     Timeout: 300
     MemorySize: 128
-    Tracing: Disabled
+    Tracing: Active
     Runtime: python3.11
     Architectures:
       - x86_64
@@ -52,7 +52,7 @@ Resources:
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadDocumentFn.Arn}/invocations
               responses: {}
       EndpointConfiguration: REGIONAL
-      TracingEnabled: false
+      TracingEnabled: true
       Cors:
         MaxAge: 5
   JubileeESBAPISecret:
