@@ -31,7 +31,7 @@ def get_commit_message(system_prompt, git_diff_output):
         # First, read the file
         prompt = f'{system_prompt}"""{git_diff_output}"""'[:8000]
         # Then run gh models
-        result = subprocess.run(['gh', 'models', 'run', 'gpt-4.1'],
+        result = subprocess.run(['gh', 'models', 'run', 'mistral-ai/codestral-2501'],
                                 input=prompt,
                                 capture_output=True,
                                 text=True,
