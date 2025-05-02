@@ -3,7 +3,7 @@ import subprocess
 
 COMMIT_MESSAGE_PROMPT = """
 Analyze the following git diff and generate a commit message using Conventional Commit format.
-Be brief and concise, dont mention filename ,use bullets to separate changes. Commit title is mandatory"""
+Be brief and concise, dont mention filename ,use bullets to separate changes. Commit title is mandatory. Include one sentage after the changes outlining why the changes werer neccesary. Output commit message only"""
 
 def get_git_diff():
     try:
