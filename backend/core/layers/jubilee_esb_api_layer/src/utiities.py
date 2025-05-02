@@ -1,9 +1,10 @@
 import json
 import os
 import time
+import uuid
 from http import HTTPStatus
 from typing import Dict, Any
-
+from aws_xray_sdk.core import xray_recorder
 import boto3
 import requests
 from aws_lambda_powertools import Logger, Tracer
@@ -126,7 +127,8 @@ class JubileeESBUtilities:
                 logger.error(f"Failed to load Portal GraphQl credentials: {str(e)}")
                 raise JubileeESBError(f"Failed to load Portal GraphQl credentials: {str(e)}")
 
-    def _project_api_call_to_portal(self, response: Response, api_name: str, api_method: str):
+    def _project_api_call_to_portal(self, response: Response, api_name: str, api_method: str, duration_ms: int,
+                                    trace_id: str):
         mutation = """
         mutation CreateAPICall($input: CreateAPICallInput!) {
             createAPICall(input: $input) {
@@ -147,6 +149,9 @@ class JubileeESBUtilities:
         # Variables for the mutation
         variables = {
             "input": {
+                "apiCallId": str(uuid.uuid4()),
+                "durationMs": duration_ms,
+                "traceId": trace_id,
                 "apiName": api_name,
                 "apiMethod": api_method,
                 "requestIPAddress": response.request.headers.get('X-Forwarded-For',
@@ -205,27 +210,32 @@ class JubileeESBUtilities:
             :param :
         """
         try:
+            current_segment = xray_recorder.current_segment()
+            trace_id = current_segment.trace_id if current_segment else None
+
             headers = {
                 "Authorization": self.authorization_jwt,
                 "Content-Type": "application/json"
             }
+            start_time = time.time() * 1000
             if is_post:
                 response = requests.post(
                     f"{self.base_url}{url}",
                     json=data,
                     headers=headers,
-                    timeout=10
+                    timeout=60
                 )
             else:
                 response = requests.get(
                     f"{self.base_url}{url}",
                     headers=headers,
-                    timeout=10
+                    timeout=60
                 )
-
+            duration_ms = round(time.time() * 1000 - start_time)
             if response.status_code == 500:
                 logger.error(response.json())
-            self._project_api_call_to_portal(response, api_name=service, api_method=api_method)
+            self._project_api_call_to_portal(response, api_name=service, api_method=api_method, duration_ms=duration_ms,
+                                             trace_id=trace_id)
             response.raise_for_status()
 
             logger.info(f"Jubilee ESB: {service} API call successful")

@@ -20,7 +20,9 @@ const schema = a.schema({
         authorize.publicApiKey().to(['create', 'read', 'update', 'delete'])
     ]).identifier(['documentId']),
     APICall: a.model({
-        apiCallId: a.id(),
+        apiCallId: a.id().required(),
+        traceId: a.string().required(),
+        durationMs: a.integer().required(),
         apiName: a.string().required(),
         apiMethod: a.string().required(),
         requestIPAddress: a.string(),

@@ -8,9 +8,9 @@ import {formatTimeStamp} from "@/utils/formatters";
 const columnDefinitions =
     [
         {
-            id: "apiCallId",
-            header: "API Call ID",
-            cell: (item: APICall) => item.apiCallId ?? ""
+            id: "traceId",
+            header: "Trace ID",
+            cell: (item: APICall) => item.traceId
         },
         {
             id: "apiName",
@@ -21,11 +21,6 @@ const columnDefinitions =
             id: "apiMethod",
             header: "API Method",
             cell: (item: APICall) => item.apiMethod
-        },
-        {
-            id: "requestIPAddress",
-            header: "Source IP",
-            cell: (item: APICall) => item.requestIPAddress ?? ""
         },
         {
             id: "requestHttpMethod",
@@ -46,7 +41,12 @@ const columnDefinitions =
             id: "responseResult",
             header: "Status",
             cell: (item: APICall) => item.responseResult ?? ""
-        }
+        },
+        {
+            id: "durationMs",
+            header: "Duration (ms)",
+            cell: (item: APICall) => item.durationMs.toString()
+        },
     ];
 
 
@@ -55,7 +55,7 @@ const listingProps: ListingProps<APICall> = {
     getAll: fetchAPICalls,
     pageSize: 100,
     columnDefinitions,
-    itemKey: (item: APICall) => item.apiCallId ?? ""
+    itemKey: (item: APICall) => item.apiCallId
 };
 
 const DocumentsListing: React.FC = () => {
