@@ -55,7 +55,7 @@ const listingProps: ListingProps<APICall> = {
     getAll: fetchAPICalls,
     pageSize: 100,
     columnDefinitions,
-    itemKey: (item: APICall) => item.apiCallId
+    itemKey: (item: APICall) => item.apiCallId ?? ""
 };
 
 const DocumentsListing: React.FC = () => {
