@@ -17,7 +17,7 @@ class IPRS:
 
     # search Interface
     @tracer.capture_method
-    def iprs_search_generic(self, identifier: str, value: str) -> Dict:
+    def search_generic(self, data) -> Dict:
         """
         Generic IPRS searches for an individual in the system.(Sec 5-6)
         """
@@ -30,7 +30,6 @@ class IPRS:
                 },
                 "required": ["identifier", "value"]
             }
-            data = {"identifier": identifier, "value": value}
             validate(event=data, schema=schema)
 
             return self.utilities.make_api_call(
@@ -48,7 +47,7 @@ class IPRS:
 
    # ping IPRS Interface
     @tracer.capture_method
-    def iprs_ping(self) -> Dict[str, Any]:
+    def ping(self) -> Dict[str, Any]:
         """Check IPRS service availability. (Sec 7-8) """
         try:
             return self.utilities._make_api_call(

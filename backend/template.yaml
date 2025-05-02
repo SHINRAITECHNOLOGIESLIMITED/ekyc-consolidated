@@ -522,3 +522,8 @@ Outputs:
     Description: Tailing the KRA validate ID Logs
     Value: !Sub sam logs --profile shinrai.devpost --cw-log-group ${KRAValidateIDNumberFnLogGroup}
       --tail --filter "- platform - botocore"  | cut -d ' ' -f 3-
+
+  IPRSSearchFnLogGroup:
+    Description: Tailing the IPRS search Logs
+    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group ${IPRSSearchFnLogGroup}
+      --tail --filter "- platform - botocore"  | cut -d ' ' -f 3-

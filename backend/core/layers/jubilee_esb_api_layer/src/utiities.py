@@ -216,13 +216,13 @@ class JubileeESBUtilities:
                     f"{self.base_url}{url}",
                     json=data,
                     headers=headers,
-                    timeout=10
+                    timeout=60
                 )
             else:
                 response = requests.get(
                     f"{self.base_url}{url}",
                     headers=headers,
-                    timeout=10
+                    timeout=60
                 )
 
             if response.status_code == 500:
