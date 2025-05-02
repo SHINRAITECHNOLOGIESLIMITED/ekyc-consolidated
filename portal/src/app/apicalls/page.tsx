@@ -10,7 +10,7 @@ const columnDefinitions =
         {
             id: "apiCallId",
             header: "API Call ID",
-            cell: (item: APICall) => item.apiCallId ?? ""
+            cell: (item: APICall) => item.apiCallId
         },
         {
             id: "apiName",
@@ -55,7 +55,7 @@ const listingProps: ListingProps<APICall> = {
     getAll: fetchAPICalls,
     pageSize: 100,
     columnDefinitions,
-    itemKey: (item: APICall) => item.apiCallId ?? ""
+    itemKey: (item: APICall) => item.apiCallId
 };
 
 const DocumentsListing: React.FC = () => {

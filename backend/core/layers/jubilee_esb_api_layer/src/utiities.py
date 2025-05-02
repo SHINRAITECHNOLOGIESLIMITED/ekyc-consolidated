@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import uuid
 from http import HTTPStatus
 from typing import Dict, Any
 
@@ -147,6 +148,7 @@ class JubileeESBUtilities:
         # Variables for the mutation
         variables = {
             "input": {
+                "apiCallId": str(uuid.uuid4()),
                 "apiName": api_name,
                 "apiMethod": api_method,
                 "requestIPAddress": response.request.headers.get('X-Forwarded-For',
