@@ -14,7 +14,8 @@ validator = JubileeESBAPI()
 @tracer.capture_lambda_handler
 def handler(event, context):
     try:
-        data = dict(idNo=event["id_number"], country="Kenya")
+        logger.info(f"Received event: {event}")
+        data = dict(idNo=event["idNo"], country=event["country"])
         kra_result = validator.kra.validate_id(data)
         return {
             "statusCode": 200,

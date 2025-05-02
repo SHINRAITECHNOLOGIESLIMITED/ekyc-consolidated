@@ -1,4 +1,5 @@
 import json
+import os
 import time
 from http import HTTPStatus
 from typing import Dict, Any
@@ -11,6 +12,11 @@ from requests import Response
 
 logger = Logger()
 tracer = Tracer()
+
+JUBILEE_ESB_API_SECRET_ARN = os.getenv('JUBILEE_ESB_API_SECRET_ARN', None)
+assert JUBILEE_ESB_API_SECRET_ARN, "JUBILEE_ESB_API_SECRET_ARN environment variable is not set"
+PORTAL_GRAPHQL_SECRET_ARN = os.getenv('PORTAL_GRAPHQL_SECRET_ARN', None)
+assert PORTAL_GRAPHQL_SECRET_ARN, "PORTAL_GRAPHQL_SECRET_ARN environment variable is not set"
 
 
 class JubileeESBError(Exception):
@@ -36,21 +42,26 @@ class JubileeESBUtilities:
             headers = {
                 "Content-Type": "application/json"
             }
-
+            # logger.info(f"Attempting to retrieve JWT token for {login_data}")
             response = requests.post(
-                f"{self.base_url}/auth/login",
+                f"{self.base_url}/api/auth/signin",
                 json=login_data,
                 headers=headers,
-                timeout=30
+                timeout=15
             )
+            if response.status_code == HTTPStatus.OK:
+                logger.info(f"Authentication response: {response.status_code}")
+            else:
+                logger.info(f"Authentication response: {response.text}")
             response.raise_for_status()
 
             token_data = response.json()
-            if not token_data.get('token'):
-                raise JubileeESBError("No token received in authentication response")
-
-            logger.info("Successfully retrieved JWT token")
-            return token_data['token']
+            if not token_data.get('tokenType'):
+                raise JubileeESBError("No tokenType received in authentication response")
+            if not token_data.get('accessToken'):
+                raise JubileeESBError("No accessToken received in authentication response")
+            logger.info("Successfully retrieved ESB JWT token")
+            return f"{token_data['tokenType']} {token_data['accessToken']}"
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to retrieve JWT token: {str(e)}")
@@ -59,71 +70,67 @@ class JubileeESBUtilities:
     def _load_jubilee_esb_credentials(self) -> None:
         """Load API credentials from AWS Secrets Manager"""
         try:
-            SECRET_ID = "JubileeESBAPISecret"
-            try:
-                base_url_response = self.secrets_client.get_secret_value(
-                    SecretId=SECRET_ID
-                )
-            except Exception as e:
-                logger.error(f"Failed to load ESB credentials: {str(e)}")
-                raise JubileeESBError("Failed to initialize ESB service")
-            if 'SecretString' not in base_url_response:
+            jubilee_esb_response = self.secrets_client.get_secret_value(
+                SecretId=JUBILEE_ESB_API_SECRET_ARN
+            )
+
+            if 'SecretString' not in jubilee_esb_response:
                 logger.error("Failed to load ESB credentials: SecretString not found")
-                raise JubileeESBError("Failed to initialize ESB service")
-
-            credentials = json.loads(base_url_response['SecretString'])
-            self.base_url = credentials['BaseUrl']
-            self.business = credentials['Business']
-
-            username = credentials['Username']
-            password = credentials['Pasword']
+                raise JubileeESBError("Failed to initialize ESB service: Secret value not found")
+            secretString = jubilee_esb_response['SecretString']
+            # logger.info(f"Successfully retrieved ESB credentials: {secretString}")
+            credentials = json.loads(secretString)
+            self.base_url = credentials['baseurl']
+            self.business = credentials['business']
+            username = credentials['username']
+            password = credentials['password']
 
             if not username or not password:
                 raise JubileeESBError("Missing username or password in credentials")
 
             # Retrieve JWT token through login
             self.authorization_jwt = self._retrieve_jwt_token(username, password)
+            logger.info("Successfully loaded Jubilee ESB credentials")
         except ClientError as e:
-            logger.error(f"Failed to load ESB credentials: {str(e)}")
-            raise JubileeESBError("Failed to initialize ESB service")
+            if e.response['Error']['Code'] == 'AccessDeniedException':
+                logger.error(f"Access denied to secret {JUBILEE_ESB_API_SECRET_ARN}: {str(e)}")
+                raise JubileeESBError(f"Failed to initialize ESB service: Access denied to secret")
+            elif e.response['Error']['Code'] == 'ResourceNotFoundException':
+                logger.error(f"Secret {JUBILEE_ESB_API_SECRET_ARN} not found: {str(e)}")
+                raise JubileeESBError(f"Failed to initialize ESB service: Secret not found")
+            else:
+                logger.error(f"Failed to load ESB credentials: {str(e)}")
+                raise JubileeESBError(f"Failed to initialize ESB service: {str(e)}")
 
     def _load_portal_credentials(self) -> None:
         """Load API credentials from AWS Secrets Manager"""
         try:
-            SECRET_ID = "portaldatacredentials"
-            try:
-                base_url_response = self.secrets_client.get_secret_value(
-                    SecretId=SECRET_ID
-                )
-            except Exception as e:
-                logger.error(f"Failed to load ESB credentials: {str(e)}")
-                raise JubileeESBError("Failed to initialize Portal connection")
-            if 'SecretString' not in base_url_response:
+            portal_credentials_response = self.secrets_client.get_secret_value(
+                SecretId=PORTAL_GRAPHQL_SECRET_ARN
+            )
+            if 'SecretString' not in portal_credentials_response:
                 logger.error("Failed to load Protal Connection credentials: SecretString not found")
                 raise JubileeESBError("Failed to initialize ESB service")
-
-            portal_credentials = json.loads(base_url_response['SecretString'])
+            portal_credentials = json.loads(portal_credentials_response['SecretString'])
             self.portal_graphql_url = portal_credentials['url']
             self.portal_graphql_api_key = portal_credentials['api_key']
-            self.portal_graphql_region = portal_credentials['aws_region']
-
+            logger.info("Successfully loaded Portal Connection credentials")
         except ClientError as e:
-            logger.error(f"Failed to load ESB credentials: {str(e)}")
-            raise JubileeESBError("Failed to initialize ESB service")
+            if e.response['Error']['Code'] == 'AccessDeniedException':
+                logger.error(f"Access denied to secret {PORTAL_GRAPHQL_SECRET_ARN}: {str(e)}")
+                raise JubileeESBError(f"Failed to initialize Portal GraphQl credentials: Access denied to secret")
+            elif e.response['Error']['Code'] == 'ResourceNotFoundException':
+                logger.error(f"Secret {PORTAL_GRAPHQL_SECRET_ARN} not found: {str(e)}")
+                raise JubileeESBError(f"Failed to load Portal GraphQl credentials: Secret not found")
+            else:
+                logger.error(f"Failed to load Portal GraphQl credentials: {str(e)}")
+                raise JubileeESBError(f"Failed to load Portal GraphQl credentials: {str(e)}")
 
     def _project_api_call_to_portal(self, response: Response, api_name: str, api_method: str):
         mutation = """
         mutation CreateAPICall($input: CreateAPICallInput!) {
             createAPICall(input: $input) {
                 apiCallId
-                userId
-                apiName
-                apiMethod
-                requestIPAddress
-                requestHttpMethod
-                requestTimestamp
-                responseStatusCode
-                responseResult
             }
         }
         """
@@ -140,7 +147,6 @@ class JubileeESBUtilities:
         # Variables for the mutation
         variables = {
             "input": {
-                "userId": "",
                 "apiName": api_name,
                 "apiMethod": api_method,
                 "requestIPAddress": response.request.headers.get('X-Forwarded-For',
@@ -208,15 +214,17 @@ class JubileeESBUtilities:
                     f"{self.base_url}{url}",
                     json=data,
                     headers=headers,
-                    timeout=30
+                    timeout=10
                 )
             else:
                 response = requests.get(
                     f"{self.base_url}{url}",
                     headers=headers,
-                    timeout=30
+                    timeout=10
                 )
 
+            if response.status_code == 500:
+                logger.error(response.json())
             self._project_api_call_to_portal(response, api_name=service, api_method=api_method)
             response.raise_for_status()
 

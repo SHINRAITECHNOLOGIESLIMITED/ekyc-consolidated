@@ -3,11 +3,22 @@ Transform: AWS::Serverless-2016-10-31
 Description: |
   Jubilee eKYC backend
 
+Parameters:
+  JubileeESBAPICredentials:
+    Type: String
+    Default: '{"username":"your-username","password":"your-password","business":"your-business","baseurl":"https://example.com"}'
+    NoEcho: true
+    Description: Jubilee ESB API Credentials in Secrets Manager
+  PortalGraphQLCredentials:
+    Type: String
+    Default: '{"api_key":"graphql-api-key","url":"https://example.com"}'
+    NoEcho: true
+    Description: Port app-sync graphql credentials
 Globals:
   Function:
-    Timeout: 5
+    Timeout: 120
     MemorySize: 128
-    Tracing: Active
+    Tracing: Disabled
     Runtime: python3.11
     Architectures:
       - x86_64
@@ -41,9 +52,23 @@ Resources:
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadDocumentFn.Arn}/invocations
               responses: {}
       EndpointConfiguration: REGIONAL
-      TracingEnabled: true
+      TracingEnabled: false
       Cors:
         MaxAge: 5
+  JubileeESBAPISecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${AWS::StackName}-jubilee-esb-api-credentials
+      Description: Jubilee ESB API Credentials
+      SecretString: !Ref JubileeESBAPICredentials
+
+  PortalGraphQLSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${AWS::StackName}-portal-graphql-credentials
+      Description: Portal GraphQL API Credentials
+      SecretString: !Ref PortalGraphQLCredentials
+
   UploadDocumentFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -133,7 +158,19 @@ Resources:
       Description: IPRS Identity Verification Process
       CodeUri: core/functions/iprs_search/src
       Handler: app.handler
-      Environment: {}
+      Environment:
+        Variables:
+          JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JubileeESBAPISecret
+                - !Ref PortalGraphQLSecret
+        - AWSLambdaBasicExecutionRole
       Layers:
         - !Ref JubileeESBAPILayer
   IPRSSearchFnLogGroup:
@@ -149,7 +186,19 @@ Resources:
       Description: KRA TAX compliace check
       CodeUri: core/functions/kra_validate_id_number/src
       Handler: app.handler
-      Environment: {}
+      Environment:
+        Variables:
+          JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JubileeESBAPISecret
+                - !Ref PortalGraphQLSecret
+        - AWSLambdaBasicExecutionRole
       Layers:
         - !Ref JubileeESBAPILayer
   KRAValidateIDNumberFnLogGroup:
@@ -165,7 +214,19 @@ Resources:
       Description: LexisNexis Background Checks
       CodeUri: core/functions/lexisnexis_search_record/src
       Handler: app.handler
-      Environment: {}
+      Environment:
+        Variables:
+          JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JubileeESBAPISecret
+                - !Ref PortalGraphQLSecret
+        - AWSLambdaBasicExecutionRole
       Layers:
         - !Ref JubileeESBAPILayer
   LexisNexisSearchRecordFnLogGroup:
@@ -443,3 +504,21 @@ Metadata:
         - LexisNexisSearchRecordFn
         - KRAValidateIDNumberFn
         - JubileeESBAPILayer
+    Group5:
+      Label: Secrets
+      Members:
+        - JubileeESBAPISecret
+        - PortalGraphQLSecret
+Outputs:
+  JubileeESBAPISecretARN:
+    Description: ARN of the Jubilee ESB API Secret
+    Value: !Ref JubileeESBAPISecret
+
+  PortalGraphQLSecretARN:
+    Description: ARN of the Portal GraphQL Secret
+    Value: !Ref PortalGraphQLSecret
+
+  KRAValidateIDNumberFnLogGroup:
+    Description: Tailing the KRA validate ID Logs
+    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group ${KRAValidateIDNumberFnLogGroup}
+      --tail --filter "- platform - botocore"  | cut -d ' ' -f 3-
