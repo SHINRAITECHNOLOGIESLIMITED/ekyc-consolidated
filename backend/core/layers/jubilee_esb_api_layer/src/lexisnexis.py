@@ -13,32 +13,38 @@ class LexisNexis:
 
     def __init__(self, utilities: JubileeESBUtilities):
         self.utilities = utilities
+        self.business = utilities.business
 
     # LexisNexis Methods
     @tracer.capture_method
-    def search_record(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def search_record(self, data) -> Dict:
         """
         Search LexisNexis records
-
-        Args:
-            data: Dictionary containing search parameters
         """
         try:
             schema = {
                 "type": "object",
                 "properties": {
-                    "reference_id": {"type": "string"},
-                    "search_parameters": {"type": "object"}
+                    "firstName": {"type": "string"},
+                    "middleName": {"type": "string"},
+                    "lastName": {"type": "string"},
+                    "gender": {"type": "string"},
+                    "dob": {"type": "string"},
+                    "nationalIdentificationNumber": {"type": "string"},
+                    "countryCode": {"type": "string"},
+                    "entityType": {"type": "string"},
+                    "sourceName": {"type": "string"},
                 },
-                "required": ["reference_id", "search_parameters"]
+                "required": ["firstName", "lastName", "gender", "dob", "countryCode", "entityType", "sourceName"]
             }
             validate(event=data, schema=schema)
 
             return self.utilities.make_api_call(
-                service="LexisNexis",
-                api_method="search",
-                url=f"{self.lexisnexis_base_url}/search",
-                data=data
+                "LexisNexis",
+                api_method="lexis_nexis",
+                url=f"/lexis/search/{self.business}",
+                data=data,
+                is_post=True
             )
         except Exception as e:
             logger.error(f"LexisNexis search failed: {str(e)}")

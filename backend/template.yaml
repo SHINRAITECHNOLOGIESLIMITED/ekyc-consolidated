@@ -16,9 +16,9 @@ Parameters:
     Description: Port app-sync graphql credentials
 Globals:
   Function:
-    Timeout: 120
+    Timeout: 300
     MemorySize: 128
-    Tracing: Disabled
+    Tracing: Active
     Runtime: python3.11
     Architectures:
       - x86_64
@@ -52,7 +52,7 @@ Resources:
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadDocumentFn.Arn}/invocations
               responses: {}
       EndpointConfiguration: REGIONAL
-      TracingEnabled: false
+      TracingEnabled: true
       Cors:
         MaxAge: 5
   JubileeESBAPISecret:
@@ -61,14 +61,12 @@ Resources:
       Name: !Sub ${AWS::StackName}-jubilee-esb-api-credentials
       Description: Jubilee ESB API Credentials
       SecretString: !Ref JubileeESBAPICredentials
-
   PortalGraphQLSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
       Name: !Sub ${AWS::StackName}-portal-graphql-credentials
       Description: Portal GraphQL API Credentials
       SecretString: !Ref PortalGraphQLCredentials
-
   UploadDocumentFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -152,11 +150,11 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${FaceLivenessFn}
       RetentionInDays: 30
-  IPRSSearchFn:
+  JubileeESBCallFn:
     Type: AWS::Serverless::Function
     Properties:
-      Description: IPRS Identity Verification Process
-      CodeUri: core/functions/iprs_search/src
+      Description: Jubilee ESB IPRS,LexisNexis and KRA verification
+      CodeUri: core/functions/jubilee_esb_call/src
       Handler: app.handler
       Environment:
         Variables:
@@ -173,68 +171,12 @@ Resources:
         - AWSLambdaBasicExecutionRole
       Layers:
         - !Ref JubileeESBAPILayer
-  IPRSSearchFnLogGroup:
+  JubileeESBCallFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${IPRSSearchFn}
-      RetentionInDays: 30
-  KRAValidateIDNumberFn:
-    Type: AWS::Serverless::Function
-    Properties:
-      Description: KRA TAX compliace check
-      CodeUri: core/functions/kra_validate_id_number/src
-      Handler: app.handler
-      Environment:
-        Variables:
-          JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
-          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource:
-                - !Ref JubileeESBAPISecret
-                - !Ref PortalGraphQLSecret
-        - AWSLambdaBasicExecutionRole
-      Layers:
-        - !Ref JubileeESBAPILayer
-  KRAValidateIDNumberFnLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${KRAValidateIDNumberFn}
-      RetentionInDays: 30
-  LexisNexisSearchRecordFn:
-    Type: AWS::Serverless::Function
-    Properties:
-      Description: LexisNexis Background Checks
-      CodeUri: core/functions/lexisnexis_search_record/src
-      Handler: app.handler
-      Environment:
-        Variables:
-          JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
-          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource:
-                - !Ref JubileeESBAPISecret
-                - !Ref PortalGraphQLSecret
-        - AWSLambdaBasicExecutionRole
-      Layers:
-        - !Ref JubileeESBAPILayer
-  LexisNexisSearchRecordFnLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${LexisNexisSearchRecordFn}
+      LogGroupName: !Sub /aws/lambda/${JubileeESBCallFn}
       RetentionInDays: 30
   DocumentTextract:
     Type: AWS::Serverless::Function
@@ -413,10 +355,9 @@ Resources:
       Type: STANDARD
       DefinitionSubstitutions:
         DocumentExtractArn: !GetAtt DocumentExtract.Arn
-        KRATaxComplianceVerificationArn: !Ref KRAValidateIDNumberFn
-        IPRSIdentityVerificationArn: !Ref IPRSSearchFn
-        LexisNexisBackgroundChecksArn: !Ref LexisNexisSearchRecordFn
-
+        KRATaxComplianceVerificationArn: !Ref AWS::NoValue
+        IPRSIdentityVerificationArn: !Ref JubileeESBCallFn
+        LexisNexisBackgroundChecksArn: !Ref AWS::NoValue
   NewDocumentRegistrationLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -500,9 +441,7 @@ Metadata:
     Group4:
       Label: 'Layer3b: KYC Validation'
       Members:
-        - IPRSSearchFn
-        - LexisNexisSearchRecordFn
-        - KRAValidateIDNumberFn
+        - JubileeESBCallFn
         - JubileeESBAPILayer
     Group5:
       Label: Secrets
@@ -518,12 +457,8 @@ Outputs:
     Description: ARN of the Portal GraphQL Secret
     Value: !Ref PortalGraphQLSecret
 
-  KRAValidateIDNumberFnLogGroup:
-    Description: Tailing the KRA validate ID Logs
-    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group ${KRAValidateIDNumberFnLogGroup}
-      --tail --filter "- platform - botocore"  | cut -d ' ' -f 3-
-
-  IPRSSearchFnLogGroup:
+  JubileeESBCallFnLogGroup:
     Description: Tailing the IPRS search Logs
-    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group ${IPRSSearchFnLogGroup}
-      --tail --filter "- platform - botocore"  | cut -d ' ' -f 3-
+    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
+      ${JubileeESBCallFnLogGroup} --tail --filter "- platform - botocore"  | cut -d
+      ' ' -f 3-

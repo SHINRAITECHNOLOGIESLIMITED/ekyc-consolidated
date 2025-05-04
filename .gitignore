@@ -77,8 +77,5 @@ nosetests.xml
 pytest_cache/
 htmlcov/
 
-#automactions
-auto_commit.py
-
 #word documents background files
 .~docx

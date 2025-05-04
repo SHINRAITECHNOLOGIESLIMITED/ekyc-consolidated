@@ -18,6 +18,7 @@ JUBILEE_ESB_API_SECRET_ARN = os.getenv('JUBILEE_ESB_API_SECRET_ARN', None)
 assert JUBILEE_ESB_API_SECRET_ARN, "JUBILEE_ESB_API_SECRET_ARN environment variable is not set"
 PORTAL_GRAPHQL_SECRET_ARN = os.getenv('PORTAL_GRAPHQL_SECRET_ARN', None)
 assert PORTAL_GRAPHQL_SECRET_ARN, "PORTAL_GRAPHQL_SECRET_ARN environment variable is not set"
+JUBILEE_ESB_TOKEN_VALIDITY_MINS = 4.5
 
 
 class JubileeESBError(Exception):
@@ -30,8 +31,9 @@ class JubileeESBUtilities:
     def __init__(self):
         """Initialize Jubilee ESB API with AWS Secrets Manager configuration"""
         self.secrets_client = boto3.client('secretsmanager')
+        self._load_portal_credentials() #portal credentials are loded first and esb depends on them
         self._load_jubilee_esb_credentials()
-        self._load_portal_credentials()
+
 
     def _retrieve_jwt_token(self, username: str, password: str) -> str:
         try:
@@ -44,6 +46,7 @@ class JubileeESBUtilities:
                 "Content-Type": "application/json"
             }
             # logger.info(f"Attempting to retrieve JWT token for {login_data}")
+            start_time = time.time() * 1000
             response = requests.post(
                 f"{self.base_url}/api/auth/signin",
                 json=login_data,
@@ -54,6 +57,12 @@ class JubileeESBUtilities:
                 logger.info(f"Authentication response: {response.status_code}")
             else:
                 logger.info(f"Authentication response: {response.text}")
+            duration_ms = round(time.time() * 1000 - start_time)
+            current_segment = xray_recorder.current_segment()
+            trace_id = current_segment.trace_id if current_segment else ""
+            self._project_api_call_to_portal(response, api_name="EBS", api_method="auth/signin",
+                                             duration_ms=duration_ms,
+                                             trace_id=trace_id)
             response.raise_for_status()
 
             token_data = response.json()
@@ -91,6 +100,7 @@ class JubileeESBUtilities:
 
             # Retrieve JWT token through login
             self.authorization_jwt = self._retrieve_jwt_token(username, password)
+            self.authorization_jwt_time = int(time.time())
             logger.info("Successfully loaded Jubilee ESB credentials")
         except ClientError as e:
             if e.response['Error']['Code'] == 'AccessDeniedException':
@@ -168,7 +178,6 @@ class JubileeESBUtilities:
             'query': mutation,
             'variables': variables
         }
-
         try:
             # Make the request to AppSync
             response = requests.post(
@@ -217,19 +226,23 @@ class JubileeESBUtilities:
                 "Authorization": self.authorization_jwt,
                 "Content-Type": "application/json"
             }
+            # re-authetincating every four and hald a minute.
+            # JWT access tokens are valid for 5 mins only
+            if int(time.time()) - self.authorization_jwt_time > 60 * JUBILEE_ESB_TOKEN_VALIDITY_MINS:
+                self._load_jubilee_esb_credentials()
             start_time = time.time() * 1000
             if is_post:
                 response = requests.post(
                     f"{self.base_url}{url}",
                     json=data,
                     headers=headers,
-                    timeout=60
+                    timeout=240
                 )
             else:
                 response = requests.get(
                     f"{self.base_url}{url}",
                     headers=headers,
-                    timeout=60
+                    timeout=240
                 )
             duration_ms = round(time.time() * 1000 - start_time)
             if response.status_code == 500:
