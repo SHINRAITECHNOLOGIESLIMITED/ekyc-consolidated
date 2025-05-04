@@ -5,3 +5,8 @@ export interface CognitoUser {
     userStatus: string;
     userCreateDate: string;
 }
+export interface DashboardMetrics {
+    kycDocuments: number;
+    apiCalls: number;
+    faceLivenessCount: number;
+}

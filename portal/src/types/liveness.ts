@@ -21,3 +21,7 @@ export interface LivenessResponse {
   isLive: boolean;
   message: string;
 }
+
+export interface DocumentResponse {
+  message:string
+}

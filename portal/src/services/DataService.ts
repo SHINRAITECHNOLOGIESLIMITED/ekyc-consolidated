@@ -1,7 +1,7 @@
 import type {Schema} from "@/../amplify/data/resource";
 import type {APICall, KYCDocument, LivenessSession} from '@/types/models';
 import {generateClient} from 'aws-amplify/api';
-import {CognitoUser} from "@/types/interfaces";
+import {CognitoUser, DashboardMetrics} from "@/types/interfaces";
 import {CognitoIdentityProviderClient, ListUsersCommand} from '@aws-sdk/client-cognito-identity-provider';
 import {fetchAuthSession} from 'aws-amplify/auth';
 import amplifyConfig from '@/../amplify_outputs.json' assert {type: 'json'};
@@ -76,7 +76,13 @@ export const fetchAPICall = async (apiCallId: string): Promise<APICall | null> =
     });
     return response.data;
 };
-
+export const fetchMetrics = async (): Promise<DashboardMetrics> => {
+    return {
+        kycDocuments: client.models.KYCDocument.list.length,
+        apiCalls: client.models.APICall.list.length,
+        faceLivenessCount: client.models.LivenessSession.list.length
+    }
+};
 const listUsers = async (limit = 20, paginationToken?: string): Promise<{
     users: CognitoUser[],
     nextToken?: string

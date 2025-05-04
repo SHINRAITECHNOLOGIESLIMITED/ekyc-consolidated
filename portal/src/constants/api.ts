@@ -9,6 +9,7 @@ export const API_CONFIG = {
     API_HEADERS: API_HEADERS,
     API_ENDPOINTS: {
         CREATE_SESSION: `${API_BASE_URL}/faceliveness`,
-        GET_RESULTS: `${API_BASE_URL}/faceliveness`
+        GET_RESULTS: `${API_BASE_URL}/faceliveness`,
+        UPLOAD_DOCUMENT: `${API_BASE_URL}/uploaddocument`,
     }
 };

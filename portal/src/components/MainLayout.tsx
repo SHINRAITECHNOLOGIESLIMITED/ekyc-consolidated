@@ -59,8 +59,7 @@ const Navigation = () => {
                 {
                     type: 'link',
                     text: 'Dashboard',
-                    href: '/',
-                    info: <Badge color="red" size="small">WIP</Badge>
+                    href: '/'
                 },
                 {type: "divider"},
                 // KYC Operations Section
@@ -78,8 +77,7 @@ const Navigation = () => {
                         {
                             type: 'link',
                             text: 'Upload new KYC Document',
-                            href: '/uploadkycdocument',
-                            info: <Badge color="red" size="small">WIP</Badge>
+                            href: '/uploadkycdocument'
                         }
                     ]
                 },
