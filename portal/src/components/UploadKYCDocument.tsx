@@ -110,7 +110,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                     .join('');
                 return {
                     file,
-                    key: `${hashHex}.${fileExtension}`,
+                    key: `${documentTypeValue}-${hashHex}.${fileExtension}`,
                     metadata: {
                         documentType: documentTypeValue,
                         customerId: customerId,
@@ -125,7 +125,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
         if (!documentType) return '';
         try {
             const identityId = user.userId;
-            return `private/${identityId}/${customerId}/${documentType.value}/`;
+            return `${identityId}/${customerId}/`;
         } catch (error) {
             console.error('Error getting user identity:', error);
             return '';
