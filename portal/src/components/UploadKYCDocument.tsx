@@ -43,6 +43,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
     const [customerIdError, setCustomerIdError] = useState<string>('');
     const [documentType, setDocumentType] = useState<SelectProps.Option | null>(null);
     const [error, setError] = useState<string>('');
+    const [success, setSuccess] = useState<string>('');
     const {user} = useAuthenticator((context) => [context.user]);
 
     const validateCustomerId = (value: string): boolean => {
@@ -74,10 +75,15 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                 customerId: customerIdValue,
                 s3Path: await getUploadPath()
             });
+
+            setSuccess(`Document(${documentTypeValue}) uploaded successfully for customer ${customerId}`);
             setDocumentType(null);
             setError('');
+            setCustomerId('');
             onSuccess?.(event.key, documentTypeValue, customerId);
         } catch (err) {
+            setError('');
+            setSuccess('');
             if (err instanceof Error) {
                 setError(err.message);
                 onError?.(err);
@@ -125,7 +131,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
         if (!documentType) return '';
         try {
             const identityId = user.userId;
-            return `${identityId}/${customerId}/`;
+            return `kyc_documents/${identityId}/${customerId}/`;
         } catch (error) {
             console.error('Error getting user identity:', error);
             return '';
@@ -139,6 +145,11 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                 {error && (
                     <Alert type="error" dismissible onDismiss={() => setError('')}>
                         {error}
+                    </Alert>
+                )}
+                {error && (
+                    <Alert type="info" dismissible onDismiss={() => setSuccess('')}>
+                        success
                     </Alert>
                 )}
                 <FormField
