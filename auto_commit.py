@@ -2,8 +2,15 @@
 import subprocess
 
 COMMIT_MESSAGE_PROMPT = """
-Analyze the following git diff and generate a commit message using Conventional Commit format.
-Be brief and concise, dont mention filename ,use bullets to separate changes. Commit title is mandatory. Include one sentage after the changes outlining why the changes werer neccesary. Output commit message only"""
+Generate a Conventional Commit message for the provided git diff.
+
+Requirements:
+- Start with a concise commit title (mandatory).
+- Commit title should follow format: ```<type>[optional scope]: <description>```
+- Use bullet points to list the changes (do not mention filename extensions).
+- Follow the bullet points with a single sentence explaining the necessity of these changes.
+- Be brief and concise throughout.
+- Output only the commit message."""
 
 def get_git_diff():
     try:
