@@ -31,8 +31,9 @@ class JubileeESBUtilities:
     def __init__(self):
         """Initialize Jubilee ESB API with AWS Secrets Manager configuration"""
         self.secrets_client = boto3.client('secretsmanager')
+        self._load_portal_credentials() #portal credentials are loded first and esb depends on them
         self._load_jubilee_esb_credentials()
-        self._load_portal_credentials()
+
 
     def _retrieve_jwt_token(self, username: str, password: str) -> str:
         try:

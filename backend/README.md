@@ -44,7 +44,7 @@ The SAM CLI provides commands to build your serverless application. This step pr
     You can also build specific functions if needed:
 
     ```bash
-    sam build iprs_search updloaddocument
+    sam build jubilee_esb_call updloaddocument
     ```
 
 ## Local Testing with SAM Local
@@ -60,7 +60,7 @@ You can invoke your Lambda functions locally using the `sam local invoke` comman
 2.  **Invoke a specific Lambda function:**
 
     ```bash
-    sam local invoke IprsidentityverificationFunction -e core/functions/iprs_search/test/events/event.json
+    sam local invoke IprsidentityverificationFunction -e core/functions/jubilee_esb_call/test/events/event.json
     ```
 
     * Replace `IprsidentityverificationFunction` with the logical ID of the Lambda function defined in your `template.yaml`.
@@ -120,7 +120,7 @@ Each Lambda function has a dedicated `test` directory containing unit tests. It 
 To run the tests for a specific function, navigate to its `test` directory and execute your testing framework's command. For example, using `unittest`:
 
 ```bash
-cd core/functions/iprs_search/test
+cd core/functions/jubilee_esb_call/test
 python -m unittest discover .
 ```
 ## Deployment

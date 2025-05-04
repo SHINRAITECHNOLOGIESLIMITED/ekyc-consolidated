@@ -17,7 +17,7 @@ class LexisNexis:
 
     # LexisNexis Methods
     @tracer.capture_method
-    def lexis_nexis(self, data) -> Dict:
+    def search_record(self, data) -> Dict:
         """
         Search LexisNexis records
         """
