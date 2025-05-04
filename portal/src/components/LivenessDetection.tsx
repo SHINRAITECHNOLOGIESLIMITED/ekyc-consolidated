@@ -1,14 +1,7 @@
 "use client";
 
 import {useEffect, useState} from "react";
-import {
-    Container,
-    Header,
-    SpaceBetween,
-    StatusIndicator,
-    Alert,
-    Box
-} from "@cloudscape-design/components";
+import {Alert, Box, Container, Header, SpaceBetween, StatusIndicator} from "@cloudscape-design/components";
 import {FaceLivenessDetector} from "@aws-amplify/ui-react-liveness";
 
 
@@ -106,45 +99,44 @@ const LivenessDetection = () => {
     };
 
     return (
-        <Container>
-            <SpaceBetween size="l">
-                <Header
-                    variant="h1"
-                    description="Complete the liveness check to verify your identity"
+
+        <SpaceBetween size="l">
+            <Header
+                variant="h1"
+                description="Complete the liveness check to verify your identity"
+            >
+                Liveness Detection
+            </Header>
+
+            {error && (
+                <Alert
+                    type="error"
+                    header="Error"
+                    dismissible
+                    onDismiss={() => setError(null)}
                 >
-                    Liveness Detection
-                </Header>
+                    {error}
+                </Alert>
+            )}
 
-                {error && (
-                    <Alert
-                        type="error"
-                        header="Error"
-                        dismissible
-                        onDismiss={() => setError(null)}
-                    >
-                        {error}
-                    </Alert>
-                )}
+            {loading ? (
+                <LoadingSpinner message="Initializing liveness detection..."/>
+            ) : processing ? (
+                <LoadingSpinner message="Processing liveness check..."/>
+            ) : (
+                <SpaceBetween size="l">
+                    <Container>
+                        <FaceLivenessDetector
+                            sessionId={sessionId ?? ""}
+                            region={API_CONFIG.REGION}
+                            onAnalysisComplete={handleAnalysisComplete}
+                        />
+                    </Container>
 
-                {loading ? (
-                    <LoadingSpinner message="Initializing liveness detection..."/>
-                ) : processing ? (
-                    <LoadingSpinner message="Processing liveness check..."/>
-                ) : (
-                    <SpaceBetween size="l">
-                        <Container>
-                            <FaceLivenessDetector
-                                sessionId={sessionId ?? ""}
-                                region={API_CONFIG.REGION}
-                                onAnalysisComplete={handleAnalysisComplete}
-                            />
-                        </Container>
-
-                        {renderResult()}
-                    </SpaceBetween>
-                )}
-            </SpaceBetween>
-        </Container>
+                    {renderResult()}
+                </SpaceBetween>
+            )}
+        </SpaceBetween>
     );
 }
 
