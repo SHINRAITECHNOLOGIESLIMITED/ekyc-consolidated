@@ -6,7 +6,7 @@ Generate a Conventional Commit message for the provided git diff.
 
 Requirements:
 - Start with a concise commit title (mandatory).
-- Commit title should follow format: ```<type>[optional scope]: <description>```
+- Commit title should follow format: ```<type> : <description>```
 - Use bullet points to list the changes (do not mention filename extensions).
 - Follow the bullet points with a single sentence explaining the necessity of these changes.
 - Be brief and concise throughout.

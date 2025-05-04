@@ -13,6 +13,7 @@ import {
 import {FileUploader} from '@aws-amplify/ui-react-storage';
 import '@aws-amplify/ui-react/styles.css';
 import {documentApi} from "@/services/api";
+import {useAuthenticator} from "@aws-amplify/ui-react";
 
 interface UploadKYCDocumentProps {
     onSuccess?: (key: string, documentType: string, customerId: string) => void;
@@ -42,6 +43,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
     const [customerIdError, setCustomerIdError] = useState<string>('');
     const [documentType, setDocumentType] = useState<SelectProps.Option | null>(null);
     const [error, setError] = useState<string>('');
+    const {user} = useAuthenticator((context) => [context.user]);
 
     const validateCustomerId = (value: string): boolean => {
         if (!value || value.length < 5) {
@@ -70,7 +72,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
             await documentApi.uploadDocument({
                 documentType: documentTypeValue,
                 customerId: customerIdValue,
-                s3Path: getUploadPath()
+                s3Path: await getUploadPath()
             });
             setDocumentType(null);
             setError('');
@@ -85,6 +87,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
             }
         }
     };
+
     interface ProcessFileInput {
         file: File;
     }
@@ -94,7 +97,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
         key: string;
     }
 
-    const processFile = async ({ file }: ProcessFileInput): Promise<ProcessFileOutput> => {
+    const processFile = async ({file}: ProcessFileInput): Promise<ProcessFileOutput> => {
         const fileExtension = file.name.split('.').pop() || '';
         const documentTypeValue: string = documentType?.value ?? "";
         return file
@@ -105,9 +108,10 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                 const hashHex = hashArray
                     .map((a: number) => a.toString(16).padStart(2, '0'))
                     .join('');
-                return { file,
+                return {
+                    file,
                     key: `${hashHex}.${fileExtension}`,
-                    metadata:{
+                    metadata: {
                         documentType: documentTypeValue,
                         customerId: customerId,
                         uploadDate: new Date().toISOString()
@@ -119,9 +123,14 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
 
     const getUploadPath = () => {
         if (!documentType) return '';
-        return `${customerId}/${documentType.value}/`;
+        try {
+            const identityId = user.userId;
+            return `private/${identityId}/${customerId}/${documentType.value}/`;
+        } catch (error) {
+            console.error('Error getting user identity:', error);
+            return '';
+        }
     };
-
 
 
     return (
@@ -171,7 +180,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                 >
                     {documentType ? (
                         <FileUploader
-                            acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png','image/*']}
+                            acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png', 'image/*']}
                             accessLevel="private"
                             maxFileCount={1}
                             processFile={processFile}
