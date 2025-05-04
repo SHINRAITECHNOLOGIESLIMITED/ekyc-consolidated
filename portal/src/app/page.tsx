@@ -72,7 +72,7 @@ const Dashboard: React.FC = () => {
                     </Button>
                 }
             >
-                KYC Dashboard
+                eKYC Dashboard
             </Header>
 
             <Cards

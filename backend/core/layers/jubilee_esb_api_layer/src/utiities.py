@@ -62,7 +62,7 @@ class JubileeESBUtilities:
             trace_id = current_segment.trace_id if current_segment else ""
             self._project_api_call_to_portal(response, api_name="EBS", api_method="auth/signin",
                                              duration_ms=duration_ms,
-                                             trace_id=trace_id)
+                                             trace_id=trace_id,capture_data=False)
             response.raise_for_status()
 
             token_data = response.json()
@@ -138,7 +138,7 @@ class JubileeESBUtilities:
                 raise JubileeESBError(f"Failed to load Portal GraphQl credentials: {str(e)}")
 
     def _project_api_call_to_portal(self, response: Response, api_name: str, api_method: str, duration_ms: int,
-                                    trace_id: str):
+                                    trace_id: str,capture_data = False):
         mutation = """
         mutation CreateAPICall($input: CreateAPICallInput!) {
             createAPICall(input: $input) {
@@ -146,7 +146,12 @@ class JubileeESBUtilities:
             }
         }
         """
-
+        if capture_data:
+            request_data = response.request.body
+            response_data = response.text
+        else:
+            request_data = ''
+            response_data = ''
         # Request headers
         headers = {
             'Content-Type': 'application/json',
@@ -169,7 +174,9 @@ class JubileeESBUtilities:
                 "requestHttpMethod": response.request.method,
                 "requestTimestamp": int(time.time()),
                 "responseStatusCode": response.status_code,
-                "responseResult": responseResult
+                "responseResult": responseResult,
+                "requestData": request_data,
+                "responseData": response_data
             }
         }
 
