@@ -77,12 +77,20 @@ export const fetchAPICall = async (apiCallId: string): Promise<APICall | null> =
     return response.data;
 };
 export const fetchMetrics = async (): Promise<DashboardMetrics> => {
+    const [kycDocuments, apiCalls, faceLivenessCount] = await Promise.all([
+        fetchKYCDocuments(),
+        fetchAPICalls(),
+        fetchLivenessSessions()
+    ]);
+
     return {
-        kycDocuments: client.models.KYCDocument.list.length,
-        apiCalls: client.models.APICall.list.length,
-        faceLivenessCount: client.models.LivenessSession.list.length
-    }
+        kycDocuments: kycDocuments.length,
+        apiCalls: apiCalls.length,
+        faceLivenessCount: faceLivenessCount.length
+    };
 };
+
+
 const listUsers = async (limit = 20, paginationToken?: string): Promise<{
     users: CognitoUser[],
     nextToken?: string
