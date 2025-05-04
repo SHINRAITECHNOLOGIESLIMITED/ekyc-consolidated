@@ -1,7 +1,7 @@
 "use client"
 
 import React, {useEffect, useState} from 'react';
-import {Box, Cards, ColumnLayout, Header, SpaceBetween,} from '@cloudscape-design/components';
+import {Box, Button, Cards, ColumnLayout, Header, SpaceBetween,} from '@cloudscape-design/components';
 import {DashboardMetrics} from "@/types/interfaces";
 import {fetchMetrics} from "@/services/DataService";
 
@@ -13,7 +13,17 @@ const Dashboard: React.FC = () => {
         faceLivenessCount: 0,
     });
     const [loading, setLoading] = useState(true);
-
+    const handleRefresh = async () => {
+        setLoading(true);
+        try {
+            const data = await fetchMetrics();
+            setMetrics(data);
+        } catch (error) {
+            console.error('Failed to refresh metrics:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
     useEffect(() => {
         const loadMetrics = async () => {
             try {
@@ -52,6 +62,15 @@ const Dashboard: React.FC = () => {
             <Header
                 variant="h1"
                 description="Overview of KYC system performance and usage"
+                actions={
+                    <Button
+                        iconName="refresh"
+                        loading={loading}
+                        onClick={handleRefresh}
+                    >
+                        Refresh
+                    </Button>
+                }
             >
                 KYC Dashboard
             </Header>
