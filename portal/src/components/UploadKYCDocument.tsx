@@ -1,15 +1,7 @@
 "use client";
 
 import React, {useState} from 'react';
-import {
-    Container,
-    FormField,
-    Input,
-    SpaceBetween,
-    Alert,
-    Select,
-    SelectProps,
-} from '@cloudscape-design/components';
+import {Alert, Container, FormField, Input, Select, SelectProps, SpaceBetween,} from '@cloudscape-design/components';
 import {FileUploader} from '@aws-amplify/ui-react-storage';
 import '@aws-amplify/ui-react/styles.css';
 import {documentApi} from "@/services/api";
@@ -39,9 +31,9 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                                                                  onSuccess,
                                                                  onError
                                                              }) => {
+    const [documentType, setDocumentType] = useState<SelectProps.Option | null>(null);
     const [customerId, setCustomerId] = useState<string>('');
     const [customerIdError, setCustomerIdError] = useState<string>('');
-    const [documentType, setDocumentType] = useState<SelectProps.Option | null>(null);
     const [error, setError] = useState<string>('');
     const [success, setSuccess] = useState<string>('');
     const {user} = useAuthenticator((context) => [context.user]);
@@ -147,7 +139,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                         {error}
                     </Alert>
                 )}
-                {error && (
+                {success && (
                     <Alert type="info" dismissible onDismiss={() => setSuccess('')}>
                         success
                     </Alert>
