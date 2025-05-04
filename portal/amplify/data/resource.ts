@@ -30,6 +30,8 @@ const schema = a.schema({
         requestTimestamp: a.integer(),
         responseStatusCode: a.string(),
         responseResult: a.string(),
+        requestData: a.json(),
+        responseData: a.json()
     }).authorization(authorize => [
         authorize.authenticated().to(['read']),
         authorize.publicApiKey().to(['create', 'read', 'update', 'delete'])
