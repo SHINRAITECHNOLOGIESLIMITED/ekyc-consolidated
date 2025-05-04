@@ -58,9 +58,11 @@ class JubileeESBUtilities:
             else:
                 logger.info(f"Authentication response: {response.text}")
             duration_ms = round(time.time() * 1000 - start_time)
+            current_segment = xray_recorder.current_segment()
+            trace_id = current_segment.trace_id if current_segment else ""
             self._project_api_call_to_portal(response, api_name="EBS", api_method="auth/signin",
                                              duration_ms=duration_ms,
-                                             trace_id="")
+                                             trace_id=trace_id)
             response.raise_for_status()
 
             token_data = response.json()
