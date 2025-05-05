@@ -2,11 +2,15 @@
 import subprocess
 MODEL_NAME = "openai/gpt-4.1" #'mistral-ai/codestral-2501'
 COMMIT_MESSAGE_PROMPT = """
-Generate a Conventional Commit message for the provided git diff.
+Write a meaningful commit message in the conventional commit convention by trying to understand 
+what was the benefits the code author wanted to add by his changes to codebase with this commit. 
+I'll send you an output of 'git diff --staged' command, and you convert it into a commit message. 
 
 Requirements:
-- Start with a concise commit title (mandatory).
-- Commit title should follow format: ```<type> : <description>```
+- Lines must not be longer than 74 characters. 
+- Use EN language to answer. 
+- End commit title with issue number if you can get it from the branch name: {branch} in parenthesis. 
+- Try to use line breaks, only after a dot, to help making the commit message easier to read..
 - Use bullet points to list the changes (do not mention filename extensions).
 - Follow the bullet points with a single sentence explaining the necessity of these changes.
 - Be brief and concise throughout.
