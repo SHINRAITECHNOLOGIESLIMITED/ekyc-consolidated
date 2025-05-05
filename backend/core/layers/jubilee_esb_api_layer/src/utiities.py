@@ -31,9 +31,8 @@ class JubileeESBUtilities:
     def __init__(self):
         """Initialize Jubilee ESB API with AWS Secrets Manager configuration"""
         self.secrets_client = boto3.client('secretsmanager')
-        self._load_portal_credentials() #portal credentials are loded first and esb depends on them
+        self._load_portal_credentials()  # portal credentials are loded first and esb depends on them
         self._load_jubilee_esb_credentials()
-
 
     def _retrieve_jwt_token(self, username: str, password: str) -> str:
         try:
@@ -62,7 +61,7 @@ class JubileeESBUtilities:
             trace_id = current_segment.trace_id if current_segment else ""
             self._project_api_call_to_portal(response, api_name="EBS", api_method="auth/signin",
                                              duration_ms=duration_ms,
-                                             trace_id=trace_id,capture_data=False)
+                                             trace_id=trace_id, capture_data=False)
             response.raise_for_status()
 
             token_data = response.json()
@@ -138,7 +137,7 @@ class JubileeESBUtilities:
                 raise JubileeESBError(f"Failed to load Portal GraphQl credentials: {str(e)}")
 
     def _project_api_call_to_portal(self, response: Response, api_name: str, api_method: str, duration_ms: int,
-                                    trace_id: str,capture_data = False):
+                                    trace_id: str, capture_data=False):
         mutation = """
         mutation CreateAPICall($input: CreateAPICallInput!) {
             createAPICall(input: $input) {
@@ -147,11 +146,25 @@ class JubileeESBUtilities:
         }
         """
         if capture_data:
-            request_data = response.request.body
-            response_data = response.text
+            # Handle request data
+            try:
+                request_data = response.request.body
+                if isinstance(request_data, (str, bytes)):
+                    try:
+                        request_data = json.loads(request_data)
+                    except (json.JSONDecodeError, TypeError):
+                        request_data = {}
+            except AttributeError:
+                request_data = {}
+
+            # Handle response data
+            try:
+                response_data = response.json() if response.text else {}
+            except (json.JSONDecodeError, AttributeError):
+                response_data = {}
         else:
-            request_data = ''
-            response_data = ''
+            request_data = {}
+            response_data = {}
         # Request headers
         headers = {
             'Content-Type': 'application/json',
@@ -175,8 +188,8 @@ class JubileeESBUtilities:
                 "requestTimestamp": int(time.time()),
                 "responseStatusCode": response.status_code,
                 "responseResult": responseResult,
-                "requestData": request_data,
-                "responseData": response_data
+                "requestData": json.dumps(request_data,indent=4),
+                "responseData": json.dumps(response_data,indent=4)
             }
         }
 
@@ -255,7 +268,7 @@ class JubileeESBUtilities:
             if response.status_code == 500:
                 logger.error(response.json())
             self._project_api_call_to_portal(response, api_name=service, api_method=api_method, duration_ms=duration_ms,
-                                             trace_id=trace_id)
+                                             trace_id=trace_id, capture_data=True)
             response.raise_for_status()
 
             logger.info(f"Jubilee ESB: {service} API call successful")
