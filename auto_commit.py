@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import subprocess
-
+MODEL_NAME = "openai/gpt-4.1" #'mistral-ai/codestral-2501'
 COMMIT_MESSAGE_PROMPT = """
 Generate a Conventional Commit message for the provided git diff.
 
@@ -38,7 +38,7 @@ def get_commit_message(system_prompt, git_diff_output):
         # First, read the file
         prompt = f'{system_prompt}"""{git_diff_output}"""'[:8000]
         # Then run gh models
-        result = subprocess.run(['gh', 'models', 'run', 'mistral-ai/codestral-2501'],
+        result = subprocess.run(['gh', 'models', 'run', MODEL_NAME],
                                 input=prompt,
                                 capture_output=True,
                                 text=True,

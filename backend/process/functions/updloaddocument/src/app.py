@@ -1,4 +1,12 @@
 import json
+import os
+
+import boto3
+
+DOCUMENTTEXTRACT_FUNCTION_NAME = os.environ.get('DOCUMENTTEXTRACT_FUNCTION_NAME', None)
+assert DOCUMENTTEXTRACT_FUNCTION_NAME is not None, "DOCUMENTTEXTRACT_FUNCTION_NAME is not defined"
+
+lambda_client = boto3.client('lambda')
 
 
 def handler(event, context):
@@ -9,6 +17,13 @@ def handler(event, context):
         'Access-Control-Allow-Methods': 'POST,OPTIONS'
     }
     try:
+        payload = json.dumps(event["body"])
+        lambda_client.invoke(
+            FunctionName=DOCUMENTTEXTRACT_FUNCTION_NAME,
+            InvocationType='Event',
+            Payload=payload
+        )
+        # TODO: project to portal
         return {
             'statusCode': 200,
             'headers': headers,
