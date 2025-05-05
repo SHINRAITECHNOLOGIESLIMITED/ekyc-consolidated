@@ -1,11 +1,21 @@
 import {defineStorage} from '@aws-amplify/backend';
 
-export const eKycDocumentStorage = defineStorage({
+export const storage = defineStorage({
     name: 'kyc_documents',
     access: (allow) => ({
-        'kyc_documents/{entity_id}/*': [
-            allow.authenticated.to(['read', 'write']),
-            allow.entity('identity').to(['read', 'write'])
+        // Allow authenticated users full access to their own folder structure
+        'kyc_documents/${cognito-identity.amazonaws.com:sub}/*': [
+            allow.authenticated.to([
+                'read',
+                'write',
+            ])
+        ],
+        // Allow listing of the user's root folder
+        'kyc_documents/${cognito-identity.amazonaws.com:sub}': [
+            allow.authenticated.to([
+                'read'
+            ])
         ]
-    }), isDefault: true
+    }),
+    isDefault: true
 });
