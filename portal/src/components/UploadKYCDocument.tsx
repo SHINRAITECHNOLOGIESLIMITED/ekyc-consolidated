@@ -5,6 +5,7 @@ import {Alert, Container, FormField, Input, Select, SelectProps, SpaceBetween,} 
 import {FileUploader} from '@aws-amplify/ui-react-storage';
 import '@aws-amplify/ui-react/styles.css';
 import {documentApi} from "@/services/api";
+import {useAuthenticator} from "@aws-amplify/ui-react";
 
 interface UploadKYCDocumentProps {
     onSuccess?: (key: string, documentType: string, customerId: string) => void;
@@ -35,6 +36,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
     const [customerIdError, setCustomerIdError] = useState<string>('');
     const [error, setError] = useState<string>('');
     const [success, setSuccess] = useState<string>('');
+    const {user} = useAuthenticator((context) => [context.user]);
 
     const validateCustomerId = (value: string): boolean => {
         if (!value || value.length < 5) {
@@ -45,7 +47,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
         return true;
     };
 
-    const handleUploadSuccess = async (event: { key?: string }) => {
+    const handleUploadSuccess = async (event: { key?: string, bucket?: string, region?: string, url?: string }) => {
         if (!event.key) {
             throw new Error('Upload key is missing');
         }
@@ -63,9 +65,9 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
             await documentApi.uploadDocument({
                 documentType: documentTypeValue,
                 customerId: customerIdValue,
-                s3Path: `${event.key}`
+                s3Path: `${event.bucket}/protected/${user.userId}/${event.key}`
             });
-
+            console.log(`Document uploaded successfully: ${event.url}`);
             setSuccess(`Document(${documentTypeValue}) uploaded successfully for customer ${customerId}`);
             setDocumentType(null);
             setError('');
