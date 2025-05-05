@@ -492,3 +492,9 @@ Outputs:
     Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
       ${JubileeESBCallFnLogGroup} --tail --filter "- platform - botocore"  | cut
       -d ' ' -f 3-
+
+  FaceLivenessFnLogGroup:
+    Description: Tailing the Facelivess Logs
+    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
+      ${FaceLivenessFnLogGroup} --tail --filter "- platform - botocore"  | cut
+      -d ' ' -f 3-
