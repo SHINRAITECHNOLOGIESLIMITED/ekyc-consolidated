@@ -2,7 +2,7 @@ import json
 
 
 def handler(event, context):
-    print(event)
+    print(event["body"])
     headers = {
         'Access-Control-Allow-Origin': 'https://main.d2896e60a8d7f8.amplifyapp.com',
         'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
@@ -17,6 +17,6 @@ def handler(event, context):
     except Exception as e:
         return {
             'statusCode': 500,
-            'headers': headers,  # Important: Include CORS headers even in error responses
+            'headers': headers,
             'body': json.dumps({'error': str(e)})
         }
