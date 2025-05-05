@@ -31,11 +31,11 @@ Resources:
       Name: !Sub
         - ${ResourceName} From Stack ${AWS::StackName}
         - ResourceName: ApiGateway
-      Description: Application entry point
+      Description: Jubilee eKYC Application Gateway
       StageName: Prod
       DefinitionBody:
         openapi: '3.0'
-        info: {}
+        info: { }
         paths:
           /faceliveness:
             post:
@@ -43,18 +43,21 @@ Resources:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFn.Arn}/invocations
-              responses: {}
+              responses: { }
           /uploaddocument:
             post:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadDocumentFn.Arn}/invocations
-              responses: {}
+              responses: { }
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
       Cors:
-        MaxAge: 5
+        AllowMethods: '''POST,OPTIONS'''
+        AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+        AllowOrigin: '''https://main.d2896e60a8d7f8.amplifyapp.com'''
+        MaxAge: '''3600'''
   JubileeESBAPISecret:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -75,10 +78,10 @@ Resources:
       Handler: app.handler
       Environment:
         Variables:
-          DOCUMENTSUPLOAD_BUCKET_NAME: !Ref DocumentsUpload
-          DOCUMENTSUPLOAD_BUCKET_ARN: !GetAtt DocumentsUpload.Arn
           NEWDOCUMENTREGISTRATION_STATE_MACHINE_NAME: !GetAtt NewDocumentRegistration.Name
           NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN: !Ref NewDocumentRegistration
+          DOCUMENTTEXTRACT_FUNCTION_NAME: !Ref DocumentTextract
+          DOCUMENTTEXTRACT_FUNCTION_ARN: !GetAtt DocumentTextract.Arn
       Events:
         ApiGatewayPOSTuploaddocument:
           Type: Api
@@ -87,35 +90,11 @@ Resources:
             Method: POST
             RestApiId: !Ref ApiGateway
       Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-                - s3:GetObjectAcl
-                - s3:GetObjectLegalHold
-                - s3:GetObjectRetention
-                - s3:GetObjectTorrent
-                - s3:GetObjectVersion
-                - s3:GetObjectVersionAcl
-                - s3:GetObjectVersionForReplication
-                - s3:GetObjectVersionTorrent
-                - s3:ListBucket
-                - s3:ListBucketMultipartUploads
-                - s3:ListBucketVersions
-                - s3:ListMultipartUploadParts
-                - s3:AbortMultipartUpload
-                - s3:DeleteObject
-                - s3:DeleteObjectVersion
-                - s3:PutObject
-                - s3:PutObjectLegalHold
-                - s3:PutObjectRetention
-                - s3:RestoreObject
-              Resource:
-                - !Sub arn:${AWS::Partition}:s3:::${DocumentsUpload}
-                - !Sub arn:${AWS::Partition}:s3:::${DocumentsUpload}/*
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt NewDocumentRegistration.Name
-  UploadDocumentFunctionLn:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref DocumentTextract
+  UploadDocumentFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
@@ -184,7 +163,7 @@ Resources:
       Description: Extract of form fields from documents
       CodeUri: core/functions/document_textract/src
       Handler: app.handler
-      Environment: {}
+      Environment: { }
   DocumentTextractLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -204,35 +183,6 @@ Resources:
           KeyType: HASH
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
-  DocumentsUpload:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub ${AWS::StackName}-documents-${AWS::AccountId}
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: aws:kms
-              KMSMasterKeyID: alias/aws/s3
-      PublicAccessBlockConfiguration:
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-  DocumentsUploadBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref DocumentsUpload
-      PolicyDocument:
-        Id: RequireEncryptionInTransit
-        Version: '2012-10-17'
-        Statement:
-          - Principal: '*'
-            Action: '*'
-            Effect: Deny
-            Resource:
-              - !GetAtt DocumentsUpload.Arn
-              - !Sub ${DocumentsUpload.Arn}/*
-            Condition:
-              Bool:
-                aws:SecureTransport: 'false'
   NewDocumentRegistrationStateMachineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -355,9 +305,9 @@ Resources:
       Type: STANDARD
       DefinitionSubstitutions:
         DocumentExtractArn: !GetAtt DocumentExtract.Arn
-        KRATaxComplianceVerificationArn: !Ref AWS::NoValue
+        KRATaxComplianceVerificationArn: !GetAtt JubileeESBCallFn.Arn
         IPRSIdentityVerificationArn: !Ref JubileeESBCallFn
-        LexisNexisBackgroundChecksArn: !Ref AWS::NoValue
+        LexisNexisBackgroundChecksArn: !GetAtt JubileeESBCallFn.Arn
   NewDocumentRegistrationLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -432,7 +382,6 @@ Metadata:
         - FaceLivenessFn
         - UploadDocumentFn
         - NewDocumentRegistration
-        - DocumentsUpload
         - FaceLivenessResults
     Group3:
       Label: 'Layer3a: KYC Capture'
@@ -452,13 +401,16 @@ Outputs:
   JubileeESBAPISecretARN:
     Description: ARN of the Jubilee ESB API Secret
     Value: !Ref JubileeESBAPISecret
-
   PortalGraphQLSecretARN:
     Description: ARN of the Portal GraphQL Secret
     Value: !Ref PortalGraphQLSecret
-
-  JubileeESBCallFnLogGroup:
-    Description: Tailing the IPRS search Logs
+  UploadDocumentFnLogGroup:
+    Description: Tailing the Upload documents search Logs
     Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
-      ${JubileeESBCallFnLogGroup} --tail --filter "- platform - botocore"  | cut -d
-      ' ' -f 3-
+      ${UploadDocumentFnLogGroup} --tail --filter "- platform - botocore"  | cut
+      -d ' ' -f 3-
+  JubileeESBCallFnLogGroup:
+    Description: Tailing the Jubilee EBS Logs
+    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
+      ${JubileeESBCallFnLogGroup} --tail --filter "- platform - botocore"  | cut
+      -d ' ' -f 3-
