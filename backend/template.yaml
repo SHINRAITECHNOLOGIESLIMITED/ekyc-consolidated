@@ -38,12 +38,51 @@ Resources:
         info: { }
         paths:
           /faceliveness:
+            options:
+              summary: CORS support
+              description: Enable CORS by returning correct headers
+              responses:
+                '200':
+                  description: Default response for CORS method
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: string
+                    Access-Control-Allow-Methods:
+                      schema:
+                        type: string
+                    Access-Control-Allow-Headers:
+                      schema:
+                        type: string
+                  content: { }
+              x-amazon-apigateway-integration:
+                type: mock
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'https://main.d2896e60a8d7f8.amplifyapp.com'"
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
             post:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFn.Arn}/invocations
-              responses: { }
+              responses:
+                '200':
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: string
+                    Access-Control-Allow-Methods:
+                      schema:
+                        type: string
+                    Access-Control-Allow-Headers:
+                      schema:
+                        type: string
           /uploaddocument:
             options:
               summary: CORS support
@@ -119,8 +158,8 @@ Resources:
         Variables:
           NEWDOCUMENTREGISTRATION_STATE_MACHINE_NAME: !GetAtt NewDocumentRegistration.Name
           NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN: !Ref NewDocumentRegistration
-          DOCUMENTTEXTRACT_FUNCTION_NAME: !Ref DocumentTextract
-          DOCUMENTTEXTRACT_FUNCTION_ARN: !GetAtt DocumentTextract.Arn
+          DOCUMENTTEXTRACT_FUNCTION_NAME: !Ref DocumentTextractFn
+          DOCUMENTTEXTRACT_FUNCTION_ARN: !GetAtt DocumentTextractFn.Arn
       Events:
         ApiGatewayPOSTuploaddocument:
           Type: Api
@@ -132,7 +171,7 @@ Resources:
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt NewDocumentRegistration.Name
         - LambdaInvokePolicy:
-            FunctionName: !Ref DocumentTextract
+            FunctionName: !Ref DocumentTextractFn
   UploadDocumentFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -196,19 +235,19 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${JubileeESBCallFn}
       RetentionInDays: 30
-  DocumentTextract:
+  DocumentTextractFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: Extract of form fields from documents
       CodeUri: core/functions/document_textract/src
       Handler: app.handler
       Environment: { }
-  DocumentTextractLogGroup:
+  DocumentTextractFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${DocumentTextract}
+      LogGroupName: !Sub /aws/lambda/${DocumentTextractFn}
       RetentionInDays: 30
   FaceLivenessResults:
     Type: AWS::DynamoDB::Table
@@ -387,12 +426,12 @@ Resources:
                 - logs:DescribeLogGroups
               Resource: '*'
         - LambdaInvokePolicy:
-            FunctionName: !Ref DocumentTextract
+            FunctionName: !Ref DocumentTextractFn
       Tracing:
         Enabled: true
       Type: EXPRESS
       DefinitionSubstitutions:
-        LambdaFunction1: !GetAtt DocumentTextract.Arn
+        LambdaFunction1: !GetAtt DocumentTextractFn.Arn
   DocumentExtractLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -443,10 +482,10 @@ Outputs:
   PortalGraphQLSecretARN:
     Description: ARN of the Portal GraphQL Secret
     Value: !Ref PortalGraphQLSecret
-  UploadDocumentFnLogGroup:
-    Description: Tailing the Upload documents search Logs
+  DocumentTextractFnLogGroup:
+    Description: Tailing the documents textract Logs
     Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
-      ${UploadDocumentFnLogGroup} --tail --filter "- platform - botocore"  | cut
+      ${DocumentTextractFnLogGroup} --tail --filter "- platform - botocore"  | cut
       -d ' ' -f 3-
   JubileeESBCallFnLogGroup:
     Description: Tailing the Jubilee EBS Logs
