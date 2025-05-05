@@ -184,7 +184,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                     {documentType ? (
                         <FileUploader
                             acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png', 'image/*']}
-                            accessLevel="private"
+                            accessLevel="protected"
                             maxFileCount={1}
                             processFile={processFile}
                             path={getUploadPath()}
