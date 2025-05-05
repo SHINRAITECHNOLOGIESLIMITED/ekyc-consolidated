@@ -5,7 +5,6 @@ import {Alert, Container, FormField, Input, Select, SelectProps, SpaceBetween,} 
 import {FileUploader} from '@aws-amplify/ui-react-storage';
 import '@aws-amplify/ui-react/styles.css';
 import {documentApi} from "@/services/api";
-import {useAuthenticator} from "@aws-amplify/ui-react";
 
 interface UploadKYCDocumentProps {
     onSuccess?: (key: string, documentType: string, customerId: string) => void;
@@ -36,7 +35,6 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
     const [customerIdError, setCustomerIdError] = useState<string>('');
     const [error, setError] = useState<string>('');
     const [success, setSuccess] = useState<string>('');
-    const {user} = useAuthenticator((context) => [context.user]);
 
     const validateCustomerId = (value: string): boolean => {
         if (!value || value.length < 5) {
@@ -122,8 +120,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
     const getUploadPath = () => {
         if (!documentType) return '';
         try {
-            const identityId = user.userId;
-            return `kyc_documents/${identityId}/${customerId}/`;
+            return `${customerId}/`;
         } catch (error) {
             console.error('Error getting user identity:', error);
             return '';
