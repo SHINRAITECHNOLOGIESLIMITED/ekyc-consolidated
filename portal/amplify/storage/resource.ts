@@ -11,7 +11,7 @@ export const storage = defineStorage({
             ])
         ],
         // Allow listing of the user's root folder
-        'kyc_documents/${cognito-identity.amazonaws.com:sub}': [
+        'kyc_documents/*': [
             allow.authenticated.to([
                 'read'
             ])
