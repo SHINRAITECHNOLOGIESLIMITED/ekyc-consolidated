@@ -3,7 +3,11 @@ import {DocumentResponse, LivenessResponse, SessionResponse} from "@/types/liven
 import {API_CONFIG} from "@/constants/api";
 
 const headers = {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',  // Or specify exact origin like 'http://localhost:3000'
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    'Access-Control-Allow-Credentials': 'true'
 };
 
 export const livenessApi = {
