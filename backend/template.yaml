@@ -518,12 +518,6 @@ Metadata:
         - JubileeESBAPISecret
         - PortalGraphQLSecret
 Outputs:
-  JubileeESBAPISecretARN:
-    Description: ARN of the Jubilee ESB API Secret
-    Value: !Ref JubileeESBAPISecret
-  PortalGraphQLSecretARN:
-    Description: ARN of the Portal GraphQL Secret
-    Value: !Ref PortalGraphQLSecret
   DocumentTextractFnLogGroup:
     Description: Tailing the documents textract Logs
     Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
@@ -534,9 +528,13 @@ Outputs:
     Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
       ${JubileeESBCallFnLogGroup} --tail --filter "- platform - botocore"  | cut
       -d ' ' -f 3-
-
   FaceLivenessFnLogGroup:
     Description: Tailing the Facelivess Logs
     Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
       ${FaceLivenessFnLogGroup} --tail --filter "- platform - botocore"  | cut
+      -d ' ' -f 3-
+  UploadDocumentFnLogGroup:
+    Description: Tailing the upload document GW endpoint Logs
+    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
+      ${UploadDocumentFnLogGroup} --tail --filter "- platform - botocore"  | cut
       -d ' ' -f 3-

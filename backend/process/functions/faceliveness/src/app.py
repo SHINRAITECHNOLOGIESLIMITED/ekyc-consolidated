@@ -2,12 +2,14 @@ import json
 import os
 
 import boto3
+from aws_lambda_powertools import Logger, Tracer
 from botocore.exceptions import ClientError
 
 FACELIVENESSRESULTS_TABLE_NAME = os.getenv('FACELIVENESSRESULTS_TABLE_NAME', None)
 FACE_LIVENESS_CONFIDENCE_THRESHOLD = os.getenv('FACE_LIVENESS_CONFIDENCE_THRESHOLD',
                                                90)  # Adjust this threshold as needed
-
+logger = Logger()
+tracer = Tracer()
 rekognition_client = boto3.client('rekognition')
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(FACELIVENESSRESULTS_TABLE_NAME)
@@ -96,7 +98,8 @@ def get_face_liveness_results(event, context):
 
         # Determine if the liveness check passed based on confidence threshold
         is_live = confidence >= FACE_LIVENESS_CONFIDENCE_THRESHOLD if confidence is not None else False
-        print(f"Face liveness check completed for session: {session_id}, Confidence: {confidence}, Status: {status}, IsLive: {is_live}")
+        print(
+            f"Face liveness check completed for session: {session_id}, Confidence: {confidence}, Status: {status}, IsLive: {is_live}")
         return {
             'statusCode': 200,
             'body': json.dumps({
@@ -119,6 +122,8 @@ def get_face_liveness_results(event, context):
         }
 
 
+@logger.inject_lambda_context
+@tracer.capture_lambda_handler
 def handler(event, context):
     """
     Main handler that routes to appropriate function based on action
