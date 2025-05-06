@@ -96,22 +96,36 @@ def handler(event, context):
     s3Path = document_metadata["s3Path"]
     customerId = document_metadata["customerId"]
     newS3Path = f"{customerId}/{s3Path.split('/')[-1]}"
-    source_bucket = "amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq"
+    source_bucket_name = "amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq"
+
+    try:
+        # Check if object exists first
+        s3_client.head_object(
+            Bucket=source_bucket_name,
+            Key=s3Path
+        )
+    except s3_client.exceptions.ClientError as e:
+        error_code = e.response['Error']['Code']
+        if error_code == '404' or error_code == 'NoSuchKey':
+            logger.error(f"File {s3Path} does not exist in bucket {source_bucket_name}")
+            raise FileNotFoundError(f"File {s3Path} not found in source bucket")
+        else:
+            raise e
 
     try:
         # copy object from source url to destination bucket
-        logger.info(f"Copying document {s3Path} from {source_bucket} to {KYCDOCUMENTSBUCKET_NAME}")
+        logger.info(f"Copying document {s3Path} from {source_bucket_name} to {KYCDOCUMENTSBUCKET_NAME}")
         s3_client.copy_object(
             Bucket=KYCDOCUMENTSBUCKET_NAME,
             CopySource={
-                'Bucket': source_bucket,
+                'Bucket': source_bucket_name,
                 'Key': s3Path
             },
             Key=newS3Path
         )
         document_metadata["s3Path"] = newS3Path
         document_metadata["bucket"] = KYCDOCUMENTSBUCKET_NAME
-        logger.info(f"Document {newS3Path} copied from {source_bucket} to {KYCDOCUMENTSBUCKET_NAME}")
+        logger.info(f"Document {newS3Path} copied from {source_bucket_name} to {KYCDOCUMENTSBUCKET_NAME}")
         project_kyc_document_portal(customerId, document_metadata["documentType"], s3Path)
         lambda_client.invoke(
             FunctionName=DOCUMENTTEXTRACT_FUNCTION_NAME,
