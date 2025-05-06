@@ -160,6 +160,8 @@ Resources:
           NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN: !Ref NewDocumentRegistration
           DOCUMENTTEXTRACT_FUNCTION_NAME: !Ref DocumentTextractFn
           DOCUMENTTEXTRACT_FUNCTION_ARN: !GetAtt DocumentTextractFn.Arn
+          KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
+          KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
       Events:
         ApiGatewayPOSTuploaddocument:
           Type: Api
@@ -172,6 +174,32 @@ Resources:
             StateMachineName: !GetAtt NewDocumentRegistration.Name
         - LambdaInvokePolicy:
             FunctionName: !Ref DocumentTextractFn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:GetObjectAcl
+                - s3:GetObjectLegalHold
+                - s3:GetObjectRetention
+                - s3:GetObjectTorrent
+                - s3:GetObjectVersion
+                - s3:GetObjectVersionAcl
+                - s3:GetObjectVersionForReplication
+                - s3:GetObjectVersionTorrent
+                - s3:ListBucket
+                - s3:ListBucketMultipartUploads
+                - s3:ListBucketVersions
+                - s3:ListMultipartUploadParts
+                - s3:AbortMultipartUpload
+                - s3:DeleteObject
+                - s3:DeleteObjectVersion
+                - s3:PutObject
+                - s3:PutObjectLegalHold
+                - s3:PutObjectRetention
+                - s3:RestoreObject
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}
+                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
   UploadDocumentFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -241,9 +269,37 @@ Resources:
       Description: Extract of form fields from documents
       CodeUri: core/functions/document_textract/src
       Handler: app.handler
-      Environment: {}
-      Layers:
-        - !Ref TextractProcessingLayer
+      Environment:
+        Variables:
+          KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
+          KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:GetObjectAcl
+                - s3:GetObjectLegalHold
+                - s3:GetObjectRetention
+                - s3:GetObjectTorrent
+                - s3:GetObjectVersion
+                - s3:GetObjectVersionAcl
+                - s3:GetObjectVersionForReplication
+                - s3:GetObjectVersionTorrent
+                - s3:ListBucket
+                - s3:ListBucketMultipartUploads
+                - s3:ListBucketVersions
+                - s3:ListMultipartUploadParts
+                - s3:AbortMultipartUpload
+                - s3:DeleteObject
+                - s3:DeleteObjectVersion
+                - s3:PutObject
+                - s3:PutObjectLegalHold
+                - s3:PutObjectRetention
+                - s3:RestoreObject
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}
+                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
   DocumentTextractFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -384,7 +440,7 @@ Resources:
         Enabled: true
       Type: STANDARD
       DefinitionSubstitutions:
-        DocumentExtractArn: !GetAtt DocumentExtract.Arn
+        DocumentExtractArn: !Ref AWS::NoValue
         KRATaxComplianceVerificationArn: !GetAtt JubileeESBCallFn.Arn
         IPRSIdentityVerificationArn: !Ref JubileeESBCallFn
         LexisNexisBackgroundChecksArn: !GetAtt JubileeESBCallFn.Arn
@@ -394,52 +450,6 @@ Resources:
       LogGroupName: !Sub
         - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
         - ResourceId: NewDocumentRegistration
-  DocumentExtract:
-    Type: AWS::Serverless::StateMachine
-    Properties:
-      Definition:
-        StartAt: LambdaTask
-        States:
-          LambdaTask:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            Parameters:
-              Payload.$: $
-              FunctionName: ${LambdaFunction1}
-            End: true
-      Logging:
-        Level: ALL
-        IncludeExecutionData: true
-        Destinations:
-          - CloudWatchLogsLogGroup:
-              LogGroupArn: !GetAtt DocumentExtractLogGroup.Arn
-      Policies:
-        - AWSXrayWriteOnlyAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - logs:CreateLogDelivery
-                - logs:GetLogDelivery
-                - logs:UpdateLogDelivery
-                - logs:DeleteLogDelivery
-                - logs:ListLogDeliveries
-                - logs:PutResourcePolicy
-                - logs:DescribeResourcePolicies
-                - logs:DescribeLogGroups
-              Resource: '*'
-        - LambdaInvokePolicy:
-            FunctionName: !Ref DocumentTextractFn
-      Tracing:
-        Enabled: true
-      Type: EXPRESS
-      DefinitionSubstitutions:
-        LambdaFunction1: !GetAtt DocumentTextractFn.Arn
-  DocumentExtractLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub
-        - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
-        - ResourceId: DocumentExtract
   JubileeESBAPILayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -450,18 +460,35 @@ Resources:
       RetentionPolicy: Retain
     Metadata:
       BuildMethod: python3.11
-  TextractProcessingLayer:
-    Type: AWS::Serverless::LayerVersion
+  KYCDocumentsBucket:
+    Type: AWS::S3::Bucket
     Properties:
-      Description: !Sub
-        - Stack ${AWS::StackName} Layer ${ResourceName}
-        - ResourceName: TextractProcessingLayer
-      ContentUri: core/layers/textract_layer/src
-      RetentionPolicy: Retain
-      CompatibleRuntimes:
-        - python3.11
-    Metadata:
-      BuildMethod: python3.11
+      BucketName: !Sub ${AWS::StackName}-kycdocume-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+      PublicAccessBlockConfiguration:
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  KYCDocumentsBucketBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref KYCDocumentsBucket
+      PolicyDocument:
+        Id: RequireEncryptionInTransit
+        Version: '2012-10-17'
+        Statement:
+          - Principal: '*'
+            Action: '*'
+            Effect: Deny
+            Resource:
+              - !GetAtt KYCDocumentsBucket.Arn
+              - !Sub ${KYCDocumentsBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
 Metadata:
   AWS::Composer::Groups:
     Group:
@@ -475,15 +502,13 @@ Metadata:
         - UploadDocumentFn
         - NewDocumentRegistration
         - FaceLivenessResults
-    Group3:
-      Label: 'Layer3a: KYC Capture'
-      Members:
-        - DocumentExtract
+        - KYCDocumentsBucket
     Group4:
-      Label: 'Layer3b: KYC Validation'
+      Label: 'Layer3b: KYC Validation (Core)'
       Members:
         - JubileeESBCallFn
         - JubileeESBAPILayer
+        - DocumentTextractFn
     Group5:
       Label: Secrets
       Members:
