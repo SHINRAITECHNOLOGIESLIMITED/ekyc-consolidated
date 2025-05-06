@@ -3,19 +3,30 @@
 import Listing, {ListingProps} from '@/components/Listing';
 import {fetchKYCDocuments} from '@/services/DataService';
 import type {KYCDocument} from '@/types/models';
+import {formatDateTime} from "@/utils/formatters";
 
 const columnDefinitions =
     [
         {
-            id: "documentId",
-            header: "Document ID",
-            cell: (item: KYCDocument) => item.documentId
+            id: "customerId",
+            header: "Customer ID",
+            cell: (item: KYCDocument) => item.customerId
         },
         {
-            id: "userId",
-            header: "User Id",
-            cell: (item: KYCDocument) => item.userId
-        }
+            id: "documentType",
+            header: "Document Type",
+            cell: (item: KYCDocument) => item.documentType
+        },
+        {
+            id: "documentStatus",
+            header: "Status",
+            cell: (item: KYCDocument) => item.documentType
+        },
+        {
+            id: "updatedAt",
+            header: "Updated At",
+            cell: (item: KYCDocument) => formatDateTime(item.updatedAt)
+        },
     ];
 
 

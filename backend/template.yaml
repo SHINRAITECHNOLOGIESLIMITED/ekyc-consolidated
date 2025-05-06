@@ -162,6 +162,7 @@ Resources:
           DOCUMENTTEXTRACT_FUNCTION_ARN: !GetAtt DocumentTextractFn.Arn
           KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
           KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
       Events:
         ApiGatewayPOSTuploaddocument:
           Type: Api
@@ -200,6 +201,7 @@ Resources:
               Resource:
                 - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}
                 - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
+                - arn:aws:s3:::amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
   UploadDocumentFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -272,6 +274,7 @@ Resources:
       Environment:
         Variables:
           KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
           KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
       Policies:
         - Statement:

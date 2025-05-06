@@ -13,8 +13,13 @@ const schema = a.schema({
     ,
     KYCDocument: a.model({
         documentId: a.string().required(),
-        userId: a.string().required(),
-
+        customerId: a.string().required(),
+        documentType: a.string().required(),
+        documentStatus: a.string().required(),
+        s3Path: a.string().required(),
+        identifier: a.string().required(),
+        extractedData: a.json(),
+        verifiedData: a.json()
     }).authorization(authorize => [
         authorize.authenticated().to(['read']),
         authorize.publicApiKey().to(['create', 'read', 'update', 'delete'])
