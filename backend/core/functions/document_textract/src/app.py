@@ -161,6 +161,7 @@ def handler(event, context):
             'body': json.dumps(event)
         }
     except Exception as e:
+        logger.error(e)
         return {
             'statusCode': 500,
             'body': json.dumps({

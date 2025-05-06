@@ -39,7 +39,7 @@ def create_face_liveness_session(event, context):
                 'request_id': context.aws_request_id
             }
         )
-        print(f"Created face liveness session: {session_id}")
+        logger.info(f"Created face liveness session: {session_id}")
         return {
             'statusCode': 200,
             'body': json.dumps({
@@ -49,7 +49,7 @@ def create_face_liveness_session(event, context):
         }
 
     except ClientError as e:
-        print(f"Error creating face liveness session: {e}")
+        logger.error(f"Error creating face liveness session: {e}")
         return {
             'statusCode': 500,
             'body': json.dumps({
@@ -98,7 +98,7 @@ def get_face_liveness_results(event, context):
 
         # Determine if the liveness check passed based on confidence threshold
         is_live = confidence >= FACE_LIVENESS_CONFIDENCE_THRESHOLD if confidence is not None else False
-        print(
+        logger.info(
             f"Face liveness check completed for session: {session_id}, Confidence: {confidence}, Status: {status}, IsLive: {is_live}")
         return {
             'statusCode': 200,
@@ -112,7 +112,7 @@ def get_face_liveness_results(event, context):
         }
 
     except ClientError as e:
-        print(f"Error getting face liveness results: {e}")
+        logger.error(f"Error getting face liveness results: {e}")
         return {
             'statusCode': 500,
             'body': json.dumps({
@@ -128,7 +128,7 @@ def handler(event, context):
     """
     Main handler that routes to appropriate function based on action
     """
-    print(event["body"])
+    logger.info(event["body"])
     try:
         # ensure that environmental variables should have been loaded
         assert FACELIVENESSRESULTS_TABLE_NAME is not None, 'FACELIVENESSRESULTS_TABLE_NAME env variable is missing'
@@ -157,7 +157,7 @@ def handler(event, context):
         elif action == 'get_results':
             return get_face_liveness_results(event, context)
         else:
-            print("Invalid action specified")
+            logger.error("Invalid action specified")
             return {
                 'statusCode': 400,
                 'body': json.dumps({
@@ -166,7 +166,7 @@ def handler(event, context):
             }
 
     except Exception as e:
-        print(f"Error while handling: {e}")
+        logger.error(f"Error while handling: {e}")
         return {
             'statusCode': 500,
             'body': json.dumps({

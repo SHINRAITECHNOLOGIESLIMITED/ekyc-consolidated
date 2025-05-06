@@ -171,6 +171,14 @@ Resources:
             Method: POST
             RestApiId: !Ref ApiGateway
       Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JubileeESBAPISecret
+                - !Ref PortalGraphQLSecret
+        - AWSLambdaBasicExecutionRole
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt NewDocumentRegistration.Name
         - LambdaInvokePolicy:
@@ -277,6 +285,14 @@ Resources:
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
           KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
       Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JubileeESBAPISecret
+                - !Ref PortalGraphQLSecret
+        - AWSLambdaBasicExecutionRole
         - Statement:
             - Effect: Allow
               Action:

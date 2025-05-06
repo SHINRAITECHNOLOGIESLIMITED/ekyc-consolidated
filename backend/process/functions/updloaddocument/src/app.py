@@ -85,19 +85,22 @@ def project_kyc_document_portal(customer_id, document_type, document_url):
 
 
 def handler(event, context):
-    print(event["body"])
+
     headers = {
         'Access-Control-Allow-Origin': 'https://main.d2896e60a8d7f8.amplifyapp.com',
         'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
         'Access-Control-Allow-Methods': 'POST,OPTIONS'
     }
+    document_metadata = json.loads(event["body"])
+    logger.info(document_metadata)
+    s3Path = document_metadata["s3Path"]
+    customerId = document_metadata["customerId"]
+    newS3Path = f"{customerId}/{s3Path.split('/')[-1]}"
+    source_bucket = "amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq"
+
     try:
-        document_metadata = json.dumps(event["body"])
-        s3Path = document_metadata["s3Path"]
-        customerID = document_metadata["customerID"]
-        newS3Path = f"{customerID}/{s3Path.split('/')[-1]}"
-        source_bucket = document_metadata["bucket"]
         # copy object from source url to destination bucket
+        logger.info(f"Copying document {s3Path} from {source_bucket} to {KYCDOCUMENTSBUCKET_NAME}")
         s3_client.copy_object(
             Bucket=KYCDOCUMENTSBUCKET_NAME,
             CopySource={
@@ -108,8 +111,8 @@ def handler(event, context):
         )
         document_metadata["s3Path"] = newS3Path
         document_metadata["bucket"] = KYCDOCUMENTSBUCKET_NAME
-        print(f"Document {newS3Path} copied from {source_bucket} to {KYCDOCUMENTSBUCKET_NAME}")
-        project_kyc_document_portal(customerID, document_metadata["documentType"], s3Path)
+        logger.info(f"Document {newS3Path} copied from {source_bucket} to {KYCDOCUMENTSBUCKET_NAME}")
+        project_kyc_document_portal(customerId, document_metadata["documentType"], s3Path)
         lambda_client.invoke(
             FunctionName=DOCUMENTTEXTRACT_FUNCTION_NAME,
             InvocationType='Event',
@@ -121,6 +124,7 @@ def handler(event, context):
             'body': json.dumps({'message': 'Document uploaded successfully'})
         }
     except Exception as e:
+        logger.error(e)
         return {
             'statusCode': 500,
             'headers': headers,
