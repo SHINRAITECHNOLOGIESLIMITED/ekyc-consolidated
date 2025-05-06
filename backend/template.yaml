@@ -35,7 +35,7 @@ Resources:
       StageName: Prod
       DefinitionBody:
         openapi: '3.0'
-        info: { }
+        info: {}
         paths:
           /faceliveness:
             options:
@@ -54,16 +54,16 @@ Resources:
                     Access-Control-Allow-Headers:
                       schema:
                         type: string
-                  content: { }
+                  content: {}
               x-amazon-apigateway-integration:
                 type: mock
                 responses:
                   default:
                     statusCode: 200
                     responseParameters:
-                      method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
-                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-                      method.response.header.Access-Control-Allow-Origin: "'https://main.d2896e60a8d7f8.amplifyapp.com'"
+                      method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+                      method.response.header.Access-Control-Allow-Origin: '''https://main.d2896e60a8d7f8.amplifyapp.com'''
                 requestTemplates:
                   application/json: '{"statusCode": 200}'
             post:
@@ -100,16 +100,16 @@ Resources:
                     Access-Control-Allow-Headers:
                       schema:
                         type: string
-                  content: { }
+                  content: {}
               x-amazon-apigateway-integration:
                 type: mock
                 responses:
                   default:
                     statusCode: 200
                     responseParameters:
-                      method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
-                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-                      method.response.header.Access-Control-Allow-Origin: "'https://main.d2896e60a8d7f8.amplifyapp.com'"
+                      method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+                      method.response.header.Access-Control-Allow-Origin: '''https://main.d2896e60a8d7f8.amplifyapp.com'''
                 requestTemplates:
                   application/json: '{"statusCode": 200}'
             post:
@@ -241,7 +241,9 @@ Resources:
       Description: Extract of form fields from documents
       CodeUri: core/functions/document_textract/src
       Handler: app.handler
-      Environment: { }
+      Environment: {}
+      Layers:
+        - !Ref TextractProcessingLayer
   DocumentTextractFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -448,6 +450,18 @@ Resources:
       RetentionPolicy: Retain
     Metadata:
       BuildMethod: python3.11
+  TextractProcessingLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: !Sub
+        - Stack ${AWS::StackName} Layer ${ResourceName}
+        - ResourceName: TextractProcessingLayer
+      ContentUri: core/layers/textract_layer/src
+      RetentionPolicy: Retain
+      CompatibleRuntimes:
+        - python3.11
+    Metadata:
+      BuildMethod: python3.11
 Metadata:
   AWS::Composer::Groups:
     Group:
@@ -485,8 +499,8 @@ Outputs:
   DocumentTextractFnLogGroup:
     Description: Tailing the documents textract Logs
     Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
-      ${DocumentTextractFnLogGroup} --tail --filter "- platform - botocore"  | cut
-      -d ' ' -f 3-
+      ${DocumentTextractFnLogGroup} --tail --filter "- platform - botocore"  |
+      cut -d ' ' -f 3-
   JubileeESBCallFnLogGroup:
     Description: Tailing the Jubilee EBS Logs
     Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
