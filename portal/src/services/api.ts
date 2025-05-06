@@ -43,7 +43,12 @@ export const livenessApi = {
 
 
 export const documentApi = {
-    uploadDocument: async (documentDetails: { documentType: string; customerId: string; s3Path: string; }): Promise<DocumentResponse> => {
+    uploadDocument: async (documentDetails: {
+        customerId: string,
+        documentType: string,
+        s3Path: string,
+        bucket: string
+    }): Promise<DocumentResponse> => {
         const response = await fetch(API_CONFIG.API_ENDPOINTS.UPLOAD_DOCUMENT, {
             method: 'POST',
             headers,

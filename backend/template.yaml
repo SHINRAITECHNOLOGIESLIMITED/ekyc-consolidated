@@ -35,15 +35,54 @@ Resources:
       StageName: Prod
       DefinitionBody:
         openapi: '3.0'
-        info: { }
+        info: {}
         paths:
           /faceliveness:
+            options:
+              summary: CORS support
+              description: Enable CORS by returning correct headers
+              responses:
+                '200':
+                  description: Default response for CORS method
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: string
+                    Access-Control-Allow-Methods:
+                      schema:
+                        type: string
+                    Access-Control-Allow-Headers:
+                      schema:
+                        type: string
+                  content: {}
+              x-amazon-apigateway-integration:
+                type: mock
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+                      method.response.header.Access-Control-Allow-Origin: '''https://main.d2896e60a8d7f8.amplifyapp.com'''
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
             post:
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFn.Arn}/invocations
-              responses: { }
+              responses:
+                '200':
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: string
+                    Access-Control-Allow-Methods:
+                      schema:
+                        type: string
+                    Access-Control-Allow-Headers:
+                      schema:
+                        type: string
           /uploaddocument:
             options:
               summary: CORS support
@@ -61,16 +100,16 @@ Resources:
                     Access-Control-Allow-Headers:
                       schema:
                         type: string
-                  content: { }
+                  content: {}
               x-amazon-apigateway-integration:
                 type: mock
                 responses:
                   default:
                     statusCode: 200
                     responseParameters:
-                      method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
-                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-                      method.response.header.Access-Control-Allow-Origin: "'https://main.d2896e60a8d7f8.amplifyapp.com'"
+                      method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+                      method.response.header.Access-Control-Allow-Origin: '''https://main.d2896e60a8d7f8.amplifyapp.com'''
                 requestTemplates:
                   application/json: '{"statusCode": 200}'
             post:
@@ -119,8 +158,11 @@ Resources:
         Variables:
           NEWDOCUMENTREGISTRATION_STATE_MACHINE_NAME: !GetAtt NewDocumentRegistration.Name
           NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN: !Ref NewDocumentRegistration
-          DOCUMENTTEXTRACT_FUNCTION_NAME: !Ref DocumentTextract
-          DOCUMENTTEXTRACT_FUNCTION_ARN: !GetAtt DocumentTextract.Arn
+          DOCUMENTTEXTRACT_FUNCTION_NAME: !Ref DocumentTextractFn
+          DOCUMENTTEXTRACT_FUNCTION_ARN: !GetAtt DocumentTextractFn.Arn
+          KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
+          KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
       Events:
         ApiGatewayPOSTuploaddocument:
           Type: Api
@@ -132,7 +174,34 @@ Resources:
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt NewDocumentRegistration.Name
         - LambdaInvokePolicy:
-            FunctionName: !Ref DocumentTextract
+            FunctionName: !Ref DocumentTextractFn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:GetObjectAcl
+                - s3:GetObjectLegalHold
+                - s3:GetObjectRetention
+                - s3:GetObjectTorrent
+                - s3:GetObjectVersion
+                - s3:GetObjectVersionAcl
+                - s3:GetObjectVersionForReplication
+                - s3:GetObjectVersionTorrent
+                - s3:ListBucket
+                - s3:ListBucketMultipartUploads
+                - s3:ListBucketVersions
+                - s3:ListMultipartUploadParts
+                - s3:AbortMultipartUpload
+                - s3:DeleteObject
+                - s3:DeleteObjectVersion
+                - s3:PutObject
+                - s3:PutObjectLegalHold
+                - s3:PutObjectRetention
+                - s3:RestoreObject
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}
+                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
+                - arn:aws:s3:::amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
   UploadDocumentFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -196,19 +265,50 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${JubileeESBCallFn}
       RetentionInDays: 30
-  DocumentTextract:
+  DocumentTextractFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: Extract of form fields from documents
       CodeUri: core/functions/document_textract/src
       Handler: app.handler
-      Environment: { }
-  DocumentTextractLogGroup:
+      Environment:
+        Variables:
+          KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+          KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:GetObjectAcl
+                - s3:GetObjectLegalHold
+                - s3:GetObjectRetention
+                - s3:GetObjectTorrent
+                - s3:GetObjectVersion
+                - s3:GetObjectVersionAcl
+                - s3:GetObjectVersionForReplication
+                - s3:GetObjectVersionTorrent
+                - s3:ListBucket
+                - s3:ListBucketMultipartUploads
+                - s3:ListBucketVersions
+                - s3:ListMultipartUploadParts
+                - s3:AbortMultipartUpload
+                - s3:DeleteObject
+                - s3:DeleteObjectVersion
+                - s3:PutObject
+                - s3:PutObjectLegalHold
+                - s3:PutObjectRetention
+                - s3:RestoreObject
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}
+                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
+  DocumentTextractFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${DocumentTextract}
+      LogGroupName: !Sub /aws/lambda/${DocumentTextractFn}
       RetentionInDays: 30
   FaceLivenessResults:
     Type: AWS::DynamoDB::Table
@@ -343,7 +443,7 @@ Resources:
         Enabled: true
       Type: STANDARD
       DefinitionSubstitutions:
-        DocumentExtractArn: !GetAtt DocumentExtract.Arn
+        DocumentExtractArn: !Ref AWS::NoValue
         KRATaxComplianceVerificationArn: !GetAtt JubileeESBCallFn.Arn
         IPRSIdentityVerificationArn: !Ref JubileeESBCallFn
         LexisNexisBackgroundChecksArn: !GetAtt JubileeESBCallFn.Arn
@@ -353,52 +453,6 @@ Resources:
       LogGroupName: !Sub
         - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
         - ResourceId: NewDocumentRegistration
-  DocumentExtract:
-    Type: AWS::Serverless::StateMachine
-    Properties:
-      Definition:
-        StartAt: LambdaTask
-        States:
-          LambdaTask:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            Parameters:
-              Payload.$: $
-              FunctionName: ${LambdaFunction1}
-            End: true
-      Logging:
-        Level: ALL
-        IncludeExecutionData: true
-        Destinations:
-          - CloudWatchLogsLogGroup:
-              LogGroupArn: !GetAtt DocumentExtractLogGroup.Arn
-      Policies:
-        - AWSXrayWriteOnlyAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - logs:CreateLogDelivery
-                - logs:GetLogDelivery
-                - logs:UpdateLogDelivery
-                - logs:DeleteLogDelivery
-                - logs:ListLogDeliveries
-                - logs:PutResourcePolicy
-                - logs:DescribeResourcePolicies
-                - logs:DescribeLogGroups
-              Resource: '*'
-        - LambdaInvokePolicy:
-            FunctionName: !Ref DocumentTextract
-      Tracing:
-        Enabled: true
-      Type: EXPRESS
-      DefinitionSubstitutions:
-        LambdaFunction1: !GetAtt DocumentTextract.Arn
-  DocumentExtractLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub
-        - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
-        - ResourceId: DocumentExtract
   JubileeESBAPILayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -409,6 +463,35 @@ Resources:
       RetentionPolicy: Retain
     Metadata:
       BuildMethod: python3.11
+  KYCDocumentsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-kycdocume-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+      PublicAccessBlockConfiguration:
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  KYCDocumentsBucketBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref KYCDocumentsBucket
+      PolicyDocument:
+        Id: RequireEncryptionInTransit
+        Version: '2012-10-17'
+        Statement:
+          - Principal: '*'
+            Action: '*'
+            Effect: Deny
+            Resource:
+              - !GetAtt KYCDocumentsBucket.Arn
+              - !Sub ${KYCDocumentsBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
 Metadata:
   AWS::Composer::Groups:
     Group:
@@ -422,15 +505,13 @@ Metadata:
         - UploadDocumentFn
         - NewDocumentRegistration
         - FaceLivenessResults
-    Group3:
-      Label: 'Layer3a: KYC Capture'
-      Members:
-        - DocumentExtract
+        - KYCDocumentsBucket
     Group4:
-      Label: 'Layer3b: KYC Validation'
+      Label: 'Layer3b: KYC Validation (Core)'
       Members:
         - JubileeESBCallFn
         - JubileeESBAPILayer
+        - DocumentTextractFn
     Group5:
       Label: Secrets
       Members:
@@ -443,13 +524,19 @@ Outputs:
   PortalGraphQLSecretARN:
     Description: ARN of the Portal GraphQL Secret
     Value: !Ref PortalGraphQLSecret
-  UploadDocumentFnLogGroup:
-    Description: Tailing the Upload documents search Logs
+  DocumentTextractFnLogGroup:
+    Description: Tailing the documents textract Logs
     Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
-      ${UploadDocumentFnLogGroup} --tail --filter "- platform - botocore"  | cut
-      -d ' ' -f 3-
+      ${DocumentTextractFnLogGroup} --tail --filter "- platform - botocore"  |
+      cut -d ' ' -f 3-
   JubileeESBCallFnLogGroup:
     Description: Tailing the Jubilee EBS Logs
     Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
       ${JubileeESBCallFnLogGroup} --tail --filter "- platform - botocore"  | cut
+      -d ' ' -f 3-
+
+  FaceLivenessFnLogGroup:
+    Description: Tailing the Facelivess Logs
+    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
+      ${FaceLivenessFnLogGroup} --tail --filter "- platform - botocore"  | cut
       -d ' ' -f 3-
