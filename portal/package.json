@@ -1,6 +1,6 @@
 {
   "name": "Jubilee eKYC Portal",
-  "version": "0.0.26",
+  "version": "0.0.27",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
