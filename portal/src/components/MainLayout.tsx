@@ -70,9 +70,7 @@ const Navigation = () => {
                         {
                             type: 'link',
                             text: 'Capture new FaceLiveness',
-                            href: '/captureliveness',
-                            info: <Badge color="red" size="small">WIP</Badge>
-
+                            href: '/captureliveness'
                         },
                         {
                             type: 'link',
@@ -99,8 +97,8 @@ const Navigation = () => {
                         },
                         {
                             type: 'link',
-                            text: 'Verification History',
-                            href: '/documentverification',
+                            text: 'KYC Certificates',
+                            href: '/certificates',
                             info: <Badge color="red" size="small">WIP</Badge>
                         }
 
