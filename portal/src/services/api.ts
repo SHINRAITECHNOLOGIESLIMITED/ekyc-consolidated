@@ -46,8 +46,7 @@ export const documentApi = {
     uploadDocument: async (documentDetails: {
         customerId: string,
         documentType: string,
-        s3Path: string,
-        bucket: string
+        s3Path: string
     }): Promise<DocumentResponse> => {
         const response = await fetch(API_CONFIG.API_ENDPOINTS.UPLOAD_DOCUMENT, {
             method: 'POST',

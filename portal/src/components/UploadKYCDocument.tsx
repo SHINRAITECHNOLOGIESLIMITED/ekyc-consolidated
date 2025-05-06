@@ -65,8 +65,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
             await documentApi.uploadDocument({
                 documentType: documentTypeValue,
                 customerId: customerIdValue,
-                bucket: event.bucket ?? "",
-                s3Path: `${event.bucket}/protected/${user.userId}/${event.key}`
+                s3Path: `protected/${user.userId}/${event.key}`
             });
             console.log(`Document uploaded successfully: ${event.url}`);
             setSuccess(`Document(${documentTypeValue}) uploaded successfully for customer ${customerId}`);
