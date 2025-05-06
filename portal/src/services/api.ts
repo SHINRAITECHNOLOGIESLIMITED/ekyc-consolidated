@@ -4,9 +4,7 @@ import {API_CONFIG} from "@/constants/api";
 
 const headers = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+    'Access-Control-Allow-Origin': '*'
 };
 
 export const livenessApi = {
