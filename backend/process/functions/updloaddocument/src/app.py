@@ -31,7 +31,8 @@ _portal_credentials = json.loads(portal_credentials_response['SecretString'])
 PORTAL_GRAPHQL_URL = _portal_credentials['url']
 PORTAL_GRAPHQL_API_KEY = _portal_credentials['api_key']
 
-
+@logger.inject_lambda_context
+@tracer.capture_lambda_handler
 def project_kyc_document_portal(customer_id, document_type, document_url):
     mutation = """
         mutation CreateKYCDocument($input: CreateKYCDocumentInput!) {

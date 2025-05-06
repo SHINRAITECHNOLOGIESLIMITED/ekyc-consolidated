@@ -142,13 +142,14 @@ def find_value_block(key_block, value_map):
                 return value_block
     return None
 
-
+@logger.inject_lambda_context
+@tracer.capture_lambda_handler
 def handler(event, context):
     try:
         document_metadata = event
         customerID = document_metadata["customerID"]
-        s3Path = document_metadata.['s3Path']
-        document_type = document_metadata.['documentType']
+        s3Path = document_metadata['s3Path']
+        document_type = document_metadata['documentType']
         key_map, value_map, block_map = get_kv_map(s3Path)
         # append extracted key value pairs to event and pass all parameters along
         extractedData = get_kv_relationship(key_map, value_map, block_map)
