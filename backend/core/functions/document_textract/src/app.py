@@ -35,6 +35,7 @@ def get_kv_map(s3Path):
     duration_ms = round(time.time() * 1000 - start_time)
     portal.log_api_call(response, api_name="textract", api_method="analyze_document", duration_ms=duration_ms,
                         trace_id=trace_id, capture_data=True)
+
     # Get the text blocks
     blocks = response['Blocks']
 
@@ -97,10 +98,15 @@ def handler(event, context):
         customer_id = document_metadata["customerId"]
         s3Path = document_metadata['s3Path']
         document_type = document_metadata['documentType']
+
+        #textract
         key_map, value_map, block_map = get_kv_map(s3Path)
+
         # append extracted key value pairs to event and pass all parameters along
         extractedData = get_kv_relationship(key_map, value_map, block_map)
+
         event['extractedData'] = extractedData
+
         document_projection = {
             "documentId": f"{customer_id}-{document_type}",
             "customerId": customer_id,
@@ -110,6 +116,7 @@ def handler(event, context):
             "extractedData": json.dumps(extractedData)
         }
         portal.update_kyc_document(document_projection)
+
         logger.info(f"Extracted key value pairs")
         logger.info(event)
         return {

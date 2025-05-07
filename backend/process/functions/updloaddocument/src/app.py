@@ -4,8 +4,8 @@ import os
 import boto3
 from aws_lambda_powertools import Logger, Tracer
 from portal import Portal
-DOCUMENTTEXTRACT_FUNCTION_NAME = os.environ.get('DOCUMENTTEXTRACT_FUNCTION_NAME', None)
-assert DOCUMENTTEXTRACT_FUNCTION_NAME is not None, "DOCUMENTTEXTRACT_FUNCTION_NAME is not defined"
+NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN = os.environ.get('NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN', None)
+assert NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN is not None, "NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN is not defined"
 
 KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
 assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
@@ -13,7 +13,7 @@ assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
 logger = Logger()
 tracer = Tracer()
 
-lambda_client = boto3.client('lambda')
+sfn_client = boto3.client('stepfunctions')
 s3_client = boto3.client('s3')
 
 portal = Portal()
@@ -68,16 +68,15 @@ def handler(event, context):
             "s3Path": newS3Path
         }
         portal.update_kyc_document(document_projection)
-
-
-        # logger.info(f"Invoking Document Extractor Lambda @{DOCUMENTTEXTRACT_FUNCTION_NAME}")
-
-        lambda_client.invoke(
-            FunctionName=DOCUMENTTEXTRACT_FUNCTION_NAME,
-            InvocationType='Event',
-            Payload=json.dumps(document_metadata)
+        
+        #Start step function execution
+        response = sfn_client.start_execution(
+            stateMachineArn=NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN,
+            input=json.dumps(document_metadata)
         )
-        logger.info(f"Invoked {DOCUMENTTEXTRACT_FUNCTION_NAME} with payload {document_metadata}")
+        #log the sfn execution identifier
+        logger.info(f"Started SFN execution {response['executionArn']} with payload {document_metadata}")
+
         return {
             'statusCode': 200,
             'headers': headers,

@@ -157,8 +157,6 @@ Resources:
         Variables:
           NEWDOCUMENTREGISTRATION_STATE_MACHINE_NAME: !GetAtt NewDocumentRegistration.Name
           NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN: !Ref NewDocumentRegistration
-          DOCUMENTTEXTRACT_FUNCTION_NAME: !Ref DocumentTextractFn
-          DOCUMENTTEXTRACT_FUNCTION_ARN: !GetAtt DocumentTextractFn.Arn
           KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
           KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
@@ -179,8 +177,6 @@ Resources:
         - AWSLambdaBasicExecutionRole
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt NewDocumentRegistration.Name
-        - LambdaInvokePolicy:
-            FunctionName: !Ref DocumentTextractFn
         - Statement:
             - Effect: Allow
               Action:
@@ -215,6 +211,8 @@ Resources:
                 - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
                 - arn:aws:s3:::amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
                 - arn:aws:s3:::amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/*
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt NewDocumentRegistration.Name
       Layers:
         - !Ref PortalProjectionLayer
   UploadDocumentFnLogGroup:
@@ -402,18 +400,26 @@ Resources:
   NewDocumentRegistration:
     Type: AWS::Serverless::StateMachine
     Properties:
-      Role: !GetAtt NewDocumentRegistrationStateMachineRole.Arn
       Definition:
-        StartAt: DocumentExtraction
+        QueryLanguage: JSONata
+        StartAt: InvokeTextract
         States:
-          DocumentExtraction:
+          InvokeTextract:
             Type: Task
-            Resource: arn:aws:states:::states:startExecution.sync:2
+            Resource: arn:aws:states:::lambda:invoke
+            OutputPath: $.Payload"
             Parameters:
-              StateMachineArn: ${DocumentExtractArn}
-              Input:
-                StatePayload: Hello from Step Functions!
-                AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$: $$.Execution.Id
+              Payload.$: $
+              FunctionName: ${DocumentExtractArn}
+            Retry:
+              - ErrorEquals:
+                  - Lambda.ServiceException
+                  - Lambda.AWSLambdaException
+                  - Lambda.SdkClientException
+                  - Lambda.TooManyRequestsException
+                IntervalSeconds: 1
+                MaxAttempts: 3
+                BackoffRate: 2
             Next: SearchIPRS
           SearchIPRS:
             Type: Task
@@ -473,6 +479,15 @@ Resources:
                         MaxAttempts: 3
                         BackoffRate: 2
                     End: true
+            Next: PutItem
+          PutItem:
+            Type: Task
+            Resource: arn:aws:states:::dynamodb:putItem
+            Parameters:
+              TableName: MyDynamoDBTable
+              Item:
+                Column:
+                  S: MyEntry
             End: true
       Logging:
         Level: ALL
@@ -484,10 +499,15 @@ Resources:
         Enabled: true
       Type: STANDARD
       DefinitionSubstitutions:
-        DocumentExtractArn: !Ref AWS::NoValue
+        DocumentExtractArn: !GetAtt DocumentTextractFn.Arn
         KRATaxComplianceVerificationArn: !GetAtt JubileeESBCallFn.Arn
         IPRSIdentityVerificationArn: !Ref JubileeESBCallFn
         LexisNexisBackgroundChecksArn: !GetAtt JubileeESBCallFn.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref DocumentTextractFn
+        - LambdaInvokePolicy:
+            FunctionName: !Ref JubileeESBCallFn
   NewDocumentRegistrationLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -550,15 +570,14 @@ Metadata:
       Members:
         - FaceLivenessFn
         - UploadDocumentFn
-        - NewDocumentRegistration
         - FaceLivenessResults
         - KYCDocumentsBucket
+        - NewDocumentRegistration
     Group4:
       Label: 'Layer3b: KYC Validation (Core)'
       Members:
         - JubileeESBCallFn
         - JubileeESBAPILayer
-        - DocumentTextractFn
     Group5:
       Label: Secrets
       Members:

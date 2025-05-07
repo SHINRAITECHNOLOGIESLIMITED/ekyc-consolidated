@@ -23,7 +23,7 @@ class Portal:
 
     def _load_secrets(self):
         secrets_client = boto3.client('secretsmanager')
-
+        logger.info(f"Loading portal graphql credentials from {PORTAL_GRAPHQL_SECRET_ARN}")
         portal_credentials_response = secrets_client.get_secret_value(
             SecretId=PORTAL_GRAPHQL_SECRET_ARN
         )
