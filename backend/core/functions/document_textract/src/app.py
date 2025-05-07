@@ -147,7 +147,7 @@ def find_value_block(key_block, value_map):
 def handler(event, context):
     try:
         document_metadata = event
-        customerID = document_metadata["customerID"]
+        customerID = document_metadata["customerId"]
         s3Path = document_metadata['s3Path']
         document_type = document_metadata['documentType']
         key_map, value_map, block_map = get_kv_map(s3Path)

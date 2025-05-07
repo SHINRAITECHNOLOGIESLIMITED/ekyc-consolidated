@@ -31,36 +31,35 @@ _portal_credentials = json.loads(portal_credentials_response['SecretString'])
 PORTAL_GRAPHQL_URL = _portal_credentials['url']
 PORTAL_GRAPHQL_API_KEY = _portal_credentials['api_key']
 
-@logger.inject_lambda_context
-@tracer.capture_lambda_handler
 def project_kyc_document_portal(customer_id, document_type, document_url):
-    mutation = """
-        mutation CreateKYCDocument($input: CreateKYCDocumentInput!) {
-            createKYCDocument(input: $input) {
-                documentId
+    try:
+        mutation = """
+            mutation CreateKYCDocument($input: CreateKYCDocumentInput!) {
+                createKYCDocument(input: $input) {
+                    documentId
+                }
+            }
+        """
+        headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': PORTAL_GRAPHQL_API_KEY
+        }
+        variables = {
+            "input": {
+                "documentId": f"{customer_id}-{document_type}",
+                "customerId": customer_id,
+                "documentType": document_type,
+                "documentStatus": "UPLOADED",
+                "url": document_url
             }
         }
-    """
-    headers = {
-        'Content-Type': 'application/json',
-        'x-api-key': PORTAL_GRAPHQL_API_KEY
-    }
-    variables = {
-        "input": {
-            "documentId": f"{customer_id}-{document_type}",
-            "customerId": customer_id,
-            "documentType": document_type,
-            "documentStatus": "UPLOADED",
-            "url": document_url
-        }
-    }
 
-    # Prepare the request body
-    payload = {
-        'query': mutation,
-        'variables': variables
-    }
-    try:
+        # Prepare the request body
+        payload = {
+            'query': mutation,
+            'variables': variables
+        }
+    
         # Make the request to AppSync
         response = requests.post(
             PORTAL_GRAPHQL_URL,
@@ -74,13 +73,13 @@ def project_kyc_document_portal(customer_id, document_type, document_url):
             if 'errors' in result:
                 print(f"GraphQL Errors: {result['errors']}")
                 return None
-            return result['data']['createAPICall']
+            return result['data']['CreateKYCDocument']
         else:
             print(f"HTTP Error: {response.status_code}")
             return None
 
     except Exception as e:
-        print(f"Error making API call: {str(e)}")
+        print(f"Error making CreateKYCDocument call: {str(e)}")
         return None
 
 
@@ -91,9 +90,10 @@ def handler(event, context):
         'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
         'Access-Control-Allow-Methods': 'POST,OPTIONS'
     }
-    document_metadata = json.loads(event["body"])
+    document_metadata = event["body"]
     logger.info(document_metadata)
     s3Path = document_metadata["s3Path"]
+    document_type= document_metadata["documentType"]
     customerId = document_metadata["customerId"]
     newS3Path = f"{customerId}/{s3Path.split('/')[-1]}"
     source_bucket_name = "amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq"
@@ -126,12 +126,15 @@ def handler(event, context):
         document_metadata["s3Path"] = newS3Path
         document_metadata["bucket"] = KYCDOCUMENTSBUCKET_NAME
         logger.info(f"Document {newS3Path} copied from {source_bucket_name} to {KYCDOCUMENTSBUCKET_NAME}")
-        project_kyc_document_portal(customerId, document_metadata["documentType"], s3Path)
+        project_kyc_document_portal(customerId,document_type , s3Path)
+        # logger.info(f"Invoking Document Extractor Lambda @{DOCUMENTTEXTRACT_FUNCTION_NAME}")
+        
         lambda_client.invoke(
             FunctionName=DOCUMENTTEXTRACT_FUNCTION_NAME,
             InvocationType='Event',
-            Payload=document_metadata
+            Payload=json.dumps(document_metadata)
         )
+        logger.info(f"Invoked {DOCUMENTTEXTRACT_FUNCTION_NAME} with payload {document_metadata}")
         return {
             'statusCode': 200,
             'headers': headers,
