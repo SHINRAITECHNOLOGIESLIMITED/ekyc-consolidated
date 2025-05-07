@@ -206,7 +206,7 @@ function MainLayout2({
                             <TopNavigation
                                 identity={{
                                     href: "/",
-                                    title: `Jubilee eKYC Portal v${version}`,
+                                    title: `Jubilee eKYC Portal v${version.toString()}`,
                                     logo: {
                                         src: "/assets/logo.svg",
                                         alt: "Jubilee eKYC Portal"
