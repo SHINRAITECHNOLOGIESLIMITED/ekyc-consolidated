@@ -4,7 +4,7 @@ const API_HEADERS = {
 };
 
 export const API_CONFIG = {
-    PROJECT_VERSION: process.env.NEXT_PUBLIC_PROJECT_VERSION || '0.0.33',
+    PROJECT_VERSION: process.env.NEXT_PUBLIC_PROJECT_VERSION || '0.0.34',
     BASE_URL: API_BASE_URL,
     REGION: process.env.NEXT_PUBLIC_AWS_REGION || 'eu-west-1',
     API_HEADERS: API_HEADERS,
