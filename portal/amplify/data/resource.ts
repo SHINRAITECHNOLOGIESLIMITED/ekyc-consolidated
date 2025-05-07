@@ -17,7 +17,7 @@ const schema = a.schema({
         documentType: a.string().required(),
         documentStatus: a.string().required(),
         s3Path: a.string().required(),
-        identifier: a.string().required(),
+        identifier: a.string(),
         extractedData: a.json(),
         verifiedData: a.json()
     }).authorization(authorize => [

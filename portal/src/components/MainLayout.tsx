@@ -16,8 +16,7 @@ import {
 import AppLayout from "@cloudscape-design/components/app-layout";
 import {usePathname, useRouter} from 'next/navigation';
 import {useMemo, useState} from "react";
-import version from '@/../package.json';
-
+import {API_CONFIG} from "@/constants/api";
 
 const LoadingOverlay = () => (
     <div style={{
@@ -206,7 +205,7 @@ function MainLayout2({
                             <TopNavigation
                                 identity={{
                                     href: "/",
-                                    title: `Jubilee eKYC Portal v${version.toString()}`,
+                                    title: `Jubilee eKYC Portal v${API_CONFIG.PROJECT_VERSION}`,
                                     logo: {
                                         src: "/assets/logo.svg",
                                         alt: "Jubilee eKYC Portal"

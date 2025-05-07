@@ -30,6 +30,8 @@ if 'SecretString' not in portal_credentials_response:
 _portal_credentials = json.loads(portal_credentials_response['SecretString'])
 PORTAL_GRAPHQL_URL = _portal_credentials['url']
 PORTAL_GRAPHQL_API_KEY = _portal_credentials['api_key']
+logger.info(f"Loaded portal graphql credentials. GraphQL URL: {PORTAL_GRAPHQL_URL}")
+
 
 def project_kyc_document_portal(customer_id, document_type, document_url):
     try:
@@ -50,7 +52,7 @@ def project_kyc_document_portal(customer_id, document_type, document_url):
                 "customerId": customer_id,
                 "documentType": document_type,
                 "documentStatus": "UPLOADED",
-                "url": document_url
+                "s3Path": document_url
             }
         }
 
@@ -59,7 +61,7 @@ def project_kyc_document_portal(customer_id, document_type, document_url):
             'query': mutation,
             'variables': variables
         }
-    
+
         # Make the request to AppSync
         response = requests.post(
             PORTAL_GRAPHQL_URL,
@@ -84,7 +86,6 @@ def project_kyc_document_portal(customer_id, document_type, document_url):
 
 
 def handler(event, context):
-
     headers = {
         'Access-Control-Allow-Origin': 'https://main.d2896e60a8d7f8.amplifyapp.com',
         'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Api-Key,X-Amz-Security-Token',
@@ -93,7 +94,7 @@ def handler(event, context):
     document_metadata = event["body"]
     logger.info(document_metadata)
     s3Path = document_metadata["s3Path"]
-    document_type= document_metadata["documentType"]
+    document_type = document_metadata["documentType"]
     customerId = document_metadata["customerId"]
     newS3Path = f"{customerId}/{s3Path.split('/')[-1]}"
     source_bucket_name = "amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq"
@@ -126,9 +127,9 @@ def handler(event, context):
         document_metadata["s3Path"] = newS3Path
         document_metadata["bucket"] = KYCDOCUMENTSBUCKET_NAME
         logger.info(f"Document {newS3Path} copied from {source_bucket_name} to {KYCDOCUMENTSBUCKET_NAME}")
-        project_kyc_document_portal(customerId,document_type , s3Path)
+        project_kyc_document_portal(customerId, document_type, s3Path)
         # logger.info(f"Invoking Document Extractor Lambda @{DOCUMENTTEXTRACT_FUNCTION_NAME}")
-        
+
         lambda_client.invoke(
             FunctionName=DOCUMENTTEXTRACT_FUNCTION_NAME,
             InvocationType='Event',

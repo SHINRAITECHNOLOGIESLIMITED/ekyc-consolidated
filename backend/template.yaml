@@ -185,6 +185,12 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref PortalGraphQLSecret
+        - Statement:
+            - Effect: Allow
+              Action:
                 - s3:GetObject
                 - s3:GetObjectAcl
                 - s3:GetObjectLegalHold
@@ -290,7 +296,6 @@ Resources:
               Action:
                 - secretsmanager:GetSecretValue
               Resource:
-                - !Ref JubileeESBAPISecret
                 - !Ref PortalGraphQLSecret
         - AWSLambdaBasicExecutionRole
         - Statement:
