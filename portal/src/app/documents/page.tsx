@@ -40,7 +40,8 @@ const listingProps: ListingProps<KYCDocument> = {
     getAll: fetchKYCDocuments,
     pageSize: 100,
     columnDefinitions,
-    itemKey: (item: KYCDocument) => item.documentId.toString()
+    itemKey: (item: KYCDocument) => item.documentId.toString(),
+    itemDetailsLink: (item: KYCDocument) => `documents/${item.documentId}`
 };
 
 const DocumentsListing: React.FC = () => {
