@@ -29,9 +29,9 @@ if 'SecretString' not in portal_credentials_response:
 _portal_credentials = json.loads(portal_credentials_response['SecretString'])
 PORTAL_GRAPHQL_URL = _portal_credentials['url']
 PORTAL_GRAPHQL_API_KEY = _portal_credentials['api_key']
+logger.info(f"Loaded portal graphql credentials. GraphQL URL: {PORTAL_GRAPHQL_URL}")
 
-
-def project_kyc_document_portal(customer_id, document_type, document_url, status, extractedData=None):
+def project_kyc_document_portal(customer_id, document_type, s3Path, status, extractedData=None):
     mutation = """
         mutation CreateKYCDocument($input: CreateKYCDocumentInput!) {
             createKYCDocument(input: $input) {
@@ -49,7 +49,7 @@ def project_kyc_document_portal(customer_id, document_type, document_url, status
             "customerId": customer_id,
             "documentType": document_type,
             "documentStatus": status,
-            "url": document_url,
+            "s3Path": s3Path,
             "extractedData": extractedData
         }
     }
