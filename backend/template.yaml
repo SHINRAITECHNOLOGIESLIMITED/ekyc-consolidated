@@ -175,7 +175,6 @@ Resources:
               Action:
                 - secretsmanager:GetSecretValue
               Resource:
-                - !Ref JubileeESBAPISecret
                 - !Ref PortalGraphQLSecret
         - AWSLambdaBasicExecutionRole
         - StepFunctionsExecutionPolicy:
@@ -216,6 +215,8 @@ Resources:
                 - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
                 - arn:aws:s3:::amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
                 - arn:aws:s3:::amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/*
+      Layers:
+        - !Ref PortalProjectionLayer
   UploadDocumentFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -242,8 +243,16 @@ Resources:
             Method: POST
             RestApiId: !Ref ApiGateway
       Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref PortalGraphQLSecret
         - DynamoDBCrudPolicy:
             TableName: !Ref FaceLivenessResults
+      Layers:
+        - !Ref PortalProjectionLayer
   FaceLivenessFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -272,6 +281,7 @@ Resources:
         - AWSLambdaBasicExecutionRole
       Layers:
         - !Ref JubileeESBAPILayer
+        - !Ref PortalProjectionLayer
   JubileeESBCallFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -305,7 +315,7 @@ Resources:
                 - textract:DetectDocumentText
                 - textract:GetDocumentAnalysis
                 - textract:GetDocumentTextDetection
-              Resource: "*"
+              Resource: '*'
         - Statement:
             - Effect: Allow
               Action:
@@ -332,6 +342,8 @@ Resources:
               Resource:
                 - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}
                 - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
+      Layers:
+        - !Ref PortalProjectionLayer
   DocumentTextractFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -485,10 +497,16 @@ Resources:
   JubileeESBAPILayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
-      Description: !Sub
-        - Stack ${AWS::StackName} Layer ${ResourceName}
-        - ResourceName: JubileeESBAPILayer
+      Description: Jubilee ESB API Layer
       ContentUri: core/layers/jubilee_esb_api_layer/src
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: python3.11
+  PortalProjectionLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: Projecting backend events into portal using graphql
+      ContentUri: shared/portal_project/src
       RetentionPolicy: Retain
     Metadata:
       BuildMethod: python3.11
