@@ -11,8 +11,8 @@ tracer = Tracer()
 
 class JubileeESBAPI:
 
-    def __init__(self):
-        utilities = JubileeESBUtilities()
+    def __init__(self, portal):
+        utilities = JubileeESBUtilities(portal)
         self.iprs = IPRS(utilities)
         self.kra = KRA(utilities)
         self.lexisnexis = LexisNexis(utilities)

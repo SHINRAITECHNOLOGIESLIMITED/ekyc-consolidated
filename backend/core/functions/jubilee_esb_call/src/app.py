@@ -4,11 +4,12 @@ from enum import Enum
 from aws_lambda_powertools import Logger, Tracer
 
 from jubilee_esb_api import JubileeESBAPI
+from portal import Portal
 from utiities import JubileeESBError
 
 logger = Logger()
 tracer = Tracer()
-validator = JubileeESBAPI()
+validator = JubileeESBAPI(Portal())
 
 
 class Method(Enum):

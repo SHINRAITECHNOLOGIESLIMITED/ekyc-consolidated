@@ -1,23 +1,20 @@
 import json
 import os
 import time
-import uuid
 from http import HTTPStatus
 from typing import Dict, Any
-from aws_xray_sdk.core import xray_recorder
+
 import boto3
 import requests
 from aws_lambda_powertools import Logger, Tracer
+from aws_xray_sdk.core import xray_recorder
 from botocore.exceptions import ClientError
-from requests import Response
 
 logger = Logger()
 tracer = Tracer()
 
 JUBILEE_ESB_API_SECRET_ARN = os.getenv('JUBILEE_ESB_API_SECRET_ARN', None)
 assert JUBILEE_ESB_API_SECRET_ARN, "JUBILEE_ESB_API_SECRET_ARN environment variable is not set"
-PORTAL_GRAPHQL_SECRET_ARN = os.getenv('PORTAL_GRAPHQL_SECRET_ARN', None)
-assert PORTAL_GRAPHQL_SECRET_ARN, "PORTAL_GRAPHQL_SECRET_ARN environment variable is not set"
 JUBILEE_ESB_TOKEN_VALIDITY_MINS = 4.5
 
 
@@ -28,10 +25,10 @@ class JubileeESBError(Exception):
 
 class JubileeESBUtilities:
 
-    def __init__(self):
+    def __init__(self,portal):
         """Initialize Jubilee ESB API with AWS Secrets Manager configuration"""
         self.secrets_client = boto3.client('secretsmanager')
-        self._load_portal_credentials()  # portal credentials are loded first and esb depends on them
+        self.portal = portal
         self._load_jubilee_esb_credentials()
 
     def _retrieve_jwt_token(self, username: str, password: str) -> str:
@@ -59,9 +56,9 @@ class JubileeESBUtilities:
             duration_ms = round(time.time() * 1000 - start_time)
             current_segment = xray_recorder.current_segment()
             trace_id = current_segment.trace_id if current_segment else ""
-            self._project_api_call_to_portal(response, api_name="EBS", api_method="auth/signin",
-                                             duration_ms=duration_ms,
-                                             trace_id=trace_id, capture_data=False)
+            self.portal.log_api_call(response, api_name="EBS", api_method="auth/signin",
+                                     duration_ms=duration_ms,
+                                     trace_id=trace_id, capture_data=False)
             response.raise_for_status()
 
             token_data = response.json()
@@ -112,115 +109,6 @@ class JubileeESBUtilities:
                 logger.error(f"Failed to load ESB credentials: {str(e)}")
                 raise JubileeESBError(f"Failed to initialize ESB service: {str(e)}")
 
-    def _load_portal_credentials(self) -> None:
-        """Load API credentials from AWS Secrets Manager"""
-        try:
-            portal_credentials_response = self.secrets_client.get_secret_value(
-                SecretId=PORTAL_GRAPHQL_SECRET_ARN
-            )
-            if 'SecretString' not in portal_credentials_response:
-                logger.error("Failed to load Protal Connection credentials: SecretString not found")
-                raise JubileeESBError("Failed to initialize ESB service")
-            portal_credentials = json.loads(portal_credentials_response['SecretString'])
-            self.portal_graphql_url = portal_credentials['url']
-            self.portal_graphql_api_key = portal_credentials['api_key']
-            logger.info("Successfully loaded Portal Connection credentials")
-        except ClientError as e:
-            if e.response['Error']['Code'] == 'AccessDeniedException':
-                logger.error(f"Access denied to secret {PORTAL_GRAPHQL_SECRET_ARN}: {str(e)}")
-                raise JubileeESBError(f"Failed to initialize Portal GraphQl credentials: Access denied to secret")
-            elif e.response['Error']['Code'] == 'ResourceNotFoundException':
-                logger.error(f"Secret {PORTAL_GRAPHQL_SECRET_ARN} not found: {str(e)}")
-                raise JubileeESBError(f"Failed to load Portal GraphQl credentials: Secret not found")
-            else:
-                logger.error(f"Failed to load Portal GraphQl credentials: {str(e)}")
-                raise JubileeESBError(f"Failed to load Portal GraphQl credentials: {str(e)}")
-
-    def _project_api_call_to_portal(self, response: Response, api_name: str, api_method: str, duration_ms: int,
-                                    trace_id: str, capture_data=False):
-        mutation = """
-        mutation CreateAPICall($input: CreateAPICallInput!) {
-            createAPICall(input: $input) {
-                apiCallId
-            }
-        }
-        """
-        if capture_data:
-            # Handle request data
-            try:
-                request_data = response.request.body
-                if isinstance(request_data, (str, bytes)):
-                    try:
-                        request_data = json.loads(request_data)
-                    except (json.JSONDecodeError, TypeError):
-                        request_data = {}
-            except AttributeError:
-                request_data = {}
-
-            # Handle response data
-            try:
-                response_data = response.json() if response.text else {}
-            except (json.JSONDecodeError, AttributeError):
-                response_data = {}
-        else:
-            request_data = {}
-            response_data = {}
-        # Request headers
-        headers = {
-            'Content-Type': 'application/json',
-            'x-api-key': self.portal_graphql_api_key
-        }
-        try:
-            responseResult = HTTPStatus(response.status_code).phrase
-        except ValueError:
-            responseResult = f"Unknown Status Code: {response.status_code}"
-        # Variables for the mutation
-        variables = {
-            "input": {
-                "apiCallId": str(uuid.uuid4()),
-                "durationMs": duration_ms,
-                "traceId": trace_id,
-                "apiName": api_name,
-                "apiMethod": api_method,
-                "requestIPAddress": response.request.headers.get('X-Forwarded-For',
-                                                                 response.request.headers.get('Remote-Addr', '')),
-                "requestHttpMethod": response.request.method,
-                "requestTimestamp": int(time.time()),
-                "responseStatusCode": response.status_code,
-                "responseResult": responseResult,
-                "requestData": json.dumps(request_data,indent=4),
-                "responseData": json.dumps(response_data,indent=4)
-            }
-        }
-
-        # Prepare the request body
-        payload = {
-            'query': mutation,
-            'variables': variables
-        }
-        try:
-            # Make the request to AppSync
-            response = requests.post(
-                self.portal_graphql_url,
-                headers=headers,
-                json=payload
-            )
-
-            # Check if request was successful
-            if response.status_code == 200:
-                result = response.json()
-                if 'errors' in result:
-                    print(f"GraphQL Errors: {result['errors']}")
-                    return None
-                return result['data']['createAPICall']
-            else:
-                print(f"HTTP Error: {response.status_code}")
-                return None
-
-        except Exception as e:
-            print(f"Error making API call: {str(e)}")
-            return None
-
     @tracer.capture_method
     def make_api_call(self,
                       service: str,
@@ -267,8 +155,8 @@ class JubileeESBUtilities:
             duration_ms = round(time.time() * 1000 - start_time)
             if response.status_code == 500:
                 logger.error(response.json())
-            self._project_api_call_to_portal(response, api_name=service, api_method=api_method, duration_ms=duration_ms,
-                                             trace_id=trace_id, capture_data=True)
+            self.portal.log_api_call(response, api_name=service, api_method=api_method, duration_ms=duration_ms,
+                                     trace_id=trace_id, capture_data=True)
             response.raise_for_status()
 
             logger.info(f"Jubilee ESB: {service} API call successful")
