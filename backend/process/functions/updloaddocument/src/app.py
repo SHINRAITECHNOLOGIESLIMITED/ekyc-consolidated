@@ -64,7 +64,7 @@ def handler(event, context):
             "documentId": f"{customer_Id}-{document_type}",
             "customerId": customer_Id,
             "documentType": document_type,
-            "documentStatus": 'EXTRACTED',
+            "documentStatus": 'UPLOADED',
             "s3Path": newS3Path
         }
         portal.update_kyc_document(document_projection)

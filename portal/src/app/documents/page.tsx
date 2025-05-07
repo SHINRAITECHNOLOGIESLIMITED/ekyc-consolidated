@@ -20,13 +20,18 @@ const columnDefinitions =
         {
             id: "documentStatus",
             header: "Status",
-            cell: (item: KYCDocument) => item.documentType
+            cell: (item: KYCDocument) => item.documentStatus
+        },
+        {
+            id: "path",
+            header: "S3 Path",
+            cell: (item: KYCDocument) => item.s3Path
         },
         {
             id: "updatedAt",
             header: "Updated At",
             cell: (item: KYCDocument) => formatDateTime(item.updatedAt)
-        },
+        }
     ];
 
 
