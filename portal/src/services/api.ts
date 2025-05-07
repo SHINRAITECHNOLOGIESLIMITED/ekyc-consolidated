@@ -3,8 +3,7 @@ import {DocumentResponse, LivenessResponse, SessionResponse} from "@/types/liven
 import {API_CONFIG} from "@/constants/api";
 
 const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*'
+    'Content-Type': 'application/json'
 };
 
 export const livenessApi = {

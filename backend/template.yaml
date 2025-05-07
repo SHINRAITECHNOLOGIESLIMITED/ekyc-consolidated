@@ -132,10 +132,12 @@ Resources:
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
       Cors:
-        AllowMethods: '''POST,OPTIONS'''
-        AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
-        AllowOrigin: '''https://main.d2896e60a8d7f8.amplifyapp.com'''
-        MaxAge: '''3600'''
+        AllowMethods: "POST,OPTIONS"
+        AllowHeaders: "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+        AllowOrigins:
+          - "https://main.d2896e60a8d7f8.amplifyapp.com"
+          - "http://localhost:3000"
+        AllowCredentials: true
   JubileeESBAPISecret:
     Type: AWS::SecretsManager::Secret
     Properties:
