@@ -87,7 +87,7 @@ def handler(event, context):
 
     headers = {
         'Access-Control-Allow-Origin': 'https://main.d2896e60a8d7f8.amplifyapp.com',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Api-Key,X-Amz-Security-Token',
         'Access-Control-Allow-Methods': 'POST,OPTIONS'
     }
     document_metadata = event["body"]

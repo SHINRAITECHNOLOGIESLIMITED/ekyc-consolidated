@@ -14,7 +14,11 @@ rekognition_client = boto3.client('rekognition')
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(FACELIVENESSRESULTS_TABLE_NAME)
 
-
+headers = {
+    'Access-Control-Allow-Origin': 'https://main.d2896e60a8d7f8.amplifyapp.com',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Api-Key,X-Amz-Security-Token',
+    'Access-Control-Allow-Methods': 'POST,OPTIONS'
+}
 def create_face_liveness_session(event, context):
     """
     Creates a face liveness session and returns the session ID
@@ -42,6 +46,7 @@ def create_face_liveness_session(event, context):
         logger.info(f"Created face liveness session: {session_id}")
         return {
             'statusCode': 200,
+            'headers': headers,
             'body': json.dumps({
                 'sessionId': session_id,
                 'message': 'Face liveness session created successfully'
@@ -52,6 +57,7 @@ def create_face_liveness_session(event, context):
         logger.error(f"Error creating face liveness session: {e}")
         return {
             'statusCode': 500,
+            'headers': headers,
             'body': json.dumps({
                 'error': str(e),
                 'message': 'Error creating face liveness session'
@@ -71,6 +77,7 @@ def get_face_liveness_results(event, context):
         if not session_id:
             return {
                 'statusCode': 400,
+                'headers': headers,
                 'body': json.dumps({
                     'message': 'Session ID is required'
                 })
@@ -102,6 +109,7 @@ def get_face_liveness_results(event, context):
             f"Face liveness check completed for session: {session_id}, Confidence: {confidence}, Status: {status}, IsLive: {is_live}")
         return {
             'statusCode': 200,
+            'headers': headers,
             'body': json.dumps({
                 'sessionId': session_id,
                 'confidence': confidence,
@@ -115,6 +123,7 @@ def get_face_liveness_results(event, context):
         logger.error(f"Error getting face liveness results: {e}")
         return {
             'statusCode': 500,
+            'headers': headers,
             'body': json.dumps({
                 'error': str(e),
                 'message': 'Error getting face liveness results'
@@ -138,6 +147,7 @@ def handler(event, context):
             if not body:
                 return {
                     'statusCode': 400,
+                    'headers': headers,
                     'body': json.dumps({
                         'message': 'Empty request body'
                     })
@@ -145,6 +155,7 @@ def handler(event, context):
         except json.JSONDecodeError:
             return {
                 'statusCode': 400,
+                'headers': headers,
                 'body': json.dumps({
                     'message': 'Invalid JSON in request body'
                 })
@@ -160,6 +171,7 @@ def handler(event, context):
             logger.error("Invalid action specified")
             return {
                 'statusCode': 400,
+                'headers': headers,
                 'body': json.dumps({
                     'message': 'Invalid action specified'
                 })
@@ -169,6 +181,7 @@ def handler(event, context):
         logger.error(f"Error while handling: {e}")
         return {
             'statusCode': 500,
+            'headers': headers,
             'body': json.dumps({
                 'message': f'Internal server error: {str(e)}'
             })
