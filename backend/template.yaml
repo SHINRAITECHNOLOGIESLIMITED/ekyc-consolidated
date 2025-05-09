@@ -378,11 +378,13 @@ Resources:
         KRATaxComplianceVerificationArn: !GetAtt JubileeESBCallFn.Arn
         IPRSIdentityVerificationArn: !GetAtt JubileeESBCallFn.Arn
         LexisNexisBackgroundChecksArn: !GetAtt JubileeESBCallFn.Arn
+        NewDocumentRegistrationResultsTableName: !Ref NewDocumentRegistrationResults
       Policies:
         - LambdaInvokePolicy:
             FunctionName: !Ref DocumentTextractFn
         - LambdaInvokePolicy:
             FunctionName: !Ref JubileeESBCallFn
+        - CloudWatchLogsFullAccess
       DefinitionUri: process/state_machines/new_document_registration.yaml
   NewDocumentRegistrationLogGroup:
     Type: AWS::Logs::LogGroup
@@ -435,6 +437,18 @@ Resources:
             Condition:
               Bool:
                 aws:SecureTransport: 'false'
+  NewDocumentRegistrationResults:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: documentId
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: documentId
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
 Metadata:
   AWS::Composer::Groups:
     Group:
@@ -449,6 +463,7 @@ Metadata:
         - FaceLivenessResults
         - KYCDocumentsBucket
         - NewDocumentRegistration
+        - NewDocumentRegistrationResults
     Group4:
       Label: 'Layer3b: KYC Validation (Core)'
       Members:
