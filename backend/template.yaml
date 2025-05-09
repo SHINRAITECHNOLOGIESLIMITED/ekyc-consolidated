@@ -364,95 +364,6 @@ Resources:
   NewDocumentRegistration:
     Type: AWS::Serverless::StateMachine
     Properties:
-      Definition:
-        QueryLanguage: JSONata
-        StartAt: InvokeTextract
-        States:
-          InvokeTextract:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            OutputPath: $.Payload"
-            Parameters:
-              Payload.$: $
-              FunctionName: ${DocumentExtractArn}
-            Retry:
-              - ErrorEquals:
-                  - Lambda.ServiceException
-                  - Lambda.AWSLambdaException
-                  - Lambda.SdkClientException
-                  - Lambda.TooManyRequestsException
-                IntervalSeconds: 1
-                MaxAttempts: 3
-                BackoffRate: 2
-            Next: SearchIPRS
-          SearchIPRS:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            OutputPath: $.Payload
-            Parameters:
-              Payload.$: $
-              FunctionName: ${IPRSIdentityVerificationArn}
-            Retry:
-              - ErrorEquals:
-                  - Lambda.ServiceException
-                  - Lambda.AWSLambdaException
-                  - Lambda.SdkClientException
-                  - Lambda.TooManyRequestsException
-                IntervalSeconds: 1
-                MaxAttempts: 3
-                BackoffRate: 2
-            Next: Parallel
-          Parallel:
-            Type: Parallel
-            Branches:
-              - StartAt: LexisNexisSearchRecord
-                States:
-                  LexisNexisSearchRecord:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${LexisNexisBackgroundChecksArn}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    End: true
-              - StartAt: KRAValidateIDNumberFn
-                States:
-                  KRAValidateIDNumberFn:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${KRATaxComplianceVerificationArn}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    End: true
-            Next: PutItem
-          PutItem:
-            Type: Task
-            Resource: arn:aws:states:::dynamodb:putItem
-            Parameters:
-              TableName: MyDynamoDBTable
-              Item:
-                Column:
-                  S: MyEntry
-            End: true
       Logging:
         Level: ALL
         IncludeExecutionData: true
@@ -461,17 +372,18 @@ Resources:
               LogGroupArn: !GetAtt NewDocumentRegistrationLogGroup.Arn
       Tracing:
         Enabled: true
-      Type: STANDARD
+      Type: EXPRESS
       DefinitionSubstitutions:
         DocumentExtractArn: !GetAtt DocumentTextractFn.Arn
         KRATaxComplianceVerificationArn: !GetAtt JubileeESBCallFn.Arn
-        IPRSIdentityVerificationArn: !Ref JubileeESBCallFn
+        IPRSIdentityVerificationArn: !GetAtt JubileeESBCallFn.Arn
         LexisNexisBackgroundChecksArn: !GetAtt JubileeESBCallFn.Arn
       Policies:
         - LambdaInvokePolicy:
             FunctionName: !Ref DocumentTextractFn
         - LambdaInvokePolicy:
             FunctionName: !Ref JubileeESBCallFn
+      DefinitionUri: process/state_machines/new_document_registration.yaml
   NewDocumentRegistrationLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
