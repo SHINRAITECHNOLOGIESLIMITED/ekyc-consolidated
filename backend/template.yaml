@@ -375,9 +375,7 @@ Resources:
       Type: EXPRESS
       DefinitionSubstitutions:
         DocumentExtractArn: !GetAtt DocumentTextractFn.Arn
-        KRATaxComplianceVerificationArn: !GetAtt JubileeESBCallFn.Arn
-        IPRSIdentityVerificationArn: !GetAtt JubileeESBCallFn.Arn
-        LexisNexisBackgroundChecksArn: !GetAtt JubileeESBCallFn.Arn
+        JubileeESBCallFnArn: !GetAtt JubileeESBCallFn.Arn
         NewDocumentRegistrationResultsTableName: !Ref NewDocumentRegistrationResults
       Policies:
         - LambdaInvokePolicy:

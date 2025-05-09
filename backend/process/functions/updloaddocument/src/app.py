@@ -3,6 +3,9 @@ import os
 
 import boto3
 from aws_lambda_powertools import Logger, Tracer
+from aws_lambda_powertools import Logger, Tracer
+from aws_lambda_powertools.utilities.validation import validate
+
 from portal import Portal
 NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN = os.environ.get('NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN', None)
 assert NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN is not None, "NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN is not defined"
@@ -17,14 +20,45 @@ sfn_client = boto3.client('stepfunctions')
 s3_client = boto3.client('s3')
 
 portal = Portal()
-
-def handler(event, context):
-    headers = {
+headers = {
         'Access-Control-Allow-Origin': 'https://main.d2896e60a8d7f8.amplifyapp.com',
         'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Api-Key,X-Amz-Security-Token',
         'Access-Control-Allow-Methods': 'POST,OPTIONS'
     }
+
+@tracer.capture_method
+def handler(event, context):
+
+    schema = {
+                "type": "object",
+                "properties": {
+                    "body": {
+                        "type": "object",
+                        "properties": {
+                            "s3Path": {
+                                "type": "string",
+                                "description": "S3 path to the document"
+                            },
+                            "documentType": {
+                                "type": "string",
+                                "description": "Type of document being uploaded"
+                            },
+                            "customerId": {
+                                "type": "string",
+                                "description": "Customer identifier"
+                            }
+                        },
+                        "required": ["s3Path", "documentType", "customerId"],
+                        "description": "Request body containing document metadata"
+                    }
+                },
+                "required": ["body"]
+            }
+    
+    validate(event=event, schema=schema)
     document_metadata = event["body"]
+    assert 'invocation_number' not in document_metadata
+    
     logger.info(document_metadata)
     s3Path = document_metadata["s3Path"]
     document_type = document_metadata["documentType"]
@@ -70,6 +104,7 @@ def handler(event, context):
         portal.update_kyc_document(document_projection)
         
         #Start step function execution
+        document_metadata['invocation_number']=0
         response = sfn_client.start_execution(
             stateMachineArn=NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN,
             input=json.dumps(document_metadata)

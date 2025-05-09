@@ -3,15 +3,9 @@ States:
   InvokeTextract:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    OutputPath: $.Payload
     Parameters:
       Payload.$: $
       FunctionName: ${DocumentExtractArn}
-    ResultSelector:
-      extractedData.$: States.StringToJson($.Payload)
-      documentId.$: $$.Execution.Input.documentId
-      timestamp.$: $$.State.EnteredTime
-    ResultPath: $.textractResults
     Retry:
       - ErrorEquals:
           - Lambda.ServiceException
@@ -21,28 +15,14 @@ States:
         IntervalSeconds: 1
         MaxAttempts: 3
         BackoffRate: 2
-    Next: TransformTextractData
-  TransformTextractData:
-    Type: Pass
-    Parameters:
-      formattedData.$: 'States.Format(''Document ID: {}, processed at {}'',
-        $.textractResults.documentId, $.textractResults.timestamp)'
-      extractedFields.$: States.JsonToString($.textractResults.extractedData)
-    ResultPath: $.transformedData
+    OutputPath: $.Payload
     Next: SearchIPRS
   SearchIPRS:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    InputPath: $
     Parameters:
-      Payload:
-        documentData.$: $.textractResults.extractedData
-        transformedData.$: $.transformedData
-      FunctionName: ${IPRSIdentityVerificationArn}
-    ResultSelector:
-      iprsData.$: States.StringToJson($.Payload)
-      searchTimestamp.$: $$.State.EnteredTime
-    ResultPath: $.iprsResults
+      Payload.$: $
+      FunctionName: ${JubileeESBCallFnArn}
     Retry:
       - ErrorEquals:
           - Lambda.ServiceException
@@ -52,6 +32,7 @@ States:
         IntervalSeconds: 1
         MaxAttempts: 3
         BackoffRate: 2
+    OutputPath: $.Payload
     Next: Parallel
   Parallel:
     Type: Parallel
@@ -62,14 +43,8 @@ States:
             Type: Task
             Resource: arn:aws:states:::lambda:invoke
             Parameters:
-              Payload:
-                documentData.$: $[0].textractResults.extractedData
-                iprsData.$: $[0].iprsResults.iprsData
-              FunctionName: ${LexisNexisBackgroundChecksArn}
-            ResultSelector:
-              lexisNexisData.$: States.StringToJson($.Payload)
-              searchTimestamp.$: $$.State.EnteredTime
-            ResultPath: $.lexisNexisResults
+              Payload.$: $
+              FunctionName: ${JubileeESBCallFnArn}
             Retry:
               - ErrorEquals:
                   - Lambda.ServiceException
@@ -79,6 +54,7 @@ States:
                 IntervalSeconds: 1
                 MaxAttempts: 3
                 BackoffRate: 2
+            OutputPath: $.Payload
             End: true
       - StartAt: KRAValidateIDNumberFn
         States:
@@ -86,14 +62,8 @@ States:
             Type: Task
             Resource: arn:aws:states:::lambda:invoke
             Parameters:
-              Payload:
-                documentData.$: $[0].textractResults.extractedData
-                idNumber.$: $[0].textractResults.extractedData.idNumber
-              FunctionName: ${KRATaxComplianceVerificationArn}
-            ResultSelector:
-              kraData.$: States.StringToJson($.Payload)
-              validationTimestamp.$: $$.State.EnteredTime
-            ResultPath: $.kraResults
+              Payload.$: $
+              FunctionName: ${JubileeESBCallFnArn}
             Retry:
               - ErrorEquals:
                   - Lambda.ServiceException
@@ -103,6 +73,7 @@ States:
                 IntervalSeconds: 1
                 MaxAttempts: 3
                 BackoffRate: 2
+            OutputPath: $.Payload
             End: true
     ResultPath: $.verificationResults
     Next: ProcessResults
