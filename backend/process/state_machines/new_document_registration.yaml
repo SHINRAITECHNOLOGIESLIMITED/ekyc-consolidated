@@ -8,10 +8,10 @@ States:
       Payload.$: $
       FunctionName: ${DocumentExtractArn}
     ResultSelector:
-      extractedData.$: "States.StringToJson($.Payload)"
-      documentId.$: "$$.Execution.Input.documentId"
-      timestamp.$: "$$.State.EnteredTime"
-    ResultPath: "$.textractResults"
+      extractedData.$: States.StringToJson($.Payload)
+      documentId.$: $$.Execution.Input.documentId
+      timestamp.$: $$.State.EnteredTime
+    ResultPath: $.textractResults
     Retry:
       - ErrorEquals:
           - Lambda.ServiceException
@@ -22,28 +22,27 @@ States:
         MaxAttempts: 3
         BackoffRate: 2
     Next: TransformTextractData
-  
   TransformTextractData:
     Type: Pass
     Parameters:
-      formattedData.$: "States.Format('Document ID: {}, processed at {}', $.textractResults.documentId, $.textractResults.timestamp)"
-      extractedFields.$: "States.JsonToString($.textractResults.extractedData)"
-    ResultPath: "$.transformedData"
+      formattedData.$: 'States.Format(''Document ID: {}, processed at {}'',
+        $.textractResults.documentId, $.textractResults.timestamp)'
+      extractedFields.$: States.JsonToString($.textractResults.extractedData)
+    ResultPath: $.transformedData
     Next: SearchIPRS
-  
   SearchIPRS:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    InputPath: "$"
+    InputPath: $
     Parameters:
       Payload:
-        documentData.$: "$.textractResults.extractedData"
-        transformedData.$: "$.transformedData"
+        documentData.$: $.textractResults.extractedData
+        transformedData.$: $.transformedData
       FunctionName: ${IPRSIdentityVerificationArn}
     ResultSelector:
-      iprsData.$: "States.StringToJson($.Payload)"
-      searchTimestamp.$: "$$.State.EnteredTime"
-    ResultPath: "$.iprsResults"
+      iprsData.$: States.StringToJson($.Payload)
+      searchTimestamp.$: $$.State.EnteredTime
+    ResultPath: $.iprsResults
     Retry:
       - ErrorEquals:
           - Lambda.ServiceException
@@ -54,7 +53,6 @@ States:
         MaxAttempts: 3
         BackoffRate: 2
     Next: Parallel
-  
   Parallel:
     Type: Parallel
     Branches:
@@ -65,13 +63,13 @@ States:
             Resource: arn:aws:states:::lambda:invoke
             Parameters:
               Payload:
-                documentData.$: "$[0].textractResults.extractedData"
-                iprsData.$: "$[0].iprsResults.iprsData"
+                documentData.$: $[0].textractResults.extractedData
+                iprsData.$: $[0].iprsResults.iprsData
               FunctionName: ${LexisNexisBackgroundChecksArn}
             ResultSelector:
-              lexisNexisData.$: "States.StringToJson($.Payload)"
-              searchTimestamp.$: "$$.State.EnteredTime"
-            ResultPath: "$.lexisNexisResults"
+              lexisNexisData.$: States.StringToJson($.Payload)
+              searchTimestamp.$: $$.State.EnteredTime
+            ResultPath: $.lexisNexisResults
             Retry:
               - ErrorEquals:
                   - Lambda.ServiceException
@@ -82,7 +80,6 @@ States:
                 MaxAttempts: 3
                 BackoffRate: 2
             End: true
-      
       - StartAt: KRAValidateIDNumberFn
         States:
           KRAValidateIDNumberFn:
@@ -90,13 +87,13 @@ States:
             Resource: arn:aws:states:::lambda:invoke
             Parameters:
               Payload:
-                documentData.$: "$[0].textractResults.extractedData"
-                idNumber.$: "$[0].textractResults.extractedData.idNumber"
+                documentData.$: $[0].textractResults.extractedData
+                idNumber.$: $[0].textractResults.extractedData.idNumber
               FunctionName: ${KRATaxComplianceVerificationArn}
             ResultSelector:
-              kraData.$: "States.StringToJson($.Payload)"
-              validationTimestamp.$: "$$.State.EnteredTime"
-            ResultPath: "$.kraResults"
+              kraData.$: States.StringToJson($.Payload)
+              validationTimestamp.$: $$.State.EnteredTime
+            ResultPath: $.kraResults
             Retry:
               - ErrorEquals:
                   - Lambda.ServiceException
@@ -107,45 +104,19 @@ States:
                 MaxAttempts: 3
                 BackoffRate: 2
             End: true
-    
-    ResultPath: "$.verificationResults"
-    Next: DetermineIPRSStatus
-  
-  DetermineIPRSStatus:
-    Type: Choice
-    Choices:
-      - Variable: "$.iprsResults.iprsData.verified"
-        BooleanEquals: true
-        Next: DetermineLexisStatus
-    Default: DetermineLexisStatus
-    
-  DetermineLexisStatus:
-    Type: Choice
-    Choices:
-      - Variable: "$.verificationResults[0].lexisNexisResults.lexisNexisData.status"
-        StringEquals: "CLEAR"
-        Next: DetermineKRAStatus
-    Default: DetermineKRAStatus
-    
-  DetermineKRAStatus:
-    Type: Choice
-    Choices:
-      - Variable: "$.verificationResults[1].kraResults.kraData.taxCompliant"
-        BooleanEquals: true
-        Next: ProcessResults
-    Default: ProcessResults
-    
+    ResultPath: $.verificationResults
+    Next: ProcessResults
   ProcessResults:
     Type: Pass
     Parameters:
       summary:
-        documentId.$: "$.textractResults.documentId"
-        personName.$: "$.textractResults.extractedData.fullName"
-        idNumber.$: "$.textractResults.extractedData.idNumber"
-        iprsVerified.$: "$.iprsResults.iprsData.verified"
-        lexisNexisStatus.$: "$.verificationResults[0].lexisNexisResults.lexisNexisData.status"
-        kraCompliant.$: "$.verificationResults[1].kraResults.kraData.taxCompliant"
-    ResultPath: "$.processedResults"
+        documentId.$: $.textractResults.documentId
+        personName.$: $.textractResults.extractedData.fullName
+        idNumber.$: $.textractResults.extractedData.idNumber
+        iprsVerified.$: $.iprsResults.iprsData.verified
+        lexisNexisStatus.$: $.verificationResults[0].lexisNexisResults.lexisNexisData.status
+        kraCompliant.$: $.verificationResults[1].kraResults.kraData.taxCompliant
+    ResultPath: $.processedResults
     Next: PersistNewDocumentRegistration
   PersistNewDocumentRegistration:
     Type: Task
@@ -154,37 +125,36 @@ States:
       TableName: ${NewDocumentRegistrationResultsTableName}
       Item:
         documentId:
-          S: "$.textractResults.documentId"
+          S: $.textractResults.documentId
         personName:
-          S: "$.textractResults.extractedData.fullName"
+          S: $.textractResults.extractedData.fullName
         idNumber:
-          S: "$.textractResults.extractedData.idNumber"
+          S: $.textractResults.extractedData.idNumber
         iprsVerified:
-          S: "$.iprsResults.iprsData.verified"
+          S: $.iprsResults.iprsData.verified
         lexisNexisStatus:
-          S: "$.verificationResults[0].lexisNexisResults.lexisNexisData.status"
+          S: $.verificationResults[0].lexisNexisResults.lexisNexisData.status
         kraCompliant:
-          S: "$.verificationResults[1].kraResults.kraData.taxCompliant"
+          S: $.verificationResults[1].kraResults.kraData.taxCompliant
         overallStatus:
-          S: "$.overallStatus.combinedStatus"
+          S: $.overallStatus.combinedStatus
         processTimestamp:
-          S: "$$.State.EnteredTime"
+          S: $$.State.EnteredTime
         documentType:
-          S: "$.textractResults.extractedData.documentType || 'UNKNOWN'"
+          S: $.textractResults.extractedData.documentType || 'UNKNOWN'
         verificationDate:
-          S: "$$.State.EnteredTime"
-    ResultPath: "$.databaseEntry"
+          S: $$.State.EnteredTime
+    ResultPath: $.databaseEntry
     Next: FinalizeResults
-  
   FinalizeResults:
     Type: Pass
     Parameters:
-      result: "SUCCESS"
-      documentId.$: "$.textractResults.documentId"
+      result: SUCCESS
+      documentId.$: $.textractResults.documentId
       verificationSummary:
-        iprsVerified.$: "$.iprsResults.iprsData.verified"
-        lexisNexisStatus.$: "$.verificationResults[0].lexisNexisResults.lexisNexisData.status"
-        kraCompliant.$: "$.verificationResults[1].kraResults.kraData.taxCompliant"
-        overallStatus.$: "$.overallStatus.combinedStatus"
-      timestamp.$: "$$.State.EnteredTime"
+        iprsVerified.$: $.iprsResults.iprsData.verified
+        lexisNexisStatus.$: $.verificationResults[0].lexisNexisResults.lexisNexisData.status
+        kraCompliant.$: $.verificationResults[1].kraResults.kraData.taxCompliant
+        overallStatus.$: $.overallStatus.combinedStatus
+      timestamp.$: $$.State.EnteredTime
     End: true
