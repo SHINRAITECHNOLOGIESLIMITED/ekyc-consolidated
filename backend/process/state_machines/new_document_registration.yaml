@@ -1,0 +1,131 @@
+StartAt: InvokeTextract
+States:
+  InvokeTextract:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    Parameters:
+      Payload.$: $
+      FunctionName: ${DocumentExtractArn}
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    OutputPath: $.Payload
+    Next: SearchIPRS
+  SearchIPRS:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    Parameters:
+      Payload.$: $
+      FunctionName: ${JubileeESBCallFnArn}
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    OutputPath: $.Payload
+    Next: Parallel
+  Parallel:
+    Type: Parallel
+    Branches:
+      - StartAt: LexisNexisSearchRecord
+        States:
+          LexisNexisSearchRecord:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              Payload.$: $
+              FunctionName: ${JubileeESBCallFnArn}
+            Retry:
+              - ErrorEquals:
+                  - Lambda.ServiceException
+                  - Lambda.AWSLambdaException
+                  - Lambda.SdkClientException
+                  - Lambda.TooManyRequestsException
+                IntervalSeconds: 1
+                MaxAttempts: 3
+                BackoffRate: 2
+            OutputPath: $.Payload
+            End: true
+      - StartAt: KRAValidateIDNumberFn
+        States:
+          KRAValidateIDNumberFn:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              Payload.$: $
+              FunctionName: ${JubileeESBCallFnArn}
+            Retry:
+              - ErrorEquals:
+                  - Lambda.ServiceException
+                  - Lambda.AWSLambdaException
+                  - Lambda.SdkClientException
+                  - Lambda.TooManyRequestsException
+                IntervalSeconds: 1
+                MaxAttempts: 3
+                BackoffRate: 2
+            OutputPath: $.Payload
+            End: true
+    ResultPath: $.verificationResults
+    Next: ProcessResults
+  ProcessResults:
+    Type: Pass
+    Parameters:
+      summary:
+        documentId.$: $.textractResults.documentId
+        personName.$: $.textractResults.extractedData.fullName
+        idNumber.$: $.textractResults.extractedData.idNumber
+        iprsVerified.$: $.iprsResults.iprsData.verified
+        lexisNexisStatus.$: $.verificationResults[0].lexisNexisResults.lexisNexisData.status
+        kraCompliant.$: $.verificationResults[1].kraResults.kraData.taxCompliant
+    ResultPath: $.processedResults
+    Next: PersistNewDocumentRegistration
+  PersistNewDocumentRegistration:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:putItem
+    Parameters:
+      TableName: ${NewDocumentRegistrationResultsTableName}
+      Item:
+        documentId:
+          S: $.textractResults.documentId
+        personName:
+          S: $.textractResults.extractedData.fullName
+        idNumber:
+          S: $.textractResults.extractedData.idNumber
+        iprsVerified:
+          S: $.iprsResults.iprsData.verified
+        lexisNexisStatus:
+          S: $.verificationResults[0].lexisNexisResults.lexisNexisData.status
+        kraCompliant:
+          S: $.verificationResults[1].kraResults.kraData.taxCompliant
+        overallStatus:
+          S: $.overallStatus.combinedStatus
+        processTimestamp:
+          S: $$.State.EnteredTime
+        documentType:
+          S: $.textractResults.extractedData.documentType || 'UNKNOWN'
+        verificationDate:
+          S: $$.State.EnteredTime
+    ResultPath: $.databaseEntry
+    Next: FinalizeResults
+  FinalizeResults:
+    Type: Pass
+    Parameters:
+      result: SUCCESS
+      documentId.$: $.textractResults.documentId
+      verificationSummary:
+        iprsVerified.$: $.iprsResults.iprsData.verified
+        lexisNexisStatus.$: $.verificationResults[0].lexisNexisResults.lexisNexisData.status
+        kraCompliant.$: $.verificationResults[1].kraResults.kraData.taxCompliant
+        overallStatus.$: $.overallStatus.combinedStatus
+      timestamp.$: $$.State.EnteredTime
+    End: true

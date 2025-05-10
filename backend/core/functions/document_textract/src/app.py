@@ -6,6 +6,7 @@ from collections import defaultdict
 import boto3
 from aws_lambda_powertools import Logger, Tracer
 from aws_xray_sdk.core import xray_recorder
+from aws_lambda_powertools.utilities.validation import validate
 
 from portal import Portal
 
@@ -35,6 +36,7 @@ def get_kv_map(s3Path):
     duration_ms = round(time.time() * 1000 - start_time)
     portal.log_api_call(response, api_name="textract", api_method="analyze_document", duration_ms=duration_ms,
                         trace_id=trace_id, capture_data=True)
+
     # Get the text blocks
     blocks = response['Blocks']
 
@@ -92,15 +94,44 @@ def find_value_block(key_block, value_map):
 @logger.inject_lambda_context
 @tracer.capture_lambda_handler
 def handler(event, context):
+    schema = {
+                "type": "object",
+                "properties": {
+                            "s3Path": {
+                                "type": "string",
+                                "description": "S3 path to the document"
+                            },
+                            "documentType": {
+                                "type": "string",
+                                "description": "Type of document being uploaded"
+                            },
+                            "customerId": {
+                                "type": "string",
+                                "description": "Customer identifier"
+                            },
+                            "invocation_number": {
+                                "type": "integer",
+                                "description": "Invocation level of the event"
+                            }
+                        },
+                        "required": ["s3Path", "documentType", "customerId","invocation_number"],
+                        "description": "Event containing document metadata and invocation info"
+                    
+            }
+    validate(event=event, schema=schema)
+    assert event['invocation_number']==0,"Expected textract to be the first invocation"
     try:
-        document_metadata = event
-        customer_id = document_metadata["customerId"]
-        s3Path = document_metadata['s3Path']
-        document_type = document_metadata['documentType']
+        customer_id = event["customerId"]
+        s3Path = event['s3Path']
+        document_type = event['documentType']
+
+        #textract
         key_map, value_map, block_map = get_kv_map(s3Path)
+
         # append extracted key value pairs to event and pass all parameters along
         extractedData = get_kv_relationship(key_map, value_map, block_map)
         event['extractedData'] = extractedData
+
         document_projection = {
             "documentId": f"{customer_id}-{document_type}",
             "customerId": customer_id,
@@ -111,16 +142,8 @@ def handler(event, context):
         }
         portal.update_kyc_document(document_projection)
         logger.info(f"Extracted key value pairs")
-        logger.info(event)
-        return {
-            'statusCode': 200,
-            'body': json.dumps(event)
-        }
+        event['invocation_number'] += 1
+        return event
     except Exception as e:
-        logger.error(e)
-        return {
-            'statusCode': 500,
-            'body': json.dumps({
-                'message': f'Error: {str(e)}'
-            })
-        }
+        logger.error(f"Error: {str(e)}")
+        raise Exception(e)

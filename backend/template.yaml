@@ -4,6 +4,11 @@ Description: |
   Jubilee eKYC backend
 
 Parameters:
+  CognitoUserPoolArn:
+    Type: String
+    Default: 'arn:aws:cognito-idp:eu-west-1:842206816107:userpool/eu-west-1_eMNIDFsxx'
+    Description: ARN of the existing Cognito User Pool for API authorization
+
   JubileeESBAPICredentials:
     Type: String
     Default: '{"username":"your-username","password":"your-password","business":"your-business","baseurl":"https://example.com"}'
@@ -36,6 +41,16 @@ Resources:
       DefinitionBody:
         openapi: '3.0'
         info: {}
+        securityDefinitions:
+        CognitoAuthorizer:
+          type: apiKey
+          name: Authorization
+          in: header
+          x-amazon-apigateway-authtype: cognito_user_pools
+          x-amazon-apigateway-authorizer:
+            type: cognito_user_pools
+            providerARNs:
+              - !Ref CognitoUserPoolArn
         paths:
           /faceliveness:
             options:
@@ -67,6 +82,8 @@ Resources:
                 requestTemplates:
                   application/json: '{"statusCode": 200}'
             post:
+              security:
+                - CognitoAuthorizer: [] 
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
@@ -113,6 +130,8 @@ Resources:
                 requestTemplates:
                   application/json: '{"statusCode": 200}'
             post:
+              security:
+                - CognitoAuthorizer: [] 
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
@@ -157,8 +176,6 @@ Resources:
         Variables:
           NEWDOCUMENTREGISTRATION_STATE_MACHINE_NAME: !GetAtt NewDocumentRegistration.Name
           NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN: !Ref NewDocumentRegistration
-          DOCUMENTTEXTRACT_FUNCTION_NAME: !Ref DocumentTextractFn
-          DOCUMENTTEXTRACT_FUNCTION_ARN: !GetAtt DocumentTextractFn.Arn
           KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
           KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
@@ -179,8 +196,6 @@ Resources:
         - AWSLambdaBasicExecutionRole
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt NewDocumentRegistration.Name
-        - LambdaInvokePolicy:
-            FunctionName: !Ref DocumentTextractFn
         - Statement:
             - Effect: Allow
               Action:
@@ -215,6 +230,8 @@ Resources:
                 - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
                 - arn:aws:s3:::amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
                 - arn:aws:s3:::amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/*
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt NewDocumentRegistration.Name
       Layers:
         - !Ref PortalProjectionLayer
   UploadDocumentFnLogGroup:
@@ -363,117 +380,9 @@ Resources:
           KeyType: HASH
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
-  NewDocumentRegistrationStateMachineRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: states.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
-        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
-      Policies:
-        - PolicyName: StepFunctionsDescribeAndStopExecution
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - states:DescribeExecution
-                  - states:StopExecution
-                Resource: '*'
-        - PolicyName: StepFunctionsEventBridgePolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - events:PutRule
-                  - events:PutTargets
-                  - events:DeleteRule
-                  - events:RemoveTargets
-                  - events:DescribeRule
-                Resource:
-                  - !Sub arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule*
   NewDocumentRegistration:
     Type: AWS::Serverless::StateMachine
     Properties:
-      Role: !GetAtt NewDocumentRegistrationStateMachineRole.Arn
-      Definition:
-        StartAt: DocumentExtraction
-        States:
-          DocumentExtraction:
-            Type: Task
-            Resource: arn:aws:states:::states:startExecution.sync:2
-            Parameters:
-              StateMachineArn: ${DocumentExtractArn}
-              Input:
-                StatePayload: Hello from Step Functions!
-                AWS_STEP_FUNCTIONS_STARTED_BY_EXECUTION_ID.$: $$.Execution.Id
-            Next: SearchIPRS
-          SearchIPRS:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            OutputPath: $.Payload
-            Parameters:
-              Payload.$: $
-              FunctionName: ${IPRSIdentityVerificationArn}
-            Retry:
-              - ErrorEquals:
-                  - Lambda.ServiceException
-                  - Lambda.AWSLambdaException
-                  - Lambda.SdkClientException
-                  - Lambda.TooManyRequestsException
-                IntervalSeconds: 1
-                MaxAttempts: 3
-                BackoffRate: 2
-            Next: Parallel
-          Parallel:
-            Type: Parallel
-            Branches:
-              - StartAt: LexisNexisSearchRecord
-                States:
-                  LexisNexisSearchRecord:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${LexisNexisBackgroundChecksArn}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    End: true
-              - StartAt: KRAValidateIDNumberFn
-                States:
-                  KRAValidateIDNumberFn:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${KRATaxComplianceVerificationArn}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    End: true
-            End: true
       Logging:
         Level: ALL
         IncludeExecutionData: true
@@ -482,12 +391,18 @@ Resources:
               LogGroupArn: !GetAtt NewDocumentRegistrationLogGroup.Arn
       Tracing:
         Enabled: true
-      Type: STANDARD
+      Type: EXPRESS
       DefinitionSubstitutions:
-        DocumentExtractArn: !Ref AWS::NoValue
-        KRATaxComplianceVerificationArn: !GetAtt JubileeESBCallFn.Arn
-        IPRSIdentityVerificationArn: !Ref JubileeESBCallFn
-        LexisNexisBackgroundChecksArn: !GetAtt JubileeESBCallFn.Arn
+        DocumentExtractArn: !GetAtt DocumentTextractFn.Arn
+        JubileeESBCallFnArn: !GetAtt JubileeESBCallFn.Arn
+        NewDocumentRegistrationResultsTableName: !Ref NewDocumentRegistrationResults
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref DocumentTextractFn
+        - LambdaInvokePolicy:
+            FunctionName: !Ref JubileeESBCallFn
+        - CloudWatchLogsFullAccess
+      DefinitionUri: process/state_machines/new_document_registration.yaml
   NewDocumentRegistrationLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -539,6 +454,18 @@ Resources:
             Condition:
               Bool:
                 aws:SecureTransport: 'false'
+  NewDocumentRegistrationResults:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: documentId
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: documentId
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
 Metadata:
   AWS::Composer::Groups:
     Group:
@@ -550,15 +477,15 @@ Metadata:
       Members:
         - FaceLivenessFn
         - UploadDocumentFn
-        - NewDocumentRegistration
         - FaceLivenessResults
         - KYCDocumentsBucket
+        - NewDocumentRegistration
+        - NewDocumentRegistrationResults
     Group4:
       Label: 'Layer3b: KYC Validation (Core)'
       Members:
         - JubileeESBCallFn
         - JubileeESBAPILayer
-        - DocumentTextractFn
     Group5:
       Label: Secrets
       Members:
