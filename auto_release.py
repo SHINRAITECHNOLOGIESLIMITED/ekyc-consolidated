@@ -621,19 +621,21 @@ def main():
     logger.info(f"New version will be: {new_version} ({new_version_data['release']['status']})")
     
     # Generate release notes from commit history
-    auto_release_notes = generate_release_notes(version_data, new_version)
-    
-    if args.auto_notes:
-        release_notes = auto_release_notes
-    else:
-        # Allow editing of generated release notes
-        if auto_release_notes:
-            release_notes = prompt_to_edit_release_notes(auto_release_notes)
+    if release_type != "PATCH":
+        auto_release_notes = generate_release_notes(version_data, new_version)
+        
+        if args.auto_notes:
+            release_notes = auto_release_notes
         else:
-            # Fall back to manual entry if no commits found
-            print("\nNo commits found for automatic release notes. Please enter them manually.")
-            release_notes = prompt_for_release_notes()
-    
+            # Allow editing of generated release notes
+            if auto_release_notes:
+                release_notes = prompt_to_edit_release_notes(auto_release_notes)
+            else:
+                # Fall back to manual entry if no commits found
+                print("\nNo commits found for automatic release notes. Please enter them manually.")
+                release_notes = prompt_for_release_notes()
+    else:
+        release_notes = None
     if args.dry_run:
         print("\nDRY RUN - No changes will be made")
         print(f"Would start git flow release: {new_version}")
@@ -656,11 +658,12 @@ def main():
     
     # Get current commit hash before making any changes
     current_commit = get_current_commit_hash()
-    if current_commit:
-        # Store the commit hash in version data
-        new_version_data['release']['last_commit'] = current_commit
-        print(f"Storing current commit hash: {current_commit[:7]}")
-        logger.info(f"Storing current commit hash: {current_commit[:7]}")
+    if release_type != "PATCH":
+        if current_commit:
+            # Store the commit hash in version data
+            new_version_data['release']['last_commit'] = current_commit
+            print(f"Storing current commit hash: {current_commit[:7]}")
+            logger.info(f"Storing current commit hash: {current_commit[:7]}")
     
     # Update version.yaml
     print(f"Updating version.yaml to version {new_version}")
