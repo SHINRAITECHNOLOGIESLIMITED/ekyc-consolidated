@@ -1,0 +1,13 @@
+---
+# Jubilee eKYC Version Information
+# Follow Semantic Versioning 2.0.0 (https://semver.org/)
+
+version:
+  major: 0
+  minor: 0
+  patch: 34
+  build: null  # Set to a string value if needed
+
+release:
+  status: alpha  # 'alpha', 'beta', 'rc', or 'final'
+  date: '2025-05-10'  # ISO format (YYYY-MM-DD)
