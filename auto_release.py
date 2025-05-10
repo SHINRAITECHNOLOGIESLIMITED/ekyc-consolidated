@@ -117,7 +117,7 @@ def save_version_data(data):
         with open(YAML_PATH, 'w') as file:
             yaml.dump(data, file, default_flow_style=False)
 
-        with open(PORTAL_TS_VERSION_PATH), 'w') as file:
+        with open(PORTAL_TS_VERSION_PATH, 'w') as file:
             file.write(f"export defualt = '{get_new_version_string(data)}';\n")
         return True
     except Exception as e:
