@@ -7,14 +7,13 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 const getAuthHeaders = async () => {
     try {
         const session = await fetchAuthSession();
-        // const jwtBearerToken = `Bearer ${session.tokens?.accessToken.toString()}`;
-        // console.log("jwtBearerToken", jwtBearerToken);
-        const amzSecurityToken = session.tokens?.idToken?.toString() ?? "";
-        // console.log("X-Amz-Security-Token",amzSecurityToken);
+        // const accessToken = `${session.tokens?.accessToken.toString()}`;
+        // console.log("Access Token:", accessToken);
+        const idToken = session.tokens?.idToken?.toString() ?? "";
+        console.log("Id Token",idToken);
         return {
             'Content-Type': 'application/json',
-            'Authorization': amzSecurityToken ,
-            // 'X-Amz-Security-Token': amzSecurityToken 
+            'Authorization': idToken 
         };
     } catch (error) {
         console.error('Error getting authentication tokens:', error);
