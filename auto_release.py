@@ -118,7 +118,7 @@ def save_version_data(data):
             yaml.dump(data, file, default_flow_style=False)
 
         with open(PORTAL_TS_VERSION_PATH, 'w') as file:
-            file.write(f"export defualt = '{get_new_version_string(data)}';\n")
+            file.write(f"export default '{get_new_version_string(data)}';\n")
         return True
     except Exception as e:
         print(f"Error saving version data: {e}")
@@ -671,7 +671,7 @@ def main():
     # Commit changes
     commit_message = f"Bump version to {new_version}"
     print(f"Committing changes: {commit_message}")
-    run_command(f"git add {YAML_PATH}", "Failed to stage version.yaml")
+    run_command(f"git add .", "Failed to stage version.yaml")
     run_command(f"git commit -m '{commit_message}'", "Failed to commit version change")
     
     # Create release notes file
