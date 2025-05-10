@@ -51,7 +51,7 @@ Resources:
             Identity:
               Header: Authorization
           LambdaTokenAuthorizer:
-            FunctionArn: !GetAtt AuthFAuthorizerFnn.Arn
+            FunctionArn: !GetAtt APIAuthorizerFn.Arn
             Identity:
               Headers:
                 - Authorization
@@ -59,18 +59,10 @@ Resources:
             EnableSimpleResponses: true
         AddDefaultAuthorizerToCorsPreflight: false
       DefinitionBody:
-        openapi: '3.0'
-        info: {}
-        securityDefinitions:
-          CognitoAuthorizer:
-            type: apiKey
-            name: Authorization
-            in: header
-            x-amazon-apigateway-authtype: cognito_user_pools
-            x-amazon-apigateway-authorizer:
-              type: cognito_user_pools
-              providerARNs:
-                - !Ref CognitoUserPoolArn
+        openapi: '3.0.1'
+        info:
+          title: 'Jubilee eKYC API'
+          version: '1.0.0'
         paths:
           /faceliveness:
             options:
@@ -101,15 +93,16 @@ Resources:
                       method.response.header.Access-Control-Allow-Origin: '''https://main.d2896e60a8d7f8.amplifyapp.com'''
                 requestTemplates:
                   application/json: '{"statusCode": 200}'
-            post:
+            post: 
               security:
-                - CognitoAuthorizer: [] 
+                - LambdaTokenAuthorizer: []
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFn.Arn}/invocations
               responses:
                 '200':
+                  description: Successful response
                   headers:
                     Access-Control-Allow-Origin:
                       schema:
@@ -151,13 +144,14 @@ Resources:
                   application/json: '{"statusCode": 200}'
             post:
               security:
-                - CognitoAuthorizer: [] 
+                - LambdaTokenAuthorizer: []
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadDocumentFn.Arn}/invocations
               responses:
                 '200':
+                  description: Successful response
                   headers:
                     Access-Control-Allow-Origin:
                       schema:
@@ -298,18 +292,20 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${FaceLivenessFn}
       RetentionInDays: 30
-  AuthorizerFn:
+  APIAuthorizerFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: Authorizer function
-      CodeUri: process/functions/authorizer/src
+      CodeUri: process/functions/api_authorizer/src
       Handler: app.handler
-  AuthorizerFnLogGroup:
+      Policies:
+        - AWSLambdaBasicExecutionRole
+  APIAuthorizerFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${AuthorizerFn}
+      LogGroupName: !Sub /aws/lambda/${APIAuthorizerFn}
       RetentionInDays: 30
   JubileeESBCallFn:
     Type: AWS::Serverless::Function
@@ -526,16 +522,9 @@ Metadata:
         - JubileeESBAPISecret
         - PortalGraphQLSecret
 Outputs:
-  DocumentTextractFnLogGroup:
-    Description: Tailing the documents textract Logs
-    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
-      ${DocumentTextractFnLogGroup} --tail --filter "- platform - botocore"  |
-      cut -d ' ' -f 3-
-  JubileeESBCallFnLogGroup:
-    Description: Tailing the Jubilee EBS Logs
-    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
-      ${JubileeESBCallFnLogGroup} --tail --filter "- platform - botocore"  | cut
-      -d ' ' -f 3-
+  ApiGatewayUrl:
+    Description: API Gateway Production URL
+    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod/
   FaceLivenessFnLogGroup:
     Description: Tailing the Facelivess Logs
     Value: !Sub sam logs --profile shinrai.devpost --cw-log-group

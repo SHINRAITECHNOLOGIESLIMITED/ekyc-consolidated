@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://2f9dicwfhh.execute-api.eu-west-1.amazonaws.com/Prod';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://f8ezfp0885.execute-api.eu-west-1.amazonaws.com/Prod/';
 const API_HEADERS = {
     'Content-Type': 'application/json'
 };
