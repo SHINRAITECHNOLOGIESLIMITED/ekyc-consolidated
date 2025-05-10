@@ -4,6 +4,11 @@ Description: |
   Jubilee eKYC backend
 
 Parameters:
+  CognitoUserPoolArn:
+    Type: String
+    Default: 'arn:aws:cognito-idp:eu-west-1:842206816107:userpool/eu-west-1_eMNIDFsxx'
+    Description: ARN of the existing Cognito User Pool for API authorization
+
   JubileeESBAPICredentials:
     Type: String
     Default: '{"username":"your-username","password":"your-password","business":"your-business","baseurl":"https://example.com"}'
@@ -36,6 +41,16 @@ Resources:
       DefinitionBody:
         openapi: '3.0'
         info: {}
+        securityDefinitions:
+        CognitoAuthorizer:
+          type: apiKey
+          name: Authorization
+          in: header
+          x-amazon-apigateway-authtype: cognito_user_pools
+          x-amazon-apigateway-authorizer:
+            type: cognito_user_pools
+            providerARNs:
+              - !Ref CognitoUserPoolArn
         paths:
           /faceliveness:
             options:
@@ -67,6 +82,8 @@ Resources:
                 requestTemplates:
                   application/json: '{"statusCode": 200}'
             post:
+              security:
+                - CognitoAuthorizer: [] 
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
@@ -113,6 +130,8 @@ Resources:
                 requestTemplates:
                   application/json: '{"statusCode": 200}'
             post:
+              security:
+                - CognitoAuthorizer: [] 
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
