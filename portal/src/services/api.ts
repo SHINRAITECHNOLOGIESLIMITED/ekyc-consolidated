@@ -8,9 +8,9 @@ const getAuthHeaders = async () => {
     try {
         const session = await fetchAuthSession();
         const jwtBearerToken = `Bearer ${session.tokens?.accessToken.toString()}`;
-        console.log("jwtBearerToken", jwtBearerToken);
+        // console.log("jwtBearerToken", jwtBearerToken);
         const amzSecurityToken = session.tokens?.idToken?.toString() ?? "";
-        console.log("X-Amz-Security-Token",amzSecurityToken);
+        // console.log("X-Amz-Security-Token",amzSecurityToken);
         return {
             'Content-Type': 'application/json',
             'Authorization': jwtBearerToken ,

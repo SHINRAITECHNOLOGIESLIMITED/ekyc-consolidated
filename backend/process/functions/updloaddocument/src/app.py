@@ -13,6 +13,10 @@ assert NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN is not None, "NEWDOCUMENTREGIST
 KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
 assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
 
+AMPLIFY_S3_BUCKET_NAME = os.environ.get('AMPLIFY_S3_BUCKET_NAME', None)
+assert AMPLIFY_S3_BUCKET_NAME is not None, "AMPLIFY_S3_BUCKET_NAME is not set"
+
+
 logger = Logger()
 tracer = Tracer()
 
@@ -64,12 +68,11 @@ def handler(event, context):
     document_type = document_metadata["documentType"]
     customer_Id = document_metadata["customerId"]
     newS3Path = f"{customer_Id}/{s3Path.split('/')[-1]}"
-    source_bucket_name = "amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq"
 
     try:
         # Check if object exists first
         s3_client.head_object(
-            Bucket=source_bucket_name,
+            Bucket=AMPLIFY_S3_BUCKET_NAME,
             Key=s3Path
         )
     except s3_client.exceptions.ClientError as e:
