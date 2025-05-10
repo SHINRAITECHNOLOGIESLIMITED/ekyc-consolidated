@@ -153,7 +153,7 @@ Resources:
       Cors:
         AllowMethods: POST,OPTIONS
         AllowHeaders: Content-Type,Authorization,X-Api-Key,X-Amz-Security-Token
-        AllowOrigin: https://main.d2896e60a8d7f8.amplifyapp.com
+        AllowOrigin: https://main.d2896e60a8d7f8.amplifyapp.com,http://localhost:3000
   JubileeESBAPISecret:
     Type: AWS::SecretsManager::Secret
     Properties:

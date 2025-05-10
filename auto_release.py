@@ -57,6 +57,7 @@ Instructions:
 
 # Path to the version.yaml file
 YAML_PATH = Path(os.path.dirname(os.path.abspath(__file__))) / 'version.yaml'
+PORTAL_TS_VERSION_PATH = Path(os.path.dirname(os.path.abspath(__file__))) / 'portal' / 'src' / 'constants' / 'release.ts'
 
 # Setup logging
 def setup_logging():
@@ -115,6 +116,9 @@ def save_version_data(data):
     try:
         with open(YAML_PATH, 'w') as file:
             yaml.dump(data, file, default_flow_style=False)
+
+        with open(PORTAL_TS_VERSION_PATH), 'w') as file:
+            file.write(f"export defualt = '{get_new_version_string(data)}';\n")
         return True
     except Exception as e:
         print(f"Error saving version data: {e}")
