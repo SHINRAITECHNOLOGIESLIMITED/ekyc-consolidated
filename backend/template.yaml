@@ -8,6 +8,11 @@ Parameters:
     Type: String
     Default: 'arn:aws:cognito-idp:eu-west-1:842206816107:userpool/eu-west-1_eMNIDFsxx'
     Description: ARN of the existing Cognito User Pool for API authorization
+  
+  AmplifyS3BucketName:
+    Type: String
+    Default: 'amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq'
+    Description: Name of the Amplify S3 bucket where KYC documents are upload into by portal
 
   JubileeESBAPICredentials:
     Type: String
@@ -38,19 +43,27 @@ Resources:
         - ResourceName: ApiGateway
       Description: Jubilee eKYC Application Gateway
       StageName: Prod
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !Ref CognitoUserPoolArn
+            Identity:
+              Header: Authorization
+        AddDefaultAuthorizerToCorsPreflight: false
       DefinitionBody:
         openapi: '3.0'
         info: {}
         securityDefinitions:
-        CognitoAuthorizer:
-          type: apiKey
-          name: Authorization
-          in: header
-          x-amazon-apigateway-authtype: cognito_user_pools
-          x-amazon-apigateway-authorizer:
-            type: cognito_user_pools
-            providerARNs:
-              - !Ref CognitoUserPoolArn
+          CognitoAuthorizer:
+            type: apiKey
+            name: Authorization
+            in: header
+            x-amazon-apigateway-authtype: cognito_user_pools
+            x-amazon-apigateway-authorizer:
+              type: cognito_user_pools
+              providerARNs:
+                - !Ref CognitoUserPoolArn
         paths:
           /faceliveness:
             options:
@@ -179,6 +192,7 @@ Resources:
           KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
           KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+          AMPLIFY_S3_BUCKET_NAME: !Ref AmplifyS3BucketName
       Events:
         ApiGatewayPOSTuploaddocument:
           Type: Api
@@ -228,8 +242,8 @@ Resources:
               Resource:
                 - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}
                 - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
-                - arn:aws:s3:::amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
-                - arn:aws:s3:::amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/*
+                - !Sub arn:${AWS::Partition}:s3:::${AmplifyS3BucketName}
+                - !Sub arn:${AWS::Partition}:s3:::${AmplifyS3BucketName}/*
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt NewDocumentRegistration.Name
       Layers:
