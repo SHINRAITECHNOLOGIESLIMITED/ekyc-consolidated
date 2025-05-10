@@ -11,3 +11,4 @@ version:
 release:
   status: alpha  # 'alpha', 'beta', 'rc', or 'final'
   date: '2025-05-10'  # ISO format (YYYY-MM-DD)
+  last_commit: null  # Stores the commit ID of the last release
