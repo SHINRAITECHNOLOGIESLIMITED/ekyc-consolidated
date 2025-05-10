@@ -57,6 +57,7 @@ Instructions:
 
 # Path to the version.yaml file
 YAML_PATH = Path(os.path.dirname(os.path.abspath(__file__))) / 'version.yaml'
+PORTAL_TS_VERSION_PATH = Path(os.path.dirname(os.path.abspath(__file__))) / 'portal' / 'src' / 'constants' / 'release.ts'
 
 # Setup logging
 def setup_logging():
@@ -115,6 +116,9 @@ def save_version_data(data):
     try:
         with open(YAML_PATH, 'w') as file:
             yaml.dump(data, file, default_flow_style=False)
+
+        with open(PORTAL_TS_VERSION_PATH, 'w') as file:
+            file.write(f"export default '{get_new_version_string(data)}';\n")
         return True
     except Exception as e:
         print(f"Error saving version data: {e}")
@@ -617,19 +621,21 @@ def main():
     logger.info(f"New version will be: {new_version} ({new_version_data['release']['status']})")
     
     # Generate release notes from commit history
-    auto_release_notes = generate_release_notes(version_data, new_version)
-    
-    if args.auto_notes:
-        release_notes = auto_release_notes
-    else:
-        # Allow editing of generated release notes
-        if auto_release_notes:
-            release_notes = prompt_to_edit_release_notes(auto_release_notes)
+    if release_type != "PATCH":
+        auto_release_notes = generate_release_notes(version_data, new_version)
+        
+        if args.auto_notes:
+            release_notes = auto_release_notes
         else:
-            # Fall back to manual entry if no commits found
-            print("\nNo commits found for automatic release notes. Please enter them manually.")
-            release_notes = prompt_for_release_notes()
-    
+            # Allow editing of generated release notes
+            if auto_release_notes:
+                release_notes = prompt_to_edit_release_notes(auto_release_notes)
+            else:
+                # Fall back to manual entry if no commits found
+                print("\nNo commits found for automatic release notes. Please enter them manually.")
+                release_notes = prompt_for_release_notes()
+    else:
+        release_notes = None
     if args.dry_run:
         print("\nDRY RUN - No changes will be made")
         print(f"Would start git flow release: {new_version}")
@@ -652,11 +658,12 @@ def main():
     
     # Get current commit hash before making any changes
     current_commit = get_current_commit_hash()
-    if current_commit:
-        # Store the commit hash in version data
-        new_version_data['release']['last_commit'] = current_commit
-        print(f"Storing current commit hash: {current_commit[:7]}")
-        logger.info(f"Storing current commit hash: {current_commit[:7]}")
+    if release_type != "PATCH":
+        if current_commit:
+            # Store the commit hash in version data
+            new_version_data['release']['last_commit'] = current_commit
+            print(f"Storing current commit hash: {current_commit[:7]}")
+            logger.info(f"Storing current commit hash: {current_commit[:7]}")
     
     # Update version.yaml
     print(f"Updating version.yaml to version {new_version}")
@@ -667,7 +674,7 @@ def main():
     # Commit changes
     commit_message = f"Bump version to {new_version}"
     print(f"Committing changes: {commit_message}")
-    run_command(f"git add {YAML_PATH}", "Failed to stage version.yaml")
+    run_command(f"git add .", "Failed to stage version.yaml")
     run_command(f"git commit -m '{commit_message}'", "Failed to commit version change")
     
     # Create release notes file

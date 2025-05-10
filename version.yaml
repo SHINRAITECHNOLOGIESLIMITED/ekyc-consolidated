@@ -1,9 +1,9 @@
 release:
   date: '2025-05-10'
-  last_commit: d2ca5079c0d8f7399b4c13ed0e187b0c0b1a6b20
+  last_commit: 221cb5d481624d811c28c3083d0e30d21e9f0ecb
   status: alpha
 version:
   build: null
   major: 0
   minor: 0
-  patch: 35
+  patch: 36
