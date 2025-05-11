@@ -62,6 +62,7 @@ export const livenessApi = {
 export const documentApi = {
     uploadDocument: async (documentDetails: {
         customerId: string,
+        url: string
         documentType: string,
         s3Path: string
     }): Promise<DocumentResponse> => {
