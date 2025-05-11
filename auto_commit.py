@@ -259,14 +259,14 @@ def get_user_confirmation_for_commit(commit_message):
     """Ask user to confirm the commit message."""
     print(f"\nProposed commit message:\n{'-' * 50}\n{commit_message}\n{'-' * 50}")
     while True:
-        response = input("\nDo you want to proceed with this commit? (y/n/e for edit): ").lower().strip()
-        if response in ['y', 'n']:
-            return response == 'y', commit_message
+        response = input("\nDo you want to proceed with this commit (default y)? (y/n/e for edit): ").lower().strip()
+        if response in ['y', 'n','']:
+            return response in ['y',''], commit_message
         elif response == 'e':
             edited_message = edit_commit_message(commit_message)
             print(f"\nEdited commit message:\n{'-' * 50}\n{edited_message}\n{'-' * 50}")
             continue_response = input("\nProceed with this edited message? (y/n): ").lower().strip()
-            if continue_response == 'y':
+            if continue_response in ['y','']:
                 return True, edited_message
             elif continue_response == 'n':
                 return False, edited_message
@@ -276,9 +276,9 @@ def get_user_confirmation_for_commit(commit_message):
 def get_user_confirmation_for_push():
     """Ask user to confirm pushing to remote."""
     while True:
-        response = input("\nDo you want to push commit(s) to remote? (y/n): ").lower().strip()
-        if response in ['y', 'n']:
-            return response == 'y'
+        response = input("\nDo you want to push commit(s) to remote (default y)? (y/n): ").lower().strip()
+        if response in ['y', 'n','']:
+            return response in ['y','']
         print("Please enter 'y' for yes or 'n' for no.")
 
 
