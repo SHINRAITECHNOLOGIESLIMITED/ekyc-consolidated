@@ -62,7 +62,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
         const customerIdValue: string = customerId ?? "";
         const documentTypeValue: string = documentType.value ?? "";
         try {
-            const s3Path = `${user.userId}/${customerId}/${event.key}`
+            const s3Path = `uploaded_kyc_docs/${user.userId}/${customerId}/${event.key}`
             console.log("s3Path:",s3Path);
             await documentApi.uploadDocument({
                 documentType: documentTypeValue,
@@ -177,7 +177,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                             acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png', 'image/*']}
                             maxFileCount={1}
                             processFile={processFile}
-                            path={({ identityId }) => `${identityId}/${customerId}`}
+                            path={({ identityId }) => `uploaded_kyc_docs/${identityId}/${customerId}`}
                             onUploadSuccess={handleUploadSuccess}
                             onUploadError={(message: string) => {
                                 setError(message);
