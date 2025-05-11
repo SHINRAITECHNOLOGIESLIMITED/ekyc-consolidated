@@ -140,11 +140,53 @@
               "isRequired": true,
               "attributes": []
             },
-            "userId": {
-              "name": "userId",
+            "customerId": {
+              "name": "customerId",
               "isArray": false,
               "type": "String",
               "isRequired": true,
+              "attributes": []
+            },
+            "documentType": {
+              "name": "documentType",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "documentStatus": {
+              "name": "documentStatus",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "s3Path": {
+              "name": "s3Path",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "identifier": {
+              "name": "identifier",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "extractedData": {
+              "name": "extractedData",
+              "isArray": false,
+              "type": "AWSJSON",
+              "isRequired": false,
+              "attributes": []
+            },
+            "verifiedData": {
+              "name": "verifiedData",
+              "isArray": false,
+              "type": "AWSJSON",
+              "isRequired": false,
               "attributes": []
             },
             "createdAt": {
@@ -208,11 +250,186 @@
             "primaryKeyFieldName": "documentId",
             "sortKeyFieldNames": []
           }
+        },
+        "APICall": {
+          "name": "APICall",
+          "fields": {
+            "apiCallId": {
+              "name": "apiCallId",
+              "isArray": false,
+              "type": "ID",
+              "isRequired": true,
+              "attributes": []
+            },
+            "traceId": {
+              "name": "traceId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "durationMs": {
+              "name": "durationMs",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": true,
+              "attributes": []
+            },
+            "apiName": {
+              "name": "apiName",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "apiMethod": {
+              "name": "apiMethod",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "requestIPAddress": {
+              "name": "requestIPAddress",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "requestHttpMethod": {
+              "name": "requestHttpMethod",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "requestTimestamp": {
+              "name": "requestTimestamp",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "responseStatusCode": {
+              "name": "responseStatusCode",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "responseResult": {
+              "name": "responseResult",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "requestData": {
+              "name": "requestData",
+              "isArray": false,
+              "type": "AWSJSON",
+              "isRequired": false,
+              "attributes": []
+            },
+            "responseData": {
+              "name": "responseData",
+              "isArray": false,
+              "type": "AWSJSON",
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "APICalls",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "fields": [
+                  "apiCallId"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "allow": "private",
+                    "operations": [
+                      "read"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "create",
+                      "read",
+                      "update",
+                      "delete"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": true,
+            "primaryKeyFieldName": "apiCallId",
+            "sortKeyFieldNames": []
+          }
         }
       },
       "enums": {},
       "nonModels": {}
     }
+  },
+  "storage": {
+    "aws_region": "eu-west-1",
+    "bucket_name": "amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq",
+    "buckets": [
+      {
+        "name": "kyc_documents",
+        "bucket_name": "amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq",
+        "aws_region": "eu-west-1",
+        "paths": {
+          "protected/${cognito-identity.amazonaws.com:sub}/*": {
+            "authenticated": [
+              "get",
+              "list",
+              "write"
+            ]
+          },
+          "protected/*": {
+            "authenticated": [
+              "get",
+              "list"
+            ]
+          }
+        }
+      }
+    ]
   },
   "version": "1.3"
 }

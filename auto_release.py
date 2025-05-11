@@ -694,7 +694,7 @@ def main():
     
     # Push to remote if requested
     if not args.no_push:
-        push = input("\nPush changes to remote repository? (y/n): ").strip()
+        push = input("\nPush changes to remote repository (default y)? (y/n): ").strip()
         if push.lower() in ['y','','yes']:
             print("Pushing develop and main branches to origin")
             run_command("git push origin develop", "Failed to push develop branch")

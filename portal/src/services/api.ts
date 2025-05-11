@@ -10,7 +10,7 @@ const getAuthHeaders = async () => {
         // const accessToken = `${session.tokens?.accessToken.toString()}`;
         // console.log("Access Token:", accessToken);
         const idToken = session.tokens?.idToken?.toString() ?? "";
-        console.log("Id Token",idToken);
+        // console.log("Id Token",idToken);
         return {
             'Content-Type': 'application/json',
             'Authorization': idToken 
