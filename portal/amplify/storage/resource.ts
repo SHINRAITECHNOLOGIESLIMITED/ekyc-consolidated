@@ -11,7 +11,7 @@ export const storage = defineStorage({
             ])
         ],
         // Allow listing of the user's root folder
-        '*': [
+        '/*': [
             allow.authenticated.to([
                 'read'
             ])
