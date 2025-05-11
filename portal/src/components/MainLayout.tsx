@@ -73,6 +73,11 @@ const Navigation = () => {
               type: "link",
               text: "Capture new FaceLiveness",
               href: "/captureliveness",
+              info: (
+                <Badge color="red" size="small">
+                  WIP
+                </Badge>
+              )
             },
             {
               type: "link",
@@ -91,6 +96,11 @@ const Navigation = () => {
               type: "link",
               text: "Face Liveness Sessions",
               href: "/liveness",
+              info: (
+                <Badge color="red" size="small">
+                  WIP
+                </Badge>
+              )
             },
             {
               type: "link",

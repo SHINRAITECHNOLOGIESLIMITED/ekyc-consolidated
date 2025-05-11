@@ -141,16 +141,26 @@ def handler(event, context):
         )
         document_request["s3Path"] = newS3Path
         document_request["bucket"] = KYCDOCUMENTSBUCKET_NAME
+        documentId = f"{customer_Id}-{document_type}"
+        document_request["documentId"]=documentId
         logger.info(f"Document {newS3Path} copied from {AMPLIFY_S3_BUCKET_NAME} to {KYCDOCUMENTSBUCKET_NAME}")
-        document_projection = {
-            "documentId": f"{customer_Id}-{document_type}",
+        document_request["document"] = {
+            "documentId": documentId,
             "customerId": customer_Id,
             "documentType": document_type,
             "documentStatus": 'UPLOADED',
             "s3Path": newS3Path
         }
-        portal.update_kyc_document(document_projection)
-        
+        # Update or create the KYC document
+        result = portal.update_kyc_document(document_request["document"])
+        if result is None:
+            logger.error(f"Failed to update or create KYC document: {documentId}")
+            return {
+                'statusCode': 500,
+                'headers': headers,
+                'body': json.dumps({'error': 'Failed to update or create KYC document'})
+            }
+            
         #Start step function execution
         document_request['invocation_number']=0
         response = sfn_client.start_execution(

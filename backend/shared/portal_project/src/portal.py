@@ -43,38 +43,78 @@ class Portal:
 
     def update_kyc_document(self, document):
         try:
-            mutation = """
-                mutation CreateKYCDocument($input: CreateKYCDocumentInput!) {
-                    createKYCDocument(input: $input) {
+            # First try to update the document if it exists
+            update_mutation = """
+                mutation UpdateKYCDocument($input: UpdateKYCDocumentInput!) {
+                    updateKYCDocument(input: $input) {
                         documentId
                     }
                 }
             """
-
-            variables = {
+            
+            update_variables = {
                 "input": document
             }
-
-            # Prepare the request body
-            payload = {
-                'query': mutation,
-                'variables': variables
+            
+            # Prepare the update request body
+            update_payload = {
+                'query': update_mutation,
+                'variables': update_variables
             }
-            # Make the request to AppSync
-            response = requests.post(
+            
+            # Make the update request to AppSync
+            update_response = requests.post(
                 self.PORTAL_GRAPHQL_URL,
                 headers=self.headers,
-                json=payload
+                json=update_payload
             )
-            # Check if request was successful
-            if response.status_code == 200:
-                result = response.json()
-                if 'errors' in result:
-                    logger.error(f"GraphQL Errors: {result['errors']}")
-                    return None
-                return result['data']['createAPICall']
+            
+            # Check if update was successful
+            if update_response.status_code == 200:
+                update_result = update_response.json()
+                if 'errors' not in update_result:
+                    logger.info(f"Document updated successfully: {document['documentId']}")
+                    return update_result['data']['updateKYCDocument']
+                else:
+                    logger.info(f"Document doesn't exist, attempting to create: {document['documentId']}")
+                    # If update fails, try to create the document
+                    create_mutation = """
+                        mutation CreateKYCDocument($input: CreateKYCDocumentInput!) {
+                            createKYCDocument(input: $input) {
+                                documentId
+                            }
+                        }
+                    """
+                    
+                    create_variables = {
+                        "input": document
+                    }
+                    
+                    # Prepare the create request body
+                    create_payload = {
+                        'query': create_mutation,
+                        'variables': create_variables
+                    }
+                    
+                    # Make the create request to AppSync
+                    create_response = requests.post(
+                        self.PORTAL_GRAPHQL_URL,
+                        headers=self.headers,
+                        json=create_payload
+                    )
+                    
+                    # Check if create was successful
+                    if create_response.status_code == 200:
+                        create_result = create_response.json()
+                        if 'errors' in create_result:
+                            logger.error(f"GraphQL Errors during create: {create_result['errors']}")
+                            return None
+                        return create_result['data']['createKYCDocument']
+                    else:
+                        logger.error(f"HTTP Error during create: {create_response.status_code}")
+                        return None
             else:
-                print(f"HTTP Error: {response.status_code}")
+                logger.error(f"HTTP Error during update: {update_response.status_code}")
                 return None
 
         except Exception as e:
@@ -92,7 +132,13 @@ class Portal:
             """
         request_data = {}
         response_data = {}
-        if isinstance(request_data, Response):
+        isResponse = False
+        try:
+            200 == response.status_code
+            isResponse = False
+        except:
+            pass
+        if isResponse:
             if capture_data:
                 # Handle request data
                 try:

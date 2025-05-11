@@ -2,15 +2,17 @@ import json
 from enum import Enum
 
 from aws_lambda_powertools import Logger, Tracer
+from aws_lambda_powertools.utilities.validation import validate
+from aws_lambda_powertools.utilities.validation.exceptions import SchemaValidationError
 
 from jubilee_esb_api import JubileeESBAPI
 from portal import Portal
 from utiities import JubileeESBError
-from aws_lambda_powertools.utilities.validation import validate
 
 logger = Logger()
 tracer = Tracer()
-validator = JubileeESBAPI(Portal())
+portal = Portal()
+validator = JubileeESBAPI(portal)
 
 
 @logger.inject_lambda_context
@@ -35,28 +37,119 @@ def handler(event, context):
                                 "type": "integer",
                                 "description": "Invocation level of the event"
                             },
+                            "document": {
+                                "type": "object",
+                                "description": "Document object",
+                                "additionalProperties": True  # Allow any properties in document
+                            },
                             "extractedData": {
                                 "type": "object",
                                 "description": "Data extracted from textract",
                                 "additionalProperties": True  # Allow any properties in extractedData
                             }
                         },
-                        "required": ["s3Path", "documentType", "customerId","invocation_number"],
+                        "required": ["s3Path", "documentType", "customerId", "invocation_number"],
                         "description": "Event containing document metadata and invocation info"
-                    
             }
-    validate(event=event, schema=schema)
-    assert event['invocation_number']<=10,"Expected validation to be withing first 10 invocations"
+    
     try:
-        match Method(event["documentType"]):
+        # Validate the event against the schema
+        validate(event=event, schema=schema)
+        
+        # Validate invocation number constraint
+        if event['invocation_number'] > 2:
+            error_msg = "Expected validation to be within first 2 invocations"
+            logger.error(error_msg)
+            if "document" in event:
+                event["document"]["documentStatus"] = "VALIDATION_ERROR: " + error_msg
+                portal.update_kyc_document(event["document"])
+            raise JubileeESBError(error_msg)
+        
+        # Check if extractedData exists
+        if "extractedData" not in event:
+            error_msg = "Missing extractedData in event"
+            logger.error(error_msg)
+            if "document" in event:
+                event["document"]["documentStatus"] = "VALIDATION_ERROR: " + error_msg
+                portal.update_kyc_document(event["document"])
+            raise JubileeESBError(error_msg)
+            
+        extractedData = event["extractedData"]
+        match event["documentType"]:
             case "KENYAN_NATIONAL_ID":
-                idNumber = event["extractedData"]["ID NUMBER"]
-                #we make two apis calls to jubilee ESB to check seperates things for KE National ID
-                iprs_result = validator.iprs.search_generic(dict(identifier="ID_NUMBER",value = idNumber))
-                kra_result = validator.kra.validate_id(dict(country = "KE",idNo = idNumber))
-                #merge both results into one
-                event["iprs_result"]=dict(iprs_result=iprs_result,kra_result=kra_result)
-
+                logger.info("Searching Details for doc:", extractedData)
+                if "ID_NUMBER" in extractedData: 
+                    idNumber = extractedData["ID_NUMBER"]
+                    #IPRS Search
+                    try:
+                        iprs_result = validator.iprs.search_generic(dict(identifier="ID_NUMBER", value=idNumber))
+                        event["search_iprs"] = iprs_result 
+                    except Exception as e:
+                        event["search_iprs"] = dict(error=str(e))    
+                        logger.error(f"Error in IPRS search: {str(e)}")
+                    #KRA Search
+                    try:
+                        kra_result = validator.kra.validate_id(dict(country="KE", idNo=idNumber))
+                        event["search_kra"] = kra_result
+                    except Exception as e:
+                        event["search_kra"] = dict(error=str(e))    
+                        logger.error(f"Error in KRA ID search: {str(e)}")
+                    #LexisNexis Search
+                    try:
+                        firstName = ""
+                        middleName = ""
+                        lastName = ""
+                        gender= ""
+                        dob=""
+                        nationalIdentificationNumber=idNumber
+                        countryCode = "KEN"
+                        entityType = "Individual"
+                        sourceName = "Portals"
+                        if "FULL_NAMES" in extractedData:
+                            names = extractedData["FULL_NAMES"].split(" ")
+                            if len(names) > 0:
+                                firstName = names[0]
+                            if len(names) > 1:
+                                middleName = names[1]
+                            if len(names) > 2:
+                                lastName = names[2]
+                        if "SEX" in extractedData:
+                            gender = extractedData["SEX"]
+                        if "DATE_OF_BIRTH" in extractedData:
+                            #YYYY-MM-DD
+                            try:
+                                date_split = extractedData["DATE_OF_BIRTH"].replace(" ","").split(".") 
+                                if len(date_split) > 2:
+                                    dob = f"{date_split[2]}-{date_split[1]}-{date_split[0]}"                            
+                            except Exception as e:
+                                logger.error(f"Error Extracting date : {str(e)}")
+                        lexis_nexis_input = dict(firstName=firstName,
+                                                middleName=middleName,
+                                                lastName=lastName,
+                                                gender=gender,
+                                                dob=dob,
+                                                nationalIdentificationNumber=nationalIdentificationNumber,
+                                                countryCode=countryCode,
+                                                entityType=entityType,
+                                                sourceName=sourceName)
+                        lexis_nexis_result = validator.lexisnexis.search_record(lexis_nexis_input)
+                        event["search_lexisnexis"] = lexis_nexis_result
+                    except Exception as e:
+                        event["search_lexisnexis"] = dict(error=str(e))    
+                        logger.error(f"Error NexisLexis search: {str(e)}")
+                    
+                    event["document"]["documentStatus"] = 'SEARCHED'
+                    portal.update_kyc_document(event["document"])
+                    #to be moved to verification lambda
+                    event["document"]["documentStatus"] = 'VERIFICATION FAILED'
+                    event["document"]["verifiedData"] = json.dumps(dict(error = "Verification not implemented"))
+                    portal.update_kyc_document(event["document"])
+                else:
+                    error_msg = 'ID_NUMBER not found in extracted data'
+                    event["document"]["documentStatus"] = 'SEARCH FAILED. Cannot Find "ID_NUMBER"'
+                    portal.update_kyc_document(event["document"])
+                    raise JubileeESBError(error_msg)
+                    
             # case Method.IPRS_PING:
             #     result = validator.iprs.ping()
             # case Method.IPRS_SEARCH_ALIEN_ID:
@@ -72,10 +165,36 @@ def handler(event, context):
             # case Method.LEXISNEXIS_SEARCH_RECORD:
             #     result = validator.lexisnexis.search_record(event)
             case _:
-                raise JubileeESBError(f"Document {event['documentType']} is not supported")
+                error_msg = f"Document {event['documentType']} is not implemented"
+                if "document" in event:
+                    event["document"]["documentStatus"] = f'SEARCH FAILED. Document type not implemented {event["documentType"]}'
+                    portal.update_kyc_document(event["document"])
+                raise JubileeESBError(error_msg)
         
         event['invocation_number'] += 1
-        return  event
+        return event
+        
+    except SchemaValidationError as e:
+        logger.error(f"Schema validation error: {str(e)}")
+        if "document" in event:
+            event["document"]["documentStatus"] = f"VALIDATION_ERROR: {str(e)}"
+            portal.update_kyc_document(event["document"])
+        raise JubileeESBError(f"Schema validation error: {str(e)}")
+        
+    except AssertionError as e:
+        logger.error(f"Assertion error: {str(e)}")
+        if "document" in event:
+            event["document"]["documentStatus"] = f"VALIDATION_ERROR: {str(e)}"
+            portal.update_kyc_document(event["document"])
+        raise JubileeESBError(f"Validation error: {str(e)}")
+        
+    except JubileeESBError as e:
+        logger.error(f"Jubilee ESB error: {str(e)}")
+        raise
+        
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
-        raise Exception(e)
+        logger.error(f"Unexpected error: {str(e)}")
+        if "document" in event:
+            event["document"]["documentStatus"] = f"ERROR: {str(e)}"
+            portal.update_kyc_document(event["document"])
+        raise JubileeESBError(f"Error processing document: {str(e)}")
