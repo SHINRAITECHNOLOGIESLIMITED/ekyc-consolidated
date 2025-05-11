@@ -62,13 +62,13 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
         const customerIdValue: string = customerId ?? "";
         const documentTypeValue: string = documentType.value ?? "";
         try {
-            console.log("UserID:",user.userId);
-            console.log("UserName:",user.username);
+            const s3Path = `${user.userId}/${customerId}/${event.key}`
+            console.log("s3Path:",s3Path);
             await documentApi.uploadDocument({
                 documentType: documentTypeValue,
                 customerId: customerIdValue,
                 url: event.url ?? "",
-                s3Path: `protected/eu-west-1:${user.userId}/${event.key}`
+                s3Path: s3Path
             });
             console.log(`Document uploaded successfully: ${event.url}`);
             setSuccess(`Document(${documentTypeValue}) uploaded successfully for customer ${customerId}`);
@@ -119,17 +119,6 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                     }
                 };
             });
-    };
-
-
-    const getUploadPath = () => {
-        if (!documentType) return '';
-        try {
-            return `${customerId}/`;
-        } catch (error) {
-            console.error('Error getting user identity:', error);
-            return '';
-        }
     };
 
 
@@ -186,10 +175,9 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                     {documentType ? (
                         <FileUploader
                             acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png', 'image/*']}
-                            accessLevel="protected"
                             maxFileCount={1}
                             processFile={processFile}
-                            path={getUploadPath()}
+                            path={({ identityId }) => `${identityId}/${customerId}`}
                             onUploadSuccess={handleUploadSuccess}
                             onUploadError={(message: string) => {
                                 setError(message);
