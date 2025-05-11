@@ -37,7 +37,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
     const [error, setError] = useState<string>('');
     const [success, setSuccess] = useState<string>('');
     const {user} = useAuthenticator((context) => [context.user]);
-
+    
     const validateCustomerId = (value: string): boolean => {
         if (!value || value.length < 5) {
             setCustomerIdError('Customer identifier must be at least 5 digits');
@@ -62,6 +62,8 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
         const customerIdValue: string = customerId ?? "";
         const documentTypeValue: string = documentType.value ?? "";
         try {
+            console.log("UserID:",user.userId);
+            console.log("UserName:",user.username);
             await documentApi.uploadDocument({
                 documentType: documentTypeValue,
                 customerId: customerIdValue,
