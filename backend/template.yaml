@@ -426,16 +426,16 @@ Outputs:
     Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod
   APIAuthorizerFnLogGroup:
     Description: Tailing the Facelivess Logs
-    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
-      ${APIAuthorizerFnLogGroup} --tail --filter "- platform - botocore"  | cut
-      -d ' ' -f 3-
+    Value: APIAuthorizerFnLogGroup
   FaceLivenessFnLogGroup:
     Description: Tailing the Facelivess Logs
-    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
-      ${FaceLivenessFnLogGroup} --tail --filter "- platform - botocore"  | cut
-      -d ' ' -f 3-
+    Value: FaceLivenessFnLogGroup
   UploadDocumentFnLogGroup:
     Description: Tailing the upload document GW endpoint Logs
-    Value: !Sub sam logs --profile shinrai.devpost --cw-log-group
-      ${UploadDocumentFnLogGroup} --tail --filter "- platform - botocore"  | cut
-      -d ' ' -f 3-
+    Value: UploadDocumentFnLogGroup
+  DocumentTextractFn:
+    Description: Tailing the document textract lambda logs
+    Value: DocumentTextractFnLogGroup
+  JubileeESBCallFnLogGroup:
+    Description: Tailing the upload document GW endpoint Logs
+    Value: JubileeESBCallFnLogGroup
