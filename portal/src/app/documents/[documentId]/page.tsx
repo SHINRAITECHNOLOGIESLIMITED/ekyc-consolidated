@@ -11,7 +11,7 @@ import {
     SpaceBetween, 
     Tabs
 } from '@cloudscape-design/components';
-import CodeView from "@cloudscape-design/code-view/code-view";
+import { CodeView } from "@cloudscape-design/code-view";
 import {useParams} from 'next/navigation';
 import React from 'react';
 import {KYCDocument} from "@/types/models";
@@ -69,7 +69,6 @@ const itemDetails = (documentId: KYCDocument) => (
                                 content: documentId.extractedData ? (
                                     <CodeView
                                         content={JSON.stringify(documentId.extractedData, null, 2)}
-                                        language="json"
                                     />
                                 ) : <Box>No extracted data available</Box>,
                                 disabled: !documentId.extractedData
@@ -80,7 +79,6 @@ const itemDetails = (documentId: KYCDocument) => (
                                 content: documentId.searchedData ? (
                                     <CodeView
                                         content={JSON.stringify(documentId.searchedData, null, 2)}
-                                        language="json"
                                     />
                                 ) : <Box>No searched data available</Box>,
                                 disabled: !documentId.searchedData
@@ -91,7 +89,6 @@ const itemDetails = (documentId: KYCDocument) => (
                                 content: documentId.verifiedData ? (
                                     <CodeView
                                         content={JSON.stringify(documentId.verifiedData, null, 2)}
-                                        language="json"
                                     />
                                 ) : <Box>No verified data available</Box>,
                                 disabled: !documentId.verifiedData
