@@ -11,6 +11,23 @@ print_separator() {
   echo "--------------------------------------------------------"
 }
 
+# Utility function to clear and trail logs for a specified log group
+clear_and_trail_logs() {
+  local log_group="$1"
+  
+  if [ -z "$log_group" ]; then
+    echo "Error: Log group parameter is required"
+    echo "Usage: clear_and_trail_logs <log-group-name>"
+    return 1
+  fi
+  
+  echo "Clearing logs for log group: $log_group"
+  aws logs delete-log-stream --profile shinrai.devpost --log-group-name "$log_group" --log-stream-name $(aws logs describe-log-streams --profile shinrai.devpost --log-group-name "$log_group" --query 'logStreams[*].logStreamName' --output text) 2>/dev/null
+  
+  echo "Starting to trail logs for: $log_group"
+  sam logs --profile shinrai.devpost --cw-log-group "$log_group" --tail --filter "- platform - botocore" | cut -d ' ' -f 3-
+}
+
 print_separator 1 "Fetching latest changes from remote origin" && \
 git fetch origin && \
 
@@ -35,6 +52,7 @@ echo "SAM project has been deployed to cloud" && \
 
 print_separator 7 "Trailing cloud watch logs" && \
 echo "Trailing cloud watch.." && \
-#sam logs --profile shinrai.devpost --cw-log-group /aws/lambda/jubilee-ekyc-backend-JubileeESBCallFn-XdPRK0bM4j2x --tail --filter "- platform - botocore"  | cut -d ' ' -f 3-
-#sam logs --profile shinrai.devpost --cw-log-group /aws/lambda/jubilee-ekyc-backend-DocumentTextractFn-Xn49U6xdE1D7 --tail --filter "- platform - botocore"  | cut -d ' ' -f 3-
-sam logs --profile shinrai.devpost --cw-log-group /aws/lambda/jubilee-ekyc-backend-UploadDocumentFn-lzEMRPRanrrO --tail --filter "- platform - botocore"  | cut -d ' ' -f 3-
+clear_and_trail_logs "/aws/lambda/jubilee-ekyc-backend-UploadDocumentFn-eh4cpzJMpLpw"
+
+# Example of other log groups you might want to trail:
+# clear_and_trail_logs "/aws/lambda/jubilee-ekyc-backend-APIAuthorizerFn-PhddSR6k6iFi"
