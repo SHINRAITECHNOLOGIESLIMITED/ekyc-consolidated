@@ -3,8 +3,7 @@ import os
 
 import boto3
 from aws_lambda_powertools import Logger, Tracer
-from aws_lambda_powertools import Logger, Tracer
-from aws_lambda_powertools.utilities.validation import validate
+from aws_lambda_powertools.utilities.validation import validate, SchemaValidationError
 
 from portal import Portal
 NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN = os.environ.get('NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN', None)
@@ -32,13 +31,36 @@ headers = {
 
 @tracer.capture_method
 def handler(event, context):
-
+    logger.info(event)
+    
     schema = {
                 "type": "object",
                 "properties": {
                     "body": {
-                        "type": "object",
-                        "properties": {
+                        "type": "string",
+                        "description": "Request body containing document metadata"
+                    }
+                },
+                "required": ["body"]
+            }
+    
+    try:
+        validate(event=event, schema=schema)  
+    except SchemaValidationError as e:
+        logger.error(f"Validation error: {str(e)}")
+        validation_errors = e.validation_message if hasattr(e, 'validation_message') else str(e)
+        return {
+            'statusCode': 400,
+            'headers': headers,
+            'body': json.dumps({
+                'error': 'Invalid request format',
+                'details': validation_errors
+            })
+        }
+    
+    schema = {
+                "type": "object",
+                       "properties": {
                             "s3Path": {
                                 "type": "string",
                                 "description": "S3 path to the document"
@@ -55,18 +77,34 @@ def handler(event, context):
                         "required": ["s3Path", "documentType", "customerId"],
                         "description": "Request body containing document metadata"
                     }
-                },
-                "required": ["body"]
-            }
+    document_request = json.loads(event["body"])  
+    try:
+        validate(event=document_request, schema=schema)  
+    except SchemaValidationError as e:
+        logger.error(f"Validation error: {str(e)}")
+        validation_errors = e.validation_message if hasattr(e, 'validation_message') else str(e)
+        return {
+            'statusCode': 400,
+            'headers': headers,
+            'body': json.dumps({
+                'error': 'Invalid request format',
+                'details': validation_errors
+            })
+        }
     
-    validate(event=event, schema=schema)
-    document_metadata = event["body"]
-    assert 'invocation_number' not in document_metadata
+    # Validate document_metadata structure
+    if 'invocation_number' in document_request:
+        logger.error("Invalid document metadata: 'invocation_number' should not be present in request")
+        return {
+            'statusCode': 400,
+            'headers': headers,
+            'body': json.dumps({'error': "Invalid document metadata: 'invocation_number' should not be present in request"})
+        }
     
-    logger.info(document_metadata)
-    s3Path = document_metadata["s3Path"]
-    document_type = document_metadata["documentType"]
-    customer_Id = document_metadata["customerId"]
+    logger.info(document_request)
+    s3Path = document_request["s3Path"]
+    document_type = document_request["documentType"]
+    customer_Id = document_request["customerId"]
     newS3Path = f"{customer_Id}/{s3Path.split('/')[-1]}"
 
     try:
@@ -78,25 +116,32 @@ def handler(event, context):
     except s3_client.exceptions.ClientError as e:
         error_code = e.response['Error']['Code']
         if error_code == '404' or error_code == 'NoSuchKey':
-            logger.error(f"File {s3Path} does not exist in bucket {source_bucket_name}")
-            raise FileNotFoundError(f"File {s3Path} not found in source bucket")
+            logger.error(f"File {s3Path} does not exist in bucket {AMPLIFY_S3_BUCKET_NAME}")
+            return {
+                    'statusCode': 500,
+                    'headers': headers,
+                    'body': json.dumps({'error': f"File {s3Path} not found in source bucket"})
+                }
         else:
-            raise e
-
+            return {
+                    'statusCode': 500,
+                    'headers': headers,
+                    'body': json.dumps({'error': e.message})
+                }
     try:
         # copy object from source url to destination bucket
-        logger.info(f"Copying document {s3Path} from {source_bucket_name} to {KYCDOCUMENTSBUCKET_NAME}")
+        logger.info(f"Copying document {s3Path} from {AMPLIFY_S3_BUCKET_NAME} to {KYCDOCUMENTSBUCKET_NAME}")
         s3_client.copy_object(
             Bucket=KYCDOCUMENTSBUCKET_NAME,
             CopySource={
-                'Bucket': source_bucket_name,
+                'Bucket': AMPLIFY_S3_BUCKET_NAME,
                 'Key': s3Path
             },
             Key=newS3Path
         )
-        document_metadata["s3Path"] = newS3Path
-        document_metadata["bucket"] = KYCDOCUMENTSBUCKET_NAME
-        logger.info(f"Document {newS3Path} copied from {source_bucket_name} to {KYCDOCUMENTSBUCKET_NAME}")
+        document_request["s3Path"] = newS3Path
+        document_request["bucket"] = KYCDOCUMENTSBUCKET_NAME
+        logger.info(f"Document {newS3Path} copied from {AMPLIFY_S3_BUCKET_NAME} to {KYCDOCUMENTSBUCKET_NAME}")
         document_projection = {
             "documentId": f"{customer_Id}-{document_type}",
             "customerId": customer_Id,
@@ -107,13 +152,13 @@ def handler(event, context):
         portal.update_kyc_document(document_projection)
         
         #Start step function execution
-        document_metadata['invocation_number']=0
+        document_request['invocation_number']=0
         response = sfn_client.start_execution(
             stateMachineArn=NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN,
-            input=json.dumps(document_metadata)
+            input=json.dumps(document_request)
         )
         #log the sfn execution identifier
-        logger.info(f"Started SFN execution {response['executionArn']} with payload {document_metadata}")
+        logger.info(f"Started SFN execution {response['executionArn']} with payload {document_request}")
 
         return {
             'statusCode': 200,

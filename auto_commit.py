@@ -157,15 +157,9 @@ def show_spinner(message):
 
 
 def get_git_diff():
-    """Get git diff of staged and unstaged changes."""
+    """Get git diff of only staged changes."""
     try:
-        # Add all changes to staging
-        subprocess.run(['git', 'add', '.'],
-                       capture_output=True,
-                       text=True,
-                       check=True)
-        
-        # Check if there are any changes to commit
+        # Check if there are any staged changes to commit
         status = subprocess.run(['git', 'status', '--porcelain'],
                                capture_output=True,
                                text=True,
@@ -175,16 +169,17 @@ def get_git_diff():
             print("No changes to commit.")
             return None
             
-        # Get both unstaged and staged diffs
-        result = subprocess.run(['git', 'diff', '--minimal'],
+        # Get only staged diffs
+        result = subprocess.run(['git', 'diff', '--staged', '--minimal'],
                                 capture_output=True,
                                 text=True,
                                 check=True)
-        result2 = subprocess.run(['git', 'diff', '--staged', '--minimal'],
-                                 capture_output=True,
-                                 text=True,
-                                 check=True)
-        return f"{result.stdout}\n{result2.stdout}"
+        
+        if not result.stdout.strip():
+            print("No staged changes to commit. Use 'git add' to stage changes.")
+            return None
+            
+        return result.stdout
     except subprocess.CalledProcessError as e:
         print(f"Error getting git diff: {str(e)}")
         return None
