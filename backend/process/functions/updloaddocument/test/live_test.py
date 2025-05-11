@@ -13,7 +13,8 @@ payload = {
 }
 headers  = {
     'Content-Type': 'application/json',
-    'Authorization': auth_token
+    'Authorization': auth_token,
+    'Origin':'https://main.d2896e60a8d7f8.amplifyapp.com'
 }
 
 def pre_flight():
@@ -54,5 +55,5 @@ def post():
         print(post_response.text)
 
 if __name__ == "__main__":
-    # pre_flight()
+    pre_flight()
     post()

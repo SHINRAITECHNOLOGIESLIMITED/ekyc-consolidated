@@ -140,6 +140,12 @@ Resources:
                 - !Ref PortalGraphQLSecret
         - DynamoDBCrudPolicy:
             TableName: !Ref FaceLivenessResults
+        - Statement:
+            - Effect: Allow
+              Action:
+                - rekognition:CreateFaceLivenessSession
+                - rekognition:GetFaceLivenessSessionResults
+              Resource: '*'
       Layers:
         - !Ref PortalProjectionLayer
       Events:
@@ -388,7 +394,7 @@ Resources:
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
       Cors:
-        AllowOrigin: '''https://main.d2896e60a8d7f8.amplifyapp.com, http://localhost'''
+        AllowOrigin: '''https://main.d2896e60a8d7f8.amplifyapp.com'''
         AllowHeaders: '''Content-Type, Authorization, X-Api-Key, X-Amz-Date,
           X-Amz-Security-Token'''
         AllowMethods: '''POST, OPTIONS'''
