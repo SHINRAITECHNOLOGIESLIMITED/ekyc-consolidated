@@ -68,7 +68,9 @@ const itemDetails = (documentId: KYCDocument) => (
                                 id: "extractedData",
                                 content: documentId.extractedData ? (
                                     <CodeView
-                                        content={JSON.stringify(documentId.extractedData, null, 2)}
+                                        content={documentId.extractedData.toString()}
+                                        lineNumbers={true}
+                                        wrapLines={true}
                                     />
                                 ) : <Box>No extracted data available</Box>,
                                 disabled: !documentId.extractedData
@@ -78,7 +80,9 @@ const itemDetails = (documentId: KYCDocument) => (
                                 id: "searchedData",
                                 content: documentId.searchedData ? (
                                     <CodeView
-                                        content={JSON.stringify(documentId.searchedData, null, 2)}
+                                        content={documentId.searchedData.toString()}
+                                        lineNumbers={true}
+                                        wrapLines={true}
                                     />
                                 ) : <Box>No searched data available</Box>,
                                 disabled: !documentId.searchedData
@@ -88,7 +92,9 @@ const itemDetails = (documentId: KYCDocument) => (
                                 id: "verifiedData",
                                 content: documentId.verifiedData ? (
                                     <CodeView
-                                        content={JSON.stringify(documentId.verifiedData, null, 2)}
+                                        content={documentId.verifiedData.toString()}
+                                        lineNumbers={true}
+                                        wrapLines={true}
                                     />
                                 ) : <Box>No verified data available</Box>,
                                 disabled: !documentId.verifiedData

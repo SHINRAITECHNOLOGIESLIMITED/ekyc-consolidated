@@ -139,6 +139,9 @@ def handler(event, context):
                         logger.error(f"Error NexisLexis search: {str(e)}")
                     
                     event["document"]["documentStatus"] = 'SEARCHED'
+                    event["document"]["searchedData"] = json.dumps(dict(iprs = iprs_result, 
+                                                                        kra = kra_result,
+                                                                        lexis_nexis=lexis_nexis_result))
                     portal.update_kyc_document(event["document"])
                     #to be moved to verification lambda
                     event["document"]["documentStatus"] = 'VERIFICATION FAILED'
@@ -147,6 +150,7 @@ def handler(event, context):
                 else:
                     error_msg = 'ID_NUMBER not found in extracted data'
                     event["document"]["documentStatus"] = 'SEARCH FAILED. Cannot Find "ID_NUMBER"'
+                    event["document"]["verifiedData"] = json.dumps(dict(error = "Cannot Find 'ID_NUMBER' field from extracted data"))
                     portal.update_kyc_document(event["document"])
                     raise JubileeESBError(error_msg)
                     
