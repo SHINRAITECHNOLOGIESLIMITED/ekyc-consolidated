@@ -1,1 +1,2 @@
-export default '0.0.55';
+const releaseVersion = '0.0.55';
+export default releaseVersion;

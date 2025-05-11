@@ -90,7 +90,9 @@ def find_value_block(key_block, value_map):
                 return value_block
     return None
 
-
+def clean_up_label(text_in:str):
+    return text_in.replace(":","").replace("'","").replace('"','').replace("  "," ").strip().replace(" ","_").upper()
+    
 @logger.inject_lambda_context
 @tracer.capture_lambda_handler
 def handler(event, context):
@@ -121,26 +123,18 @@ def handler(event, context):
     validate(event=event, schema=schema)
     assert event['invocation_number']==0,"Expected textract to be the first invocation"
     try:
-        customer_id = event["customerId"]
         s3Path = event['s3Path']
-        document_type = event['documentType']
-
+        
         #textract
         key_map, value_map, block_map = get_kv_map(s3Path)
 
         # append extracted key value pairs to event and pass all parameters along
         extractedData = get_kv_relationship(key_map, value_map, block_map)
+        extractedData = {clean_up_label(k):v[0] for k,v in extractedData.items()}
         event['extractedData'] = extractedData
-
-        document_projection = {
-            "documentId": f"{customer_id}-{document_type}",
-            "customerId": customer_id,
-            "documentType": document_type,
-            "documentStatus": 'EXTRACTED',
-            "s3Path": s3Path,
-            "extractedData": json.dumps(extractedData)
-        }
-        portal.update_kyc_document(document_projection)
+        event["document"]["documentStatus"] = 'EXTRACTED'
+        event["document"]["extractedData"] = json.dumps(extractedData)
+        portal.update_kyc_document(event["document"])
         logger.info(f"Extracted key value pairs")
         event['invocation_number'] += 1
         return event

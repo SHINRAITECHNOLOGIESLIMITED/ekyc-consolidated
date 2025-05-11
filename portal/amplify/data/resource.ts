@@ -19,6 +19,7 @@ const schema = a.schema({
         s3Path: a.string().required(),
         identifier: a.string(),
         extractedData: a.json(),
+        searchedData: a.json(),
         verifiedData: a.json()
     }).authorization(authorize => [
         authorize.authenticated().to(['read']),

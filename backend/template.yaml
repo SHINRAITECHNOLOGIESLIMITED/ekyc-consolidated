@@ -301,6 +301,8 @@ Resources:
             FunctionName: !Ref DocumentTextractFn
         - LambdaInvokePolicy:
             FunctionName: !Ref JubileeESBCallFn
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NewDocumentRegistrationResults
         - CloudWatchLogsFullAccess
       DefinitionUri: process/state_machines/new_document_registration.yaml
   NewDocumentRegistrationLogGroup:
