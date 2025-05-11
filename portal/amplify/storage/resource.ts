@@ -4,14 +4,14 @@ export const storage = defineStorage({
     name: 'kyc_documents',
     access: (allow) => ({
         // Allow authenticated users full access to their own folder structure
-        '${cognito:username}/*': [
+        'uploaded_kyc_docs/${cognito:username}/*': [
             allow.authenticated.to([
                 'read',
                 'write',
             ])
         ],
         // Allow listing of the user's root folder
-        '*': [
+        'uploaded_kyc_docs/*': [
             allow.authenticated.to([
                 'read'
             ])
