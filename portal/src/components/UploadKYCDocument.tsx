@@ -177,7 +177,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                             acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png', 'image/*']}
                             maxFileCount={1}
                             processFile={processFile}
-                            path={({ identityId }) => `uploaded_kyc_docs`}
+                            path={() => `uploaded_kyc_docs`}
                             onUploadSuccess={handleUploadSuccess}
                             onUploadError={(message: string) => {
                                 setError(message);
