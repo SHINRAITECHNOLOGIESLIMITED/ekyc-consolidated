@@ -1,4 +1,5 @@
 from typing import Dict, Any
+import json
 
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.validation import validate
@@ -17,7 +18,7 @@ class LexisNexis:
 
     # LexisNexis Methods
     @tracer.capture_method
-    def search_record(self, data) -> Dict:
+    def search_record(self, data: Dict[str, Any]) -> Dict:
         """
         Search LexisNexis records
         """
@@ -41,7 +42,7 @@ class LexisNexis:
 
             return self.utilities.make_api_call(
                 "LexisNexis",
-                api_method="lexis_nexis",
+                api_method="search_record",
                 url=f"/lexis/search/{self.business}",
                 data=data,
                 is_post=True

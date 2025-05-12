@@ -51,11 +51,11 @@ def handler(event, context):
                         "required": ["s3Path", "documentType", "customerId", "invocation_number"],
                         "description": "Event containing document metadata and invocation info"
             }
-    
+
     try:
         # Validate the event against the schema
         validate(event=event, schema=schema)
-        
+
         # Validate invocation number constraint
         if event['invocation_number'] > 2:
             error_msg = "Expected validation to be within first 2 invocations"
@@ -64,7 +64,7 @@ def handler(event, context):
                 event["document"]["documentStatus"] = "VALIDATION_ERROR: " + error_msg
                 portal.update_kyc_document(event["document"])
             raise JubileeESBError(error_msg)
-        
+
         # Check if extractedData exists
         if "extractedData" not in event:
             error_msg = "Missing extractedData in event"
@@ -73,56 +73,80 @@ def handler(event, context):
                 event["document"]["documentStatus"] = "VALIDATION_ERROR: " + error_msg
                 portal.update_kyc_document(event["document"])
             raise JubileeESBError(error_msg)
-            
+
         extractedData = event["extractedData"]
         match event["documentType"]:
             case "KENYAN_NATIONAL_ID":
                 logger.info("Searching Details for doc:", extractedData)
-                if "ID_NUMBER" in extractedData: 
+                # Debug: Log the entire extractedData to see what we're working with
+                logger.info(f"Full extractedData content: {json.dumps(extractedData)}")
+
+                if "ID_NUMBER" in extractedData:
                     idNumber = extractedData["ID_NUMBER"]
                     #IPRS Search
                     try:
                         iprs_result = validator.iprs.search_generic(dict(identifier="ID_NUMBER", value=idNumber))
-                        event["search_iprs"] = iprs_result 
+                        event["search_iprs"] = iprs_result
                     except Exception as e:
                         event["search_iprs"] = dict(error=str(e))
-                        iprs_result = dict(error=str(e))    
+                        iprs_result = dict(error=str(e))
                         logger.error(f"Error in IPRS search: {str(e)}")
                     #KRA Search
                     try:
                         kra_result = validator.kra.validate_id(dict(country="KE", idNo=idNumber))
                         event["search_kra"] = kra_result
                     except Exception as e:
-                        kra_result = dict(error=str(e)) 
-                        event["search_kra"] = dict(error=str(e))    
+                        kra_result = dict(error=str(e))
+                        event["search_kra"] = dict(error=str(e))
                         logger.error(f"Error in KRA ID search: {str(e)}")
                     #LexisNexis Search
                     try:
                         firstName = ""
                         middleName = ""
                         lastName = ""
-                        gender= ""
-                        dob=""
-                        nationalIdentificationNumber=idNumber
+                        gender = "Male"  # Changed from "M" to "Male" to match curl format
+                        dob = ""
+                        nationalIdentificationNumber = idNumber
                         countryCode = "KEN"
                         entityType = "Individual"
                         sourceName = "Portals"
+                        # Debug: Check if FULL_NAMES exists
+                        logger.info(f"FULL_NAMES in extractedData: {'FULL_NAMES' in extractedData}")
                         if "FULL_NAMES" in extractedData:
-                            names = extractedData["FULL_NAMES"].split(" ")
-                            if len(names) > 0:
+                            full_name = extractedData["FULL_NAMES"].strip()
+                            logger.info(f"FULL_NAMES value: {full_name}")
+                            names = [name for name in full_name.split(" ") if name]
+                            logger.info(f"Parsed names array: {names}")
+
+                            if len(names) == 1:
+                                # Only one name provided
                                 firstName = names[0]
-                            if len(names) > 1:
-                                middleName = names[1]
-                            if len(names) > 2:
-                                lastName = names[2]
+                                lastName = names[0]  # Use the same name as lastName to satisfy API requirements
+                            elif len(names) == 2:
+                                # Common case: First and Last name
+                                firstName = names[0]
+                                lastName = names[1]
+                            elif len(names) >= 3:
+                                # Case with middle name(s)
+                                firstName = names[0]
+                                lastName = names[-1]  # Last element as surname
+                                middleName = " ".join(names[1:-1])  # Everything in between as middle name
+
+                            logger.info(f"Parsed names: firstName={firstName}, middleName={middleName}, lastName={lastName}")
+                        # Get gender if available
                         if "SEX" in extractedData:
+                            # Convert single letter gender to full word format
                             gender = extractedData["SEX"]
+                        else:
+                            gender = "Male"  # Default to Male if not specified
+                        # Debug: Check if DATE_OF_BIRTH exists
+                        logger.info(f"DATE_OF_BIRTH in extractedData: {'DATE_OF_BIRTH' in extractedData}")
                         if "DATE_OF_BIRTH" in extractedData:
                             #YYYY-MM-DD
                             try:
-                                date_split = extractedData["DATE_OF_BIRTH"].replace(" ","").split(".") 
+                                date_split = extractedData["DATE_OF_BIRTH"].replace(" ","").split(".")
                                 if len(date_split) > 2:
-                                    dob = f"{date_split[2]}-{date_split[1]}-{date_split[0]}"                            
+                                    dob = f"{date_split[2]}-{date_split[1]}-{date_split[0]}"
                             except Exception as e:
                                 logger.error(f"Error Extracting date : {str(e)}")
                         lexis_nexis_input = dict(firstName=firstName,
@@ -134,15 +158,17 @@ def handler(event, context):
                                                 countryCode=countryCode,
                                                 entityType=entityType,
                                                 sourceName=sourceName)
+
                         lexis_nexis_result = validator.lexisnexis.search_record(lexis_nexis_input)
                         event["search_lexisnexis"] = lexis_nexis_result
+
                     except Exception as e:
                         event["search_lexisnexis"] = dict(error=str(e))
-                        lexis_nexis_result = dict(error=str(e))    
+                        lexis_nexis_result = dict(error=str(e))
                         logger.error(f"Error NexisLexis search: {str(e)}")
-                    
+
                     event["document"]["documentStatus"] = 'SEARCHED'
-                    event["document"]["searchedData"] = json.dumps(dict(iprs = iprs_result, 
+                    event["document"]["searchedData"] = json.dumps(dict(iprs = iprs_result,
                                                                         kra = kra_result,
                                                                         lexis_nexis=lexis_nexis_result))
                     portal.update_kyc_document(event["document"])
@@ -156,7 +182,7 @@ def handler(event, context):
                     event["document"]["verifiedData"] = json.dumps(dict(error = "Cannot Find 'ID_NUMBER' field from extracted data"))
                     portal.update_kyc_document(event["document"])
                     raise JubileeESBError(error_msg)
-                    
+
             # case Method.IPRS_PING:
             #     result = validator.iprs.ping()
             # case Method.IPRS_SEARCH_ALIEN_ID:
@@ -177,28 +203,28 @@ def handler(event, context):
                     event["document"]["documentStatus"] = f'SEARCH FAILED. Document type not implemented {event["documentType"]}'
                     portal.update_kyc_document(event["document"])
                 raise JubileeESBError(error_msg)
-        
+
         event['invocation_number'] += 1
         return event
-        
+
     except SchemaValidationError as e:
         logger.error(f"Schema validation error: {str(e)}")
         if "document" in event:
             event["document"]["documentStatus"] = f"VALIDATION_ERROR: {str(e)}"
             portal.update_kyc_document(event["document"])
         raise JubileeESBError(f"Schema validation error: {str(e)}")
-        
+
     except AssertionError as e:
         logger.error(f"Assertion error: {str(e)}")
         if "document" in event:
             event["document"]["documentStatus"] = f"VALIDATION_ERROR: {str(e)}"
             portal.update_kyc_document(event["document"])
         raise JubileeESBError(f"Validation error: {str(e)}")
-        
+
     except JubileeESBError as e:
         logger.error(f"Jubilee ESB error: {str(e)}")
         raise
-        
+
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         if "document" in event:
