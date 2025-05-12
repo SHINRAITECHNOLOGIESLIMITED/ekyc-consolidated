@@ -85,13 +85,15 @@ def handler(event, context):
                         iprs_result = validator.iprs.search_generic(dict(identifier="ID_NUMBER", value=idNumber))
                         event["search_iprs"] = iprs_result 
                     except Exception as e:
-                        event["search_iprs"] = dict(error=str(e))    
+                        event["search_iprs"] = dict(error=str(e))
+                        iprs_result = dict(error=str(e))    
                         logger.error(f"Error in IPRS search: {str(e)}")
                     #KRA Search
                     try:
                         kra_result = validator.kra.validate_id(dict(country="KE", idNo=idNumber))
                         event["search_kra"] = kra_result
                     except Exception as e:
+                        kra_result = dict(error=str(e)) 
                         event["search_kra"] = dict(error=str(e))    
                         logger.error(f"Error in KRA ID search: {str(e)}")
                     #LexisNexis Search
@@ -135,7 +137,8 @@ def handler(event, context):
                         lexis_nexis_result = validator.lexisnexis.search_record(lexis_nexis_input)
                         event["search_lexisnexis"] = lexis_nexis_result
                     except Exception as e:
-                        event["search_lexisnexis"] = dict(error=str(e))    
+                        event["search_lexisnexis"] = dict(error=str(e))
+                        lexis_nexis_result = dict(error=str(e))    
                         logger.error(f"Error NexisLexis search: {str(e)}")
                     
                     event["document"]["documentStatus"] = 'SEARCHED'
