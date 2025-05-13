@@ -1,0 +1,707 @@
+openapi: 3.0.0
+info:
+  title: Identity Verification System API
+  version: 1.0.0
+  description: API endpoints to support the Identity Verification System for agent and customer onboarding and verification processes.
+
+servers:
+  - url: /api/v1 # Example server URL
+
+paths:
+  /agent-registration:
+    post:
+      summary: Register a new agent
+      operationId: createAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRegistrationRequest'
+      responses:
+        '201':
+          description: Agent registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRegistrationSuccess'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /customer-registration:
+    post:
+      summary: Register a new customer
+      operationId: createCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRegistrationRequest'
+      responses:
+        '201':
+          description: Customer registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerRegistrationSuccess'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /government/nationalid-verification:
+    post:
+      summary: Verify National ID details against government database
+      operationId: verifyNationalIdGovernment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NationalIdVerificationRequest'
+      responses:
+        '200':
+          description: Verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernmentVerificationResult'
+        '400':
+          description: Invalid input or data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error communicating with government service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /government/passport-verification:
+    post:
+      summary: Verify Passport details against government database
+      operationId: verifyPassportGovernment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PassportVerificationRequest'
+      responses:
+        '200':
+          description: Verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernmentVerificationResult'
+        '400':
+          description: Invalid input or data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error communicating with government service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /government/kra-verification:
+    post:
+      summary: Verify KRA PIN details against KRA database
+      operationId: verifyKraGovernment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KRAVerificationRequest'
+      responses:
+        '200':
+          description: Verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernmentVerificationResult'
+        '400':
+          description: Invalid input or data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error communicating with government service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /government/company-verification:
+    post:
+      summary: Verify Company details against government business registration database
+      operationId: verifyCompanyGovernment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyVerificationRequest'
+      responses:
+        '200':
+          description: Verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernmentVerificationResult'
+        '400':
+          description: Invalid input or data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error communicating with government service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /document/nationalid-validation:
+    post:
+      summary: Validate National ID document details
+      operationId: validateNationalIdDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NationalIdDocumentValidationRequest'
+      responses:
+        '200':
+          description: Document validation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentValidationResult'
+        '400':
+          description: Invalid input or document validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error or document processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /document/passport-validation:
+    post:
+      summary: Validate Passport document details
+      operationId: validatePassportDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PassportDocumentValidationRequest'
+      responses:
+        '200':
+          description: Document validation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentValidationResult'
+        '400':
+          description: Invalid input or document validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error or document processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /document/kra-validation:
+    post:
+      summary: Validate KRA PIN document details
+      operationId: validateKraDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KRADocumentValidationRequest'
+      responses:
+        '200':
+          description: Document validation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentValidationResult'
+        '400':
+          description: Invalid input or document validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error or document processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /document/company-validation:
+    post:
+      summary: Validate Company Certificate of Registration document details
+      operationId: validateCompanyDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyDocumentValidationRequest'
+      responses:
+        '200':
+          description: Document validation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentValidationResult'
+        '400':
+          description: Invalid input or document validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error or document processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    AgentRegistrationRequest:
+      type: object
+      properties:
+        agentType:
+          type: string
+          description: Type of agent (Individual or Company)
+          enum:
+            - Individual
+            - Company
+        name:
+          type: string
+          description: Full legal name (individual or company)
+          example: Jane Doe or ABC Ltd
+        pinNumber:
+          type: string
+          description: KRA Personal Identification Number
+          example: A000000000B
+        idNumber:
+          type: string
+          description: National ID Card number (required for individuals)
+          nullable: true
+          example: '12345678'
+        passportPhotoUrl:
+          type: string
+          description: URL of the uploaded passport photo document
+          format: url
+        nationalIdCardUrl:
+          type: string
+          description: URL of the uploaded National ID Card document (required for individuals)
+          format: url
+          nullable: true
+        companyCertificateUrl:
+          type: string
+          description: URL of the uploaded Company Certificate of Registration document (required for companies)
+          format: url
+          nullable: true
+        dateOfBirth:
+          type: string
+          description: Date of birth (required for individuals)
+          format: date
+          nullable: true
+          example: 1990-01-31
+        businessNumber:
+          type: string
+          description: Business Registration Number (required for companies)
+          nullable: true
+          example: BN123456
+      required:
+        - agentType
+        - name
+        - pinNumber
+        - passportPhotoUrl
+
+    AgentRegistrationSuccess:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Registration success message
+          example: Agent registered successfully
+        agentCode:
+          type: string
+          description: Unique identifier assigned to the registered agent
+          example: AGT123456
+
+    CustomerRegistrationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Full legal name of the customer
+          example: John Smith
+        pinNumber:
+          type: string
+          description: Customer's KRA Personal Identification Number
+          example: A000000000C
+        idNumber:
+          type: string
+          description: Customer's National ID Card number or Passport number
+          example: '87654321' or P123456
+        gender:
+          type: string
+          description: Customer's gender
+          enum:
+            - Male
+            - Female
+        dateOfBirth:
+          type: string
+          description: Customer's date of birth
+          format: date
+          example: 1985-05-15
+        passportPhotoUrl:
+          type: string
+          description: URL of the uploaded customer passport photo document
+          format: url
+        nationalIdOrPassportUrl:
+          type: string
+          description: URL of the uploaded National ID Card or Passport document
+          format: url
+        kraPinCardUrl:
+          type: string
+          description: URL of the uploaded KRA PIN Card document
+          format: url
+        beneficiaries:
+          type: array
+          description: List of customer policy beneficiaries
+          items:
+            $ref: '#/components/schemas/Beneficiary'
+      required:
+        - name
+        - pinNumber
+        - idNumber
+        - gender
+        - dateOfBirth
+        - passportPhotoUrl
+        - nationalIdOrPassportUrl
+        - kraPinCardUrl
+
+    CustomerRegistrationSuccess:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Registration success message
+          example: Customer registered successfully
+        customerId:
+          type: string # Or integer, depending on your system
+          description: Unique identifier assigned to the registered customer
+          example: CUST789012
+
+    Beneficiary:
+      type: object
+      properties:
+        idNumber:
+          type: string
+          description: Primary identification number for the beneficiary (ID, Birth Cert, Passport)
+          example: BC987654 or '11223344'
+        relationship:
+          type: string
+          description: Relationship to the main customer (e.g., Spouse, Child)
+          example: Child
+        gender:
+          type: string
+          description: Gender of the beneficiary
+          enum:
+            - Male
+            - Female
+        dateOfBirth:
+          type: string
+          description: Date of birth of the beneficiary
+          format: date
+          example: 2010-11-22
+      required:
+        - idNumber
+        - relationship
+        - gender
+        - dateOfBirth
+
+    NationalIdVerificationRequest:
+      type: object
+      properties:
+        idNumber:
+          type: string
+          description: National ID Card number
+          example: '12345678'
+        fullNames:
+          type: string
+          description: Full names as per National ID
+          example: Jane Doe
+        dateOfBirth:
+          type: string
+          description: Date of birth
+          format: date
+          example: 1990-01-31
+      required:
+        - idNumber
+        - fullNames
+        - dateOfBirth
+
+    PassportVerificationRequest:
+      type: object
+      properties:
+        passportNumber:
+          type: string
+          description: Passport number
+          example: P123456
+        fullNames:
+          type: string
+          description: Full names as per Passport
+          example: John Smith
+        dateOfBirth:
+          type: string
+          description: Date of birth
+          format: date
+          example: 1985-05-15
+      required:
+        - passportNumber
+        - fullNames
+        - dateOfBirth
+
+    KRAVerificationRequest:
+      type: object
+      properties:
+        kraPin:
+          type: string
+          description: KRA PIN Number
+          example: A000000000B
+        fullNames:
+          type: string
+          description: Full names as per KRA records
+          example: Jane Doe
+        idNumber:
+          type: string
+          description: National ID Card number or Passport number linked to KRA PIN
+          example: '12345678' or P123456
+      required:
+        - kraPin
+        - fullNames
+        - idNumber
+
+    CompanyVerificationRequest:
+      type: object
+      properties:
+        businessNumber:
+          type: string
+          description: Business Registration Number
+          example: BN123456
+        fullNames: # Assuming this maps to Registered Company Name
+          type: string
+          description: Registered Company Name
+          example: ABC Ltd
+      required:
+        - businessNumber
+        - fullNames
+
+    GovernmentVerificationResult:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Verification status
+          enum:
+            - Matched
+            - Not Matched
+            - Error
+        matchDetails:
+          type: object
+          description: Details of matched fields (e.g., { "name": true, "dob": false })
+          additionalProperties:
+            type: boolean
+        errorMessage:
+          type: string
+          description: Details of the error if status is Error
+          nullable: true
+
+    DocumentValidationRequestBase:
+      type: object
+      properties:
+        uploadedDocumentUrl:
+          type: string
+          description: URL of the uploaded document file
+          format: url
+      required:
+        - uploadedDocumentUrl
+
+    NationalIdDocumentValidationRequest:
+      allOf:
+        - $ref: '#/components/schemas/DocumentValidationRequestBase'
+        - type: object
+          properties:
+            idNumber:
+              type: string
+              description: National ID Card number provided by user
+              example: '12345678'
+            fullNames:
+              type: string
+              description: Full names provided by user
+              example: Jane Doe
+            dateOfBirth:
+              type: string
+              description: Date of birth provided by user
+              format: date
+              example: 1990-01-31
+          required:
+            - idNumber
+            - fullNames
+            - dateOfBirth
+
+    PassportDocumentValidationRequest:
+      allOf:
+        - $ref: '#/components/schemas/DocumentValidationRequestBase'
+        - type: object
+          properties:
+            passportNumber:
+              type: string
+              description: Passport number provided by user
+              example: P123456
+            fullNames:
+              type: string
+              description: Full names provided by user
+              example: John Smith
+            dateOfBirth:
+              type: string
+              description: Date of birth provided by user
+              format: date
+              example: 1985-05-15
+          required:
+            - passportNumber
+            - fullNames
+            - dateOfBirth
+
+    KRADocumentValidationRequest:
+      allOf:
+        - $ref: '#/components/schemas/DocumentValidationRequestBase'
+        - type: object
+          properties:
+            kraPin:
+              type: string
+              description: KRA PIN Number provided by user
+              example: A000000000B
+            fullNames:
+              type: string
+              description: Full names provided by user
+              example: Jane Doe
+            idNumber:
+              type: string
+              description: National ID Card number or Passport number provided by user
+              example: '12345678' or P123456
+          required:
+            - kraPin
+            - fullNames
+            - idNumber
+
+    CompanyDocumentValidationRequest:
+      allOf:
+        - $ref: '#/components/schemas/DocumentValidationRequestBase'
+        - type: object
+          properties:
+            businessNumber:
+              type: string
+              description: Business Number provided by user
+              example: BN123456
+            fullNames: # Assuming this maps to Registered Company Name
+              type: string
+              description: Registered Company Name provided by user
+              example: ABC Ltd
+          required:
+            - businessNumber
+            - fullNames
+
+    DocumentValidationResult:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Document validation status
+          enum:
+            - Validated
+            - Rejected
+            - Error
+        extractedData:
+          type: object
+          description: Data extracted from the document (e.g., name, ID number, expiry date)
+          nullable: true # Data might not be extracted on rejection or error
+        matchDetails:
+          type: object
+          description: Details indicating if provided data matches extracted data (e.g., { "idNumber": true, "name": false })
+          additionalProperties:
+            type: boolean
+          nullable: true # Match details might not be available on error
+        rejectionReason:
+          type: string
+          description: Reason for rejection if status is Rejected
+          nullable: true
+        errorMessage:
+          type: string
+          description: Details of the error if status is Error
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          description: HTTP status code of the error
+          example: 400
+        message:
+          type: string
+          description: A human-readable error message
+          example: Invalid input data provided.
+        details:
+          type: string
+          description: More detailed information about the error
+          nullable: true
+          example: The provided ID number format is incorrect.
