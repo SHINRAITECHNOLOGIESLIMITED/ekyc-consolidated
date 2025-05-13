@@ -1,11 +1,10 @@
 openapi: 3.0.0
-info:
-  title: Identity Verification System API
-  version: 1.0.0
-  description: API endpoints to support the Identity Verification System for agent and customer onboarding and verification processes.
 
-servers:
-  - url: /api/v1 # Example server URL
+info:
+  title: eKYC Identity Verification System API
+  version: 1.0.0
+  description: API endpoints to support the KYC Identity Verification System for
+    agent and customer onboarding and verification processes.
 
 paths:
   /agent-registration:
@@ -338,12 +337,14 @@ components:
           format: url
         nationalIdCardUrl:
           type: string
-          description: URL of the uploaded National ID Card document (required for individuals)
+          description: URL of the uploaded National ID Card document (required for
+            individuals)
           format: url
           nullable: true
         companyCertificateUrl:
           type: string
-          description: URL of the uploaded Company Certificate of Registration document (required for companies)
+          description: URL of the uploaded Company Certificate of Registration document
+            (required for companies)
           format: url
           nullable: true
         dateOfBirth:
@@ -389,7 +390,7 @@ components:
         idNumber:
           type: string
           description: Customer's National ID Card number or Passport number
-          example: '87654321' or P123456
+          example: 87654321 or P123456
         gender:
           type: string
           description: Customer's gender
@@ -445,7 +446,8 @@ components:
       properties:
         idNumber:
           type: string
-          description: Primary identification number for the beneficiary (ID, Birth Cert, Passport)
+          description: Primary identification number for the beneficiary (ID, Birth Cert,
+            Passport)
           example: BC987654 or '11223344'
         relationship:
           type: string
@@ -524,7 +526,7 @@ components:
         idNumber:
           type: string
           description: National ID Card number or Passport number linked to KRA PIN
-          example: '12345678' or P123456
+          example: 12345678
       required:
         - kraPin
         - fullNames
@@ -537,7 +539,8 @@ components:
           type: string
           description: Business Registration Number
           example: BN123456
-        fullNames: # Assuming this maps to Registered Company Name
+        fullNames:
+          # Assuming this maps to Registered Company Name
           type: string
           description: Registered Company Name
           example: ABC Ltd
@@ -557,7 +560,7 @@ components:
             - Error
         matchDetails:
           type: object
-          description: Details of matched fields (e.g., { "name": true, "dob": false })
+          description: Details of matched fields
           additionalProperties:
             type: boolean
         errorMessage:
@@ -637,7 +640,7 @@ components:
             idNumber:
               type: string
               description: National ID Card number or Passport number provided by user
-              example: '12345678' or P123456
+              example: 12345678 or P123456
           required:
             - kraPin
             - fullNames
@@ -652,7 +655,8 @@ components:
               type: string
               description: Business Number provided by user
               example: BN123456
-            fullNames: # Assuming this maps to Registered Company Name
+            fullNames:
+              # Assuming this maps to Registered Company Name
               type: string
               description: Registered Company Name provided by user
               example: ABC Ltd
@@ -676,7 +680,7 @@ components:
           nullable: true # Data might not be extracted on rejection or error
         matchDetails:
           type: object
-          description: Details indicating if provided data matches extracted data (e.g., { "idNumber": true, "name": false })
+          description: Details indicating if provided data matches extracted data
           additionalProperties:
             type: boolean
           nullable: true # Match details might not be available on error

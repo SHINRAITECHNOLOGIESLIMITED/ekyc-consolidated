@@ -375,24 +375,10 @@ Resources:
         - ${ResourceName} From Stack ${AWS::StackName}
         - ResourceName: ApiGateway
       StageName: Prod
-      DefinitionBody:
-        openapi: '3.0'
-        info: {}
-        paths:
-          /uploaddocument:
-            post:
-              x-amazon-apigateway-integration:
-                httpMethod: POST
-                type: aws_proxy
-                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadDocumentFn.Arn}/invocations
-              responses: {}
-          /faceliveness:
-            post:
-              x-amazon-apigateway-integration:
-                httpMethod: POST
-                type: aws_proxy
-                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFn.Arn}/invocations
-              responses: {}
+      DefinitionBody: !Transform
+        Name: AWS::Include
+        Parameters:
+          Location: openapi.yaml
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
       Cors:

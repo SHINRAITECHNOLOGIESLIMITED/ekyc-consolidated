@@ -71,7 +71,7 @@ This process outlines the information and verification steps required for onboar
 * **Gender:** The gender of the beneficiary.
 * **Date Of Birth:** The date of birth of the beneficiary.
 
-#### Customer Verification Process:
+#### WIP Customer Verification Process:
 
 The verification process for customers involves validating the provided information and documents:
 
