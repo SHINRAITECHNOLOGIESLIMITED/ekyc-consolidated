@@ -61,6 +61,47 @@ Resources:
           X-Amz-Security-Token'''
         AllowMethods: '''POST, OPTIONS'''
         MaxAge: 60
+
+  RegistrationFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Handles agent and customer registration
+      CodeUri: process/functions/registration/src
+      Handler: app.handler
+      Environment:
+        Variables:
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+      Events:
+        ApiGatewayPOSTAgentRegistration:
+          Type: Api
+          Properties:
+            Path: /agent-registration
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTCustomerRegistration:
+          Type: Api
+          Properties:
+            Path: /customer-registration
+            Method: POST
+            RestApiId: !Ref ApiGateway
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref PortalGraphQLSecret
+      Layers:
+        - !Ref PortalProjectionLayer
+
+  RegistrationFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${RegistrationFn}
+      RetentionInDays: 30
   DocumentValidationFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -73,6 +114,31 @@ Resources:
           KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
           AMPLIFY_S3_BUCKET_NAME: !Ref AmplifyS3BucketName
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+      Events:
+        ApiGatewayPOSTKRA:
+          Type: Api
+          Properties:
+            Path: /document/kra-validation
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTID:
+          Type: Api
+          Properties:
+            Path: /document/nationalid-validation
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTPassport:
+          Type: Api
+          Properties:
+            Path: /document/passport-validation
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTCompany:
+          Type: Api
+          Properties:
+            Path: /document/company-validation
+            Method: POST
+            RestApiId: !Ref ApiGateway
       Policies:
         - Statement:
             - Effect: Allow
@@ -135,7 +201,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${DocumentValidationFn}
       RetentionInDays: 30
-  GovernmentVerification:
+  GovernmentVerificationFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: Handles calls to external government services (IPRS) for data
@@ -146,7 +212,33 @@ Resources:
         Variables:
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
           JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
+      Events:
+        ApiGatewayPOSTKRA:
+          Type: Api
+          Properties:
+            Path: /government/kra-verification
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTID:
+          Type: Api
+          Properties:
+            Path: /government/nationalid-verification
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTPassport:
+          Type: Api
+          Properties:
+            Path: /government/passport-verification
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTCompany:
+          Type: Api
+          Properties:
+            Path: /government/company-verification
+            Method: POST
+            RestApiId: !Ref ApiGateway
       Policies:
+        - AWSLambdaBasicExecutionRole
         - Statement:
             - Effect: Allow
               Action:
@@ -156,6 +248,13 @@ Resources:
                 - !Ref JubileeESBAPISecret
       Layers:
         - !Ref PortalProjectionLayer
+  GovernmentVerificationFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GovernmentVerificationFn}
+      RetentionInDays: 30
   FaceLivenessFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -266,11 +365,12 @@ Metadata:
     Group2:
       Label: 'Layer2: Process orchestration'
       Members:
-        - GovernmentVerification
+        - GovernmentVerificationFn
         - DocumentValidationFn
         - FaceLivenessFn
         - FaceLivenessResults
         - KYCDocumentsBucket
+        - RegistrationFn
 Outputs:
   ApiGatewayUrl:
     Description: API Gateway Production URL
