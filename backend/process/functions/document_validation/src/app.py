@@ -1,4 +1,6 @@
 import json
+import boto3
+from botocore.exceptions import ClientError
 
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.validation import validate
@@ -15,45 +17,77 @@ assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
 logger = Logger()
 tracer = Tracer()
 portal = Portal()
+s3_client = boto3.client('s3')
 
-def download_document_to_s3(s3_client, url, object_key):
+def parse_s3_https_url(url: str):
+    """
+    Parses an S3 HTTPS URL in the format:
+    https://bucket-name.s3.region.amazonaws.com/key
+    and returns the bucket and key.
+    """
+    parsed = urlparse(url)
+    netloc_parts = parsed.netloc.split('.')
+
+    if len(netloc_parts) < 3 or netloc_parts[1] != 's3':
+        raise ValueError(f"Unsupported S3 HTTPS URL format: {url}")
+
+    bucket = netloc_parts[0]
+    key = parsed.path.lstrip('/')
+    return bucket, key
+
+def download_document_to_s3(s3_client, url, object_key=None):
     """
     Downloads a document from a URL and uploads it to an S3 bucket.
-    
+
     Parameters:
     - s3_client: boto3 S3 client instance
     - url: URL of the document to download
-    - bucket_name: Name of the S3 bucket to upload to
     - object_key: Key to use for the S3 object (if None, will be derived from URL)
-    
+
     Returns:
-    - S3 URI of the uploaded document
+    - S3 URI of the uploaded document and the object key
     """
-    
-    
     try:
-        # Download the document from the URL
-        response = requests.get(url, stream=True)
-        response.raise_for_status()  # Raise an exception for HTTP errors
-        
-        # Upload the document to S3
+        # Parse the S3 URL to extract bucket and key
+        parsed_url = urlparse(url)
+
+        # Check if this is an S3 URL
+        if parsed_url.scheme == 's3':
+            source_bucket = parsed_url.netloc
+            source_key = parsed_url.path.lstrip('/')
+        elif parsed_url.scheme == 'https' and 's3' in parsed_url.netloc:
+            source_bucket, source_key = parse_s3_https_url(url)
+        else:
+            raise ValueError(f"Unsupported URL format: {url}")
+
+        # Generate object key if not provided
+        if object_key is None:
+            object_key = source_key.split('/')[-1]
+
+        # Download the object from source S3 bucket securely using boto3
+        response = s3_client.get_object(Bucket=source_bucket, Key=source_key)
+
+        # Upload to destination bucket
         s3_client.upload_fileobj(
-            response.raw,
+            response['Body'],  # Use Body instead of raw
             KYCDOCUMENTSBUCKET_NAME,
             object_key,
-            ExtraArgs={'ContentType': response.headers.get('Content-Type')}
+            ExtraArgs={'ContentType': response.get('ContentType')}
         )
-        
+
         # Return the S3 URI
-        s3_uri = f"s3://{bucket_name}/{object_key}"
-        return s3_uri,object_key
-    
-    except requests.exceptions.RequestException as e:
-        # Handle request errors (connection, timeout, etc.)
-        raise Exception(f"Error downloading document from URL: {e}")
+        s3_uri = f"s3://{KYCDOCUMENTSBUCKET_NAME}/{object_key}"
+        return s3_uri, object_key
+
+    except ClientError as e:
+        logger.error(f"S3 operation error: {e}")
+        raise Exception(f"Error accessing S3: {e}")
+    except ValueError as e:
+        logger.error(f"URL parsing error: {e}")
+        raise Exception(f"Invalid S3 URL format: {e}")
     except Exception as e:
-        # Handle other errors (S3 upload failures, etc.)
-        raise Exception(f"Error uploading document to S3: {e}")
+        logger.error(f"Unexpected error: {e}")
+        raise Exception(f"Error processing document: {e}")
 
 
 @logger.inject_lambda_context
@@ -88,7 +122,7 @@ def handler(event, context):
         except json.JSONDecodeError:
             logger.error("Error decoding JSON body")
             return make_response(400, {'message': 'Invalid JSON body'})
-        
+
 
         except Exception as e:
             logger.error(f"An unexpected error occurred in lambda_handler: {e}")
@@ -105,7 +139,7 @@ def handle_nationalid_document_validation(data):
     schema = {
         "type": "object",
         "properties": {
-            "uploadedDocumentUrl": {"type": "string", "format": "url"},
+            "uploadedDocumentUrl": {"type": "string", "format": "uri"},
             "idNumber": {"type": "string"},
             "fullNames": {"type": "string"},
             "dateOfBirth": {"type": "string", "format": "date"}
@@ -114,22 +148,20 @@ def handle_nationalid_document_validation(data):
         "additionalProperties": False
     }
     validate(schema=schema,event=data)
-    
-    
-    
+
     try:
         #download document to local s3
-        url,s3Path = download_document_to_s3(url=data['uploadedDocumentUrl'], object_key=None)
-        logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")    
+        url,s3Path = download_document_to_s3(s3_client=s3_client, url=data['uploadedDocumentUrl'], object_key=None)
+        logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extractedData =  extract(s3Path)
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
-        logger.info(extractedData)    
-        
+        logger.info(extractedData)
+
         idnumberValid = False,"Not processed"
         namesValid = False,"Not processed"
         dobValid = False,"Not processed"
-        
-        #verify 
+
+        #verify
         if 'ID_NUMBER' in extractedData:
             if extractedData['ID_NUMBER'] == data['idNumber']:
                 idnumberValid = True,"Matched"
@@ -137,8 +169,8 @@ def handle_nationalid_document_validation(data):
                 idnumberValid = False,f"Mismatch - found {extractedData['ID_NUMBER']} expected {data['idNumber']}"
         else:
             idnumberValid = False,"ID Number field not found in the document"
-        
-        
+
+
         if 'DATE_OF_BIRTH' in extractedData:
             if extractedData['DATE_OF_BIRTH'] == data['dateOfBirth'] :
                 dobValid = True,"Matched"
@@ -146,7 +178,7 @@ def handle_nationalid_document_validation(data):
                 dobValid = False,f"Mismatch - found {extractedData['DATE_OF_BIRTH']} expected {data['dateOfBirth'] }"
         else:
             dobValid = False,"Date of Birth field not found in the document"
-        
+
         if 'FULL_NAME' in extractedData:
             if extractedData['FULL_NAME'] == data['fullNames'] :
                 dobValid = True,"Matched"
@@ -154,7 +186,7 @@ def handle_nationalid_document_validation(data):
                 dobValid = False,f"Mismatch - found {extractedData['FULL_NAME']} expected {data['fullNames'] }"
         else:
             dobValid = False,"FullName field not found in the document"
-        
+
         if dobValid[0] and idnumberValid[0] and namesValid[0]:
             status="Valid"
         else:
@@ -180,7 +212,7 @@ def handle_passport_document_validation(data):
     schema = {
         "type": "object",
         "properties": {
-            "uploadedDocumentUrl": {"type": "string", "format": "url"},
+            "uploadedDocumentUrl": {"type": "string", "format": "uri"},
             "passportNumber": {"type": "string"},
             "fullNames": {"type": "string"},
             "dateOfBirth": {"type": "string", "format": "date"}
@@ -188,12 +220,53 @@ def handle_passport_document_validation(data):
         "required": ["uploadedDocumentUrl", "passportNumber", "fullNames", "dateOfBirth"],
         "additionalProperties": False
     }
-    
-    try:
-        validate(schema=schema,event=data)    
-        
+    validate(schema=schema,event=data)
 
-        return make_response(501, {'message': 'Passport document validation endpoint not implemented'})
+    try:
+        url,s3Path = download_document_to_s3(s3_client=s3_client, url=data['uploadedDocumentUrl'], object_key=None)
+        logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
+        extractedData =  extract(s3Path)
+        logger.info(f"Textracted {data['uploadedDocumentUrl']}")
+        logger.info(extractedData)
+
+        passportNumberValid = False,"Not processed"
+        fullnamesValid = False,"Not processed"
+        dobValid = False,"Not processed"
+
+        #Verify PP
+        if 'PASSPORT_NUMBER' in extractedData:
+            if extractedData['PASSPORT_NUMBER'] == data['passportNumber']:
+                passportNumberValid = True,"Matched"
+            else:
+                passportNumberValid = False,f"Mismatch - found {extractedData['PASSPORT_NUMBER']} expected {data['passportNumber']}"
+        else:
+            passportNumberValid = False,"Passport Number field not found in the document"
+
+        if 'FULL_NAME' in extractedData:
+            if extractedData['FULL_NAME'] == data['fullNames'] :
+                fullnamesValid = True,"Matched"
+            else:
+                fullnamesValid = False,f"Mismatch - found {extractedData['FULL_NAME']} expected {data['fullNames'] }"
+        else:
+            fullnamesValid = False,"FullName field not found in the document"
+
+        if 'DATE_OF_BIRTH' in extractedData:
+            if extractedData['DATE_OF_BIRTH'] == data['dateOfBirth'] :
+                dobValid = True,"Matched"
+            else:
+                dobValid = False,f"Mismatch - found {extractedData['DATE_OF_BIRTH']} expected {data['dateOfBirth'] }"
+        else:
+            dobValid = False,"Date of Birth field not found in the document"
+
+        if dobValid[0] and passportNumberValid[0] and fullnamesValid[0]:
+            status="Valid"
+        else:
+            status="Invalid"
+        matchDetails = dict(passportNumber = dict(valid=passportNumberValid[0], reason=passportNumberValid[1]),
+                          names = dict(valid=fullnamesValid[0], reason=fullnamesValid[1]),
+                          dob = dict(valid=dobValid[0], reason=dobValid[1]),)
+        validation = dict(matchDetails=matchDetails, extractedData=extractedData, status=status)
+        return make_response(200, validation)
 
     except SchemaValidationError as e:
         logger.error(f"Schema validation failed for Passport document validation: {e}")
@@ -210,21 +283,53 @@ def handle_kra_document_validation(data):
     schema = {
         "type": "object",
         "properties": {
-            "uploadedDocumentUrl": {"type": "string", "format": "url"},
+            "uploadedDocumentUrl": {"type": "string", "format": "uri"},
             "kraPin": {"type": "string"},
-            "fullNames": {"type": "string"},
-            "idNumber": {"type": "string"} 
+            "taxPayersName": {"type": "string"},
         },
-        "required": ["uploadedDocumentUrl", "kraPin", "fullNames", "idNumber"],
+        "required": ["uploadedDocumentUrl", "kraPin", "taxPayersName"],
         "additionalProperties": False
     }
-    
-    try:
-        validate(schema=schema,event=data)
-        
+    validate(schema=schema,event=data)
 
-        
-        return make_response(501, {'message': 'KRA document validation endpoint not implemented'})
+    try:
+        # download doc to local s3
+        url,s3Path = download_document_to_s3(s3_client=s3_client, url=data['uploadedDocumentUrl'], object_key=None)
+        logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
+        extractedData = extract(s3Path)
+        logger.info(f"Textracted {data['uploadedDocumentUrl']}")
+        logger.info(extractedData)
+
+        krapinValid = False,"Not processed"
+        taxPayersNameValid = False,"Not processed"
+
+        # Verify KRA
+        if 'PERSONAL_IDENTIFICATION_NUMBER' in extractedData:
+            if extractedData['PERSONAL_IDENTIFICATION_NUMBER'] == data['kraPin']:
+                krapinValid = True,"Matched"
+            else:
+                krapinValid = False,f"Mismatch - found {extractedData['PERSONAL_IDENTIFICATION_NUMBER']} expected {data['kraPin']}"
+        else:
+            krapinValid = False,"KRA PIN field not found in the document"
+
+        if 'TAXPAYER_NAME' in extractedData:
+            if extractedData['TAXPAYER_NAME'] == data['taxPayersName'] :
+                taxPayersNameValid = True,"Matched"
+            else:
+                taxPayersNameValid = False,f"Mismatch - found {extractedData['TAXPAYER_NAME']} expected {data['taxPayersName'] }"
+        else:
+            taxPayersNameValid = False,"taxPayersName field not found in the document"
+
+
+        if krapinValid[0] and taxPayersNameValid[0]:
+            status="Valid"
+
+        else:
+            status="Invalid"
+        matchDetails = dict(kraPin = dict(valid=krapinValid[0], reason=krapinValid[1]),
+                        names = dict(valid=taxPayersNameValid[0], reason=taxPayersNameValid[1]))
+        validation = dict(matchDetails=matchDetails, extractedData=extractedData, status=status)
+        return make_response(200, validation)
 
     except SchemaValidationError as e:
         logger.error(f"Schema validation failed for KRA document validation: {e}")
@@ -241,18 +346,50 @@ def handle_company_document_validation(data):
     schema = {
         "type": "object",
         "properties": {
-            "uploadedDocumentUrl": {"type": "string", "format": "url"},
+            "uploadedDocumentUrl": {"type": "string", "format": "uri"},
             "businessNumber": {"type": "string"},
             "fullNames": {"type": "string"} # Maps to Registered Company Name
         },
         "required": ["uploadedDocumentUrl", "businessNumber", "fullNames"],
         "additionalProperties": False
     }
-    
+    validate(schema=schema,event=data)
+
     try:
-        validate(schema=schema,event=data)
-        
-        return make_response(501, {'message': 'Company document validation endpoint not implemented'})
+        # download doc to local s3
+        url,s3Path = download_document_to_s3(s3_client=s3_client, url=data['uploadedDocumentUrl'], object_key=None)
+        logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
+        extractedData = extract(s3Path)
+        logger.info(f"Textracted {data['uploadedDocumentUrl']}")
+        logger.info(extractedData)
+
+        bsNoinValid = False,"Not processed"
+        fullnamesValid = False,"Not processed"
+
+        if 'BUSINESS_NUMBER' in extractedData:
+            if extractedData['BUSINESS_NUMBER'] == data['businessNumber']:
+                bsNoinValid = True,"Matched"
+            else:
+                bsNoinValid = False,f"Mismatch - found {extractedData['BUSINESS_NUMBER']} expected {data['businessNumber']}"
+        else:
+            bsNoinValid = False,"Business Number field not found in the document"
+
+        if 'FULL_NAME' in extractedData:
+            if extractedData['FULL_NAME'] == data['fullNames'] :
+                fullnamesValid = True,"Matched"
+            else:
+                fullnamesValid = False,f"Mismatch - found {extractedData['FULL_NAME']} expected {data['fullNames'] }"
+        else:
+            fullnamesValid = False,"FullName field not found in the document"
+
+        if bsNoinValid[0] and fullnamesValid[0]:
+            status="Valid"
+        else:
+            status="Invalid"
+        matchdetails = dict(bsNo = dict(valid=bsNoinValid[0], reason=bsNoinValid[1]),
+                          names = dict(valid=fullnamesValid[0], reason=fullnamesValid[1]),)
+        validation = dict(matchdetails=matchdetails, extractedData=extractedData, status=status)
+        return make_response(200, validation)
 
     except SchemaValidationError as e:
         logger.error(f"Schema validation failed for Company document validation: {e}")
