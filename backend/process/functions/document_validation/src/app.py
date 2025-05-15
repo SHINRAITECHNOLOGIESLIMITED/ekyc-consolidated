@@ -348,9 +348,8 @@ def handle_company_document_validation(data):
         "properties": {
             "uploadedDocumentUrl": {"type": "string", "format": "uri"},
             "businessNumber": {"type": "string"},
-            "fullNames": {"type": "string"} # Maps to Registered Company Name
         },
-        "required": ["uploadedDocumentUrl", "businessNumber", "fullNames"],
+        "required": ["uploadedDocumentUrl", "businessNumber"],
         "additionalProperties": False
     }
     validate(schema=schema,event=data)
@@ -364,30 +363,21 @@ def handle_company_document_validation(data):
         logger.info(extractedData)
 
         bsNoinValid = False,"Not processed"
-        fullnamesValid = False,"Not processed"
 
-        if 'BUSINESS_NUMBER' in extractedData:
-            if extractedData['BUSINESS_NUMBER'] == data['businessNumber']:
+        if 'NO' in extractedData:
+            if extractedData['NO'] == data['businessNumber']:
                 bsNoinValid = True,"Matched"
             else:
-                bsNoinValid = False,f"Mismatch - found {extractedData['BUSINESS_NUMBER']} expected {data['businessNumber']}"
+                bsNoinValid = False,f"Mismatch - found {extractedData['NO']} expected {data['businessNumber']}"
         else:
             bsNoinValid = False,"Business Number field not found in the document"
 
-        if 'FULL_NAME' in extractedData:
-            if extractedData['FULL_NAME'] == data['fullNames'] :
-                fullnamesValid = True,"Matched"
-            else:
-                fullnamesValid = False,f"Mismatch - found {extractedData['FULL_NAME']} expected {data['fullNames'] }"
-        else:
-            fullnamesValid = False,"FullName field not found in the document"
 
-        if bsNoinValid[0] and fullnamesValid[0]:
+        if bsNoinValid[0]:
             status="Valid"
         else:
             status="Invalid"
-        matchdetails = dict(bsNo = dict(valid=bsNoinValid[0], reason=bsNoinValid[1]),
-                          names = dict(valid=fullnamesValid[0], reason=fullnamesValid[1]),)
+        matchdetails = dict(bsNo = dict(valid=bsNoinValid[0], reason=bsNoinValid[1]),)
         validation = dict(matchdetails=matchdetails, extractedData=extractedData, status=status)
         return make_response(200, validation)
 
