@@ -1,6 +1,7 @@
 import json
 import boto3
 from botocore.exceptions import ClientError
+from datetime import datetime
 
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.validation import validate
@@ -172,20 +173,23 @@ def handle_nationalid_document_validation(data):
 
 
         if 'DATE_OF_BIRTH' in extractedData:
-            if extractedData['DATE_OF_BIRTH'] == data['dateOfBirth'] :
-                dobValid = True,"Matched"
-            else:
-                dobValid = False,f"Mismatch - found {extractedData['DATE_OF_BIRTH']} expected {data['dateOfBirth'] }"
-        else:
-            dobValid = False,"Date of Birth field not found in the document"
+            try:
+                    extracted_dob = datetime.strptime(extractedData['DATE_OF_BIRTH'], "%d.%m.%Y").date()
+                    input_dob = datetime.strptime(data['dateOfBirth'], "%Y-%m-%d").date()
+                    if extracted_dob == input_dob:
+                        dobValid = True, "Matched"
+                    else:
+                        dobValid = False, f"Mismatch - found {extracted_dob} expected {input_dob}"
+            except Exception as e:
+                    dobValid = False, f"Date parsing failed: {str(e)}"
 
-        if 'FULL_NAME' in extractedData:
-            if extractedData['FULL_NAME'] == data['fullNames'] :
-                dobValid = True,"Matched"
+        if 'FULL_NAMES' in extractedData:
+            if extractedData['FULL_NAMES'].upper() == data['fullNames'].upper():
+                namesValid = True,"Matched"
             else:
-                dobValid = False,f"Mismatch - found {extractedData['FULL_NAME']} expected {data['fullNames'] }"
+                namesValid = False,f"Mismatch - found {extractedData['FULL_NAMES']} expected {data['fullNames'] }"
         else:
-            dobValid = False,"FullName field not found in the document"
+            namesValid = False,"FullName field not found in the document"
 
         if dobValid[0] and idnumberValid[0] and namesValid[0]:
             status="Valid"
@@ -234,27 +238,27 @@ def handle_passport_document_validation(data):
         dobValid = False,"Not processed"
 
         #Verify PP
-        if 'PASSPORT_NUMBER' in extractedData:
-            if extractedData['PASSPORT_NUMBER'] == data['passportNumber']:
+        if 'PASSPORT_NO_NAMBARI_YA_PAST_NO_DE_PASSEPORT' in extractedData:
+            if extractedData['PASSPORT_NO_NAMBARI_YA_PAST_NO_DE_PASSEPORT'] == data['passportNumber']:
                 passportNumberValid = True,"Matched"
             else:
-                passportNumberValid = False,f"Mismatch - found {extractedData['PASSPORT_NUMBER']} expected {data['passportNumber']}"
+                passportNumberValid = False,f"Mismatch - found {extractedData['PASSPORT_NO_NAMBARI_YA_PAST_NO_DE_PASSEPORT']} expected {data['passportNumber']}"
         else:
             passportNumberValid = False,"Passport Number field not found in the document"
 
-        if 'FULL_NAME' in extractedData:
-            if extractedData['FULL_NAME'] == data['fullNames'] :
+        if 'GIVEN_NAMES/MAJINA_ALIYOPEWA_PRENOMS' in extractedData:
+            if extractedData['GIVEN_NAMES/MAJINA_ALIYOPEWA_PRENOMS'].upper() == data['fullNames'].upper():
                 fullnamesValid = True,"Matched"
             else:
-                fullnamesValid = False,f"Mismatch - found {extractedData['FULL_NAME']} expected {data['fullNames'] }"
+                fullnamesValid = False,f"Mismatch - found {extractedData['GIVEN_NAMES/MAJINA_ALIYOPEWA_PRENOMS']} expected {data['fullNames'] }"
         else:
             fullnamesValid = False,"FullName field not found in the document"
 
-        if 'DATE_OF_BIRTH' in extractedData:
-            if extractedData['DATE_OF_BIRTH'] == data['dateOfBirth'] :
+        if 'DATE_OF_BIRTH/TAREHE_VA_KUZALIWA_DATE_DE_NAISSANCE' in extractedData:
+            if extractedData['DATE_OF_BIRTH/TAREHE_VA_KUZALIWA_DATE_DE_NAISSANCE'] == data['dateOfBirth'] :
                 dobValid = True,"Matched"
             else:
-                dobValid = False,f"Mismatch - found {extractedData['DATE_OF_BIRTH']} expected {data['dateOfBirth'] }"
+                dobValid = False,f"Mismatch - found {extractedData['DATE_OF_BIRTH/TAREHE_VA_KUZALIWA_DATE_DE_NAISSANCE']} expected {data['dateOfBirth'] }"
         else:
             dobValid = False,"Date of Birth field not found in the document"
 
@@ -313,7 +317,7 @@ def handle_kra_document_validation(data):
             krapinValid = False,"KRA PIN field not found in the document"
 
         if 'TAXPAYER_NAME' in extractedData:
-            if extractedData['TAXPAYER_NAME'] == data['taxPayersName'] :
+            if extractedData['TAXPAYER_NAME'].upper() == data['taxPayersName'].upper():
                 taxPayersNameValid = True,"Matched"
             else:
                 taxPayersNameValid = False,f"Mismatch - found {extractedData['TAXPAYER_NAME']} expected {data['taxPayersName'] }"
@@ -364,11 +368,11 @@ def handle_company_document_validation(data):
 
         bsNoinValid = False,"Not processed"
 
-        if 'NO' in extractedData:
-            if extractedData['NO'] == data['businessNumber']:
+        if 'NO.' in extractedData:
+            if extractedData['NO.'] == data['businessNumber']:
                 bsNoinValid = True,"Matched"
             else:
-                bsNoinValid = False,f"Mismatch - found {extractedData['NO']} expected {data['businessNumber']}"
+                bsNoinValid = False,f"Mismatch - found {extractedData['NO.']} expected {data['businessNumber']}"
         else:
             bsNoinValid = False,"Business Number field not found in the document"
 
