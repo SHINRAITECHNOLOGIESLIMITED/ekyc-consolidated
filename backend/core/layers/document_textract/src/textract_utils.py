@@ -27,7 +27,7 @@ def _get_kv_map(s3Path):
     start_time = time.time() * 1000
     response = textract_client.analyze_document(
         Document={'S3Object': {'Bucket': KYCDOCUMENTSBUCKET_NAME, 'Name': s3Path}},
-        FeatureTypes=["FORMS"]
+        FeatureTypes=["FORMS","TABLES", "LAYOUT"]
     )
     duration_ms = round(time.time() * 1000 - start_time)
     portal.log_api_call(None, api_name="textract", api_method="analyze_document", duration_ms=duration_ms,
@@ -49,7 +49,7 @@ def _get_kv_map(s3Path):
             else:
                 value_map[block_id] = block
 
-    return key_map, value_map, block_map
+    return key_map, value_map, block_map, blocks
 
 
 def _get_text(result, blocks_map):
@@ -88,6 +88,18 @@ def _find_value_block(key_block, value_map):
 
 def _clean_up_label(text_in:str):
     return text_in.replace(":","").replace("'","").replace('"','').replace("  "," ").strip().replace(" ","_").upper()
+
+
+def _extract_text_phrases(blocks):
+    """
+    Extract text in phrase form (sentences and paragraphs) from Textract blocks.
+    """
+    phrases = []
+    for block in blocks:
+        if block['BlockType'] in ['LINE', 'PARAGRAPH']:
+            if 'Text' in block:
+                phrases.append(block['Text'])
+    return phrases
     
 
 def extract(s3Path: str):
@@ -96,12 +108,16 @@ def extract(s3Path: str):
         
         
         #textract
-        key_map, value_map, block_map = _get_kv_map(s3Path)
+        key_map, value_map, block_map, blocks = _get_kv_map(s3Path)
 
         # append extracted key value pairs to event and pass all parameters along
         extractedData = _get_kv_relationship(key_map, value_map, block_map)
         #cleaning up
         extractedData = {_clean_up_label(k):v[0] for k,v in extractedData.items()}
+        
+        # Extract text phrases
+        text_phrases = _extract_text_phrases(blocks)
+        extractedData['TEXT_PHRASES'] = text_phrases
         
         return extractedData
     except Exception as e:

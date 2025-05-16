@@ -2,13 +2,13 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 from datetime import datetime
+from io import BytesIO
 
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.validation import validate
 from aws_lambda_powertools.utilities.validation.exceptions import SchemaValidationError
 from textract_utils import extract
 import requests
-from urllib.parse import urlparse
 import os
 from portal import Portal
 
@@ -20,60 +20,34 @@ tracer = Tracer()
 portal = Portal()
 s3_client = boto3.client('s3')
 
-def parse_s3_https_url(url: str):
-    """
-    Parses an S3 HTTPS URL in the format:
-    https://bucket-name.s3.region.amazonaws.com/key
-    and returns the bucket and key.
-    """
-    parsed = urlparse(url)
-    netloc_parts = parsed.netloc.split('.')
-
-    if len(netloc_parts) < 3 or netloc_parts[1] != 's3':
-        raise ValueError(f"Unsupported S3 HTTPS URL format: {url}")
-
-    bucket = netloc_parts[0]
-    key = parsed.path.lstrip('/')
-    return bucket, key
-
-def download_document_to_s3(s3_client, url, object_key=None):
+def download_document_to_s3(url, object_key=None):
     """
     Downloads a document from a URL and uploads it to an S3 bucket.
 
     Parameters:
-    - s3_client: boto3 S3 client instance
-    - url: URL of the document to download
+    - url: URL of the document to download. allow http,https,ftp,s3 ...etc
     - object_key: Key to use for the S3 object (if None, will be derived from URL)
 
     Returns:
     - S3 URI of the uploaded document and the object key
     """
     try:
-        # Parse the S3 URL to extract bucket and key
-        parsed_url = urlparse(url)
-
-        # Check if this is an S3 URL
-        if parsed_url.scheme == 's3':
-            source_bucket = parsed_url.netloc
-            source_key = parsed_url.path.lstrip('/')
-        elif parsed_url.scheme == 'https' and 's3' in parsed_url.netloc:
-            source_bucket, source_key = parse_s3_https_url(url)
-        else:
-            raise ValueError(f"Unsupported URL format: {url}")
-
         # Generate object key if not provided
         if object_key is None:
-            object_key = source_key.split('/')[-1]
+            object_key = url.split('/')[-1]
 
-        # Download the object from source S3 bucket securely using boto3
-        response = s3_client.get_object(Bucket=source_bucket, Key=source_key)
-
-        # Upload to destination bucket
+        # Download the object from url using requests
+        response = requests.get(url)
+        if response.status_code != 200:
+            logger.error(f"Failed to download document: HTTP {response.status_code} from {url}")
+            raise Exception(f"Failed to download document: HTTP {response.status_code} from {url}")
+        
+        
         s3_client.upload_fileobj(
-            response['Body'],  # Use Body instead of raw
+            BytesIO(response.content),  
             KYCDOCUMENTSBUCKET_NAME,
             object_key,
-            ExtraArgs={'ContentType': response.get('ContentType')}
+            ExtraArgs={'ContentType': response.headers.get('Content-Type')}
         )
 
         # Return the S3 URI
@@ -152,7 +126,7 @@ def handle_nationalid_document_validation(data):
 
     try:
         #download document to local s3
-        url,s3Path = download_document_to_s3(s3_client=s3_client, url=data['uploadedDocumentUrl'], object_key=None)
+        url,s3Path = download_document_to_s3(url=data['uploadedDocumentUrl'], object_key=None)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extractedData =  extract(s3Path)
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
@@ -227,7 +201,7 @@ def handle_passport_document_validation(data):
     validate(schema=schema,event=data)
 
     try:
-        url,s3Path = download_document_to_s3(s3_client=s3_client, url=data['uploadedDocumentUrl'], object_key=None)
+        url,s3Path = download_document_to_s3(url=data['uploadedDocumentUrl'], object_key=None)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extractedData =  extract(s3Path)
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
@@ -298,7 +272,7 @@ def handle_kra_document_validation(data):
 
     try:
         # download doc to local s3
-        url,s3Path = download_document_to_s3(s3_client=s3_client, url=data['uploadedDocumentUrl'], object_key=None)
+        url,s3Path = download_document_to_s3(url=data['uploadedDocumentUrl'], object_key=None)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extractedData = extract(s3Path)
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
@@ -360,7 +334,7 @@ def handle_company_document_validation(data):
 
     try:
         # download doc to local s3
-        url,s3Path = download_document_to_s3(s3_client=s3_client, url=data['uploadedDocumentUrl'], object_key=None)
+        url,s3Path = download_document_to_s3(url=data['uploadedDocumentUrl'], object_key=None)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extractedData = extract(s3Path)
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
