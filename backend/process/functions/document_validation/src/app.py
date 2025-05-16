@@ -11,7 +11,11 @@ from textract_utils import extract
 import requests
 import os
 from portal import Portal
-
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from PIL import Image
+import io
+    
 KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
 assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
 
@@ -20,7 +24,40 @@ tracer = Tracer()
 portal = Portal()
 s3_client = boto3.client('s3')
 
-def download_document_to_s3(url, object_key=None):
+def convert_to_pdf(file_name, content_type):
+    """
+    Read file_name format based on content type.
+    
+    Parameters:
+    - file_name: document path
+    - content_type: MIME type of the document
+    
+    Returns:
+    - PDF binary data
+    """
+    
+    #update function to convert using filename
+    if content_type == 'application/pdf':
+        # If it's already a PDF, just return the binary data
+        with open(file_name, 'rb') as f:
+            return f.read()
+    logger.info(f"Document is not a PDF, converting to PDF")
+    if content_type.startswith('image/'):
+        # Handle image conversion
+        img_buffer = io.BytesIO()
+        img = Image.open(file_name)
+        
+        # Create PDF with the same dimensions as the image
+        width, height = img.size
+        c = canvas.Canvas(img_buffer, pagesize=(width, height))
+        c.drawImage(file_name, 0, 0, width, height)
+        c.save()
+        return img_buffer.getvalue()
+    else:
+        raise Exception(f"Unsupported file type: {content_type}")  # Fixed syntax error
+
+
+def copy_to_s3(url, object_key):
     """
     Downloads a document from a URL and uploads it to an S3 bucket.
 
@@ -32,26 +69,53 @@ def download_document_to_s3(url, object_key=None):
     - S3 URI of the uploaded document and the object key
     """
     try:
-        # Generate object key if not provided
-        if object_key is None:
-            object_key = url.split('/')[-1]
+        tmp_dir = '/tmp'
+        file_name = f"{tmp_dir}/{os.path.basename(object_key)}"
+        
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(file_name), exist_ok=True)
+    
+        #if url is s3 ulr use s3_client to download the document
+        if url.startswith('s3://'):
+            bucket_name, key = url[5:].split('/', 1)
+            try:
+                content_type = s3_client.head_object(Bucket=bucket_name, Key=key)['ContentType']
+                s3_client.download_file(bucket_name, key, file_name)
+            except Exception as e:
+                logger.error(f"Error downloading document from S3: {e}")
+                raise Exception(f"Error downloading document from S3: {e}")                
+        else:
+            # Download the object from url using requests
+            response = requests.get(url)
+            if response.status_code != 200:
+                logger.error(f"Failed to download document: HTTP {response.status_code} from {url}")
+                raise Exception(f"Failed to download document: HTTP {response.status_code} from {url}")
+            #write to file
+            with open(file_name, 'wb') as f:
+                f.write(response.content)
+            content_type = response.headers.get('Content-Type')
+        #check if downloaded document is pdf - if not make it PDF
+        
+        try:
+            binary = convert_to_pdf(file_name,content_type)
+        except Exception as e:
+            logger.error(f"Error converting to PDF: {e}")
+            raise Exception(f"Error converting to PDF: {e}")
 
-        # Download the object from url using requests
-        response = requests.get(url)
-        if response.status_code != 200:
-            logger.error(f"Failed to download document: HTTP {response.status_code} from {url}")
-            raise Exception(f"Failed to download document: HTTP {response.status_code} from {url}")
-        
-        
         s3_client.upload_fileobj(
-            BytesIO(response.content),  
+            BytesIO(binary),  
             KYCDOCUMENTSBUCKET_NAME,
             object_key,
-            ExtraArgs={'ContentType': response.headers.get('Content-Type')}
+            ExtraArgs={'ContentType': 'application/pdf'}
         )
+        try:
+            os.remove(file_name)
+        except Exception as e:
+            logger.error(f"Error removing file: {e}")
 
         # Return the S3 URI
         s3_uri = f"s3://{KYCDOCUMENTSBUCKET_NAME}/{object_key}"
+        logger.info(f"Document uploaded to S3: {s3_uri}")
         return s3_uri, object_key
 
     except ClientError as e:
@@ -73,7 +137,7 @@ def handler(event, context):
     Handles POST requests to various /document/* paths.
     Routes requests to specific handlers which perform schema validation.
     """
-    logger.info(f"Received event: {json.dumps(event)}")
+    # logger.info(f"Received event: {json.dumps(event)}")
 
     http_method = event.get('httpMethod')
     path = event.get('path')
@@ -94,9 +158,9 @@ def handler(event, context):
                 case _:
                     return make_response(404, {'message': 'Path Not Found'})
 
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             logger.error("Error decoding JSON body")
-            return make_response(400, {'message': 'Invalid JSON body'})
+            return make_response(400, {'message': 'Invalid JSON body: {e}'})
 
 
         except Exception as e:
@@ -126,7 +190,8 @@ def handle_nationalid_document_validation(data):
 
     try:
         #download document to local s3
-        url,s3Path = download_document_to_s3(url=data['uploadedDocumentUrl'], object_key=None)
+        object_key = f"KenyanNationalIDs/{data['idNumber']}.pdf"
+        url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extractedData =  extract(s3Path)
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
@@ -201,7 +266,9 @@ def handle_passport_document_validation(data):
     validate(schema=schema,event=data)
 
     try:
-        url,s3Path = download_document_to_s3(url=data['uploadedDocumentUrl'], object_key=None)
+        object_key = f"Passports/{data['passportNumber']}.pdf"
+        url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
+        
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extractedData =  extract(s3Path)
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
@@ -271,8 +338,8 @@ def handle_kra_document_validation(data):
     validate(schema=schema,event=data)
 
     try:
-        # download doc to local s3
-        url,s3Path = download_document_to_s3(url=data['uploadedDocumentUrl'], object_key=None)
+        object_key = f"KRAPinCertificate/{data['kraPin']}.pdf"
+        url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extractedData = extract(s3Path)
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
@@ -326,6 +393,7 @@ def handle_company_document_validation(data):
         "properties": {
             "uploadedDocumentUrl": {"type": "string", "format": "uri"},
             "businessNumber": {"type": "string"},
+            "businessName": {"type": "string"},
         },
         "required": ["uploadedDocumentUrl", "businessNumber"],
         "additionalProperties": False
@@ -334,28 +402,47 @@ def handle_company_document_validation(data):
 
     try:
         # download doc to local s3
-        url,s3Path = download_document_to_s3(url=data['uploadedDocumentUrl'], object_key=None)
+        object_key = f"CR12/{data['businessNumber']}.pdf"
+        url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extractedData = extract(s3Path)
+
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
-        logger.info(extractedData)
-
+        
+        # logger.info(extractedData)
         bsNoinValid = False,"Not processed"
+        bsNameinValid = False,"Not processed"
+        if 'TEXT_PHRASES' in extractedData:
+            extractedData = extractedData['TEXT_PHRASES']
+            logger.info(extractedData)
 
-        if 'NO.' in extractedData:
-            if extractedData['NO.'] == data['businessNumber']:
-                bsNoinValid = True,"Matched"
+            if len(extractedData) >= 2:
+                bsNumber = extractedData[1].replace("No.","").strip()
+                if bsNumber == data['businessNumber']:
+                    bsNoinValid = True,"Matched"
+                else:
+                    bsNoinValid = False,f"Mismatch - found {bsNumber} expected {data['businessNumber']}"
             else:
-                bsNoinValid = False,f"Mismatch - found {extractedData['NO.']} expected {data['businessNumber']}"
+                bsNoinValid = False,"Not found"
+            if len(extractedData) >= 5:
+                companyName = extractedData[4].strip()
+                if companyName.upper() == data['businessName'].upper():
+                    bsNameinValid = True,"Matched"
+                else:
+                    bsNameinValid = False,f"Mismatch - found {companyName} expected {data['companyName']}"
+            else:
+                bsNameinValid = False,"Not found"
+            
+            
         else:
-            bsNoinValid = False,"Business Number field not found in the document"
-
+            bsNoinValid = False,"Could not read text data"
+            bsNameinValid= False,"Could not read text data"
 
         if bsNoinValid[0]:
             status="Valid"
         else:
             status="Invalid"
-        matchdetails = dict(bsNo = dict(valid=bsNoinValid[0], reason=bsNoinValid[1]),)
+        matchdetails = dict(businessNumber = dict(valid=bsNoinValid[0], reason=bsNoinValid[1]),name = dict(valid=bsNameinValid[0], reason=bsNameinValid[1]))
         validation = dict(matchdetails=matchdetails, extractedData=extractedData, status=status)
         return make_response(200, validation)
 
