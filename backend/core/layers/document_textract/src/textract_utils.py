@@ -111,13 +111,13 @@ def extract(s3Path: str):
         key_map, value_map, block_map, blocks = _get_kv_map(s3Path)
 
         # append extracted key value pairs to event and pass all parameters along
-        extractedData = _get_kv_relationship(key_map, value_map, block_map)
+        extractedForm = _get_kv_relationship(key_map, value_map, block_map)
         #cleaning up
-        extractedData = {_clean_up_label(k):v[0] for k,v in extractedData.items()}
+        extractedForm = {_clean_up_label(k):v[0] for k,v in extractedForm.items()}
         
         # Extract text phrases
         text_phrases = _extract_text_phrases(blocks)
-        extractedData['TEXT_PHRASES'] = text_phrases
+        extractedData = dict(form = extractedForm, phrases = text_phrases)
         
         return extractedData
     except Exception as e:

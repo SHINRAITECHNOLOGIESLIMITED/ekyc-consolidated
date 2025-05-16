@@ -193,7 +193,7 @@ def handle_nationalid_document_validation(data):
         object_key = f"KenyanNationalIDs/{data['idNumber']}.pdf"
         url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
-        extractedData =  extract(s3Path)
+        extractedData =  extract(s3Path)["form"]
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
         logger.info(extractedData)
 
@@ -270,7 +270,7 @@ def handle_passport_document_validation(data):
         url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
-        extractedData =  extract(s3Path)
+        extractedData =  extract(s3Path)["form"]
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
         logger.info(extractedData)
 
@@ -341,7 +341,7 @@ def handle_kra_document_validation(data):
         object_key = f"KRAPinCertificate/{data['kraPin']}.pdf"
         url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
-        extractedData = extract(s3Path)
+        extractedData = extract(s3Path)["form"]
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
         logger.info(extractedData)
 
@@ -405,38 +405,30 @@ def handle_company_document_validation(data):
         object_key = f"CR12/{data['businessNumber']}.pdf"
         url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
-        extractedData = extract(s3Path)
+        extractedData = extract(s3Path)["phrases"]
 
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
         
         # logger.info(extractedData)
         bsNoinValid = False,"Not processed"
         bsNameinValid = False,"Not processed"
-        if 'TEXT_PHRASES' in extractedData:
-            extractedData = extractedData['TEXT_PHRASES']
-            logger.info(extractedData)
-
-            if len(extractedData) >= 2:
-                bsNumber = extractedData[1].replace("No.","").strip()
-                if bsNumber == data['businessNumber']:
-                    bsNoinValid = True,"Matched"
-                else:
-                    bsNoinValid = False,f"Mismatch - found {bsNumber} expected {data['businessNumber']}"
+        logger.info(extractedData)
+        if len(extractedData) >= 2:
+            bsNumber = extractedData[1].replace("No.","").strip()
+            if bsNumber == data['businessNumber']:
+                bsNoinValid = True,"Matched"
             else:
-                bsNoinValid = False,"Not found"
-            if len(extractedData) >= 5:
-                companyName = extractedData[4].strip()
-                if companyName.upper() == data['businessName'].upper():
-                    bsNameinValid = True,"Matched"
-                else:
-                    bsNameinValid = False,f"Mismatch - found {companyName} expected {data['companyName']}"
-            else:
-                bsNameinValid = False,"Not found"
-            
-            
+                bsNoinValid = False,f"Mismatch - found {bsNumber} expected {data['businessNumber']}"
         else:
-            bsNoinValid = False,"Could not read text data"
-            bsNameinValid= False,"Could not read text data"
+            bsNoinValid = False,"Not found"
+        if len(extractedData) >= 5:
+            companyName = extractedData[4].strip()
+            if companyName.upper() == data['businessName'].upper():
+                bsNameinValid = True,"Matched"
+            else:
+                bsNameinValid = False,f"Mismatch - found {companyName} expected {data['companyName']}"
+        else:
+            bsNameinValid = False,"Not found"
 
         if bsNoinValid[0]:
             status="Valid"
