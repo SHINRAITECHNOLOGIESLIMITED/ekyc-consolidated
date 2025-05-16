@@ -457,6 +457,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+                
+  /backgroundcheck:
+    post:
+      summary: Perform background check against Lexis Nexis
+      operationId: performBackgroundCheck
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BackgroundCheckFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackgroundCheckRequest'
+      responses:
+        '200':
+          description: Background check completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackgroundCheckResult'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   schemas:
@@ -883,6 +923,67 @@ components:
                 reason:
                   type: string
 
+    BackgroundCheckRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: First name of the individual
+          example: John
+        middleName:
+          type: string
+          description: Middle name of the individual
+          example: David
+        lastName:
+          type: string
+          description: Last name of the individual
+          example: Smith
+        gender:
+          type: string
+          description: Gender of the individual
+          example: Male
+        dateOfBirth:
+          type: string
+          description: Date of birth in ISO format
+          format: date
+          example: 1990-01-31
+        nationalIdentificationNumber:
+          type: string
+          description: National ID number of the individual
+          example: 12345678
+      required:
+        - firstName
+        - lastName
+        - gender
+        - dateOfBirth
+        - nationalIdentificationNumber
+      additionalProperties: false
+      
+    BackgroundCheckResult:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Status of the background check
+        riskScore:
+          type: number
+          description: Risk score from the background check
+        matches:
+          type: array
+          description: List of potential matches found
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              score:
+                type: number
+              details:
+                type: object
+        message:
+          type: string
+          description: Additional information about the background check result
+          
     ErrorResponse:
       type: object
       properties:

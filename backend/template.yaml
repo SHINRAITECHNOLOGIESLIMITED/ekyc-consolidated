@@ -255,6 +255,41 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${GovernmentVerificationFn}
       RetentionInDays: 30
+  BackgroundChecksFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Handles background checking against Lexis Nexis API
+      CodeUri: process/functions/background_check/src
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+          JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
+      Events:
+        ApiGatewayPOSTBackgroundCheck:
+          Type: Api
+          Properties:
+            Path: /backgroundcheck
+            Method: POST
+            RestApiId: !Ref ApiGateway
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref PortalGraphQLSecret
+                - !Ref JubileeESBAPISecret
+      Layers:
+        - !Ref PortalProjectionLayer
+  BackgroundChecksFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${BackgroundChecksFn}
+      RetentionInDays: 30
   FaceLivenessFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -371,6 +406,7 @@ Metadata:
         - FaceLivenessResults
         - KYCDocumentsBucket
         - RegistrationFn
+        - Function
 Outputs:
   ApiGatewayUrl:
     Description: API Gateway Production URL
