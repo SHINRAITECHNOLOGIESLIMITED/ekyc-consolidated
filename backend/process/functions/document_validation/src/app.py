@@ -181,9 +181,10 @@ def handle_nationalid_document_validation(data):
             "uploadedDocumentUrl": {"type": "string", "format": "uri"},
             "idNumber": {"type": "string"},
             "fullNames": {"type": "string"},
-            "dateOfBirth": {"type": "string", "format": "date"}
+            "dateOfBirth": {"type": "string", "format": "date"},
+            "gender": {"type": "string"}
         },
-        "required": ["uploadedDocumentUrl", "idNumber", "fullNames", "dateOfBirth"],
+        "required": ["uploadedDocumentUrl", "idNumber", "fullNames", "dateOfBirth","gender"],
         "additionalProperties": False
     }
     validate(schema=schema,event=data)
@@ -200,6 +201,7 @@ def handle_nationalid_document_validation(data):
         idnumberValid = False,"Not processed"
         namesValid = False,"Not processed"
         dobValid = False,"Not processed"
+        genderValid = False,"Not processed"
 
         #verify
         if 'ID_NUMBER' in extractedData:
@@ -221,6 +223,8 @@ def handle_nationalid_document_validation(data):
                         dobValid = False, f"Mismatch - found {extracted_dob} expected {input_dob}"
             except Exception as e:
                     dobValid = False, f"Date parsing failed: {str(e)}"
+        else:
+            dobValid = False,"Date of Birth field not found in the document"
 
         if 'FULL_NAMES' in extractedData:
             if extractedData['FULL_NAMES'].upper() == data['fullNames'].upper():
@@ -230,7 +234,17 @@ def handle_nationalid_document_validation(data):
         else:
             namesValid = False,"FullName field not found in the document"
 
-        if dobValid[0] and idnumberValid[0] and namesValid[0]:
+        if 'SEX' in extractedData:
+            if extractedData['SEX'].upper() == data['gender'].upper():
+                genderValid = True,"Matched"
+            else:
+                genderValid = False,f"Mismatch - found {extractedData['SEX']} expected {data['gender']}"
+        else:
+            genderValid = False,"SEX field not found in the document"
+        
+        
+        
+        if dobValid[0] and idnumberValid[0] and namesValid[0] and genderValid[0]:
             status="Valid"
         else:
             status="Invalid"

@@ -632,6 +632,13 @@ components:
           type: string
           description: Full names as per National ID
           example: Jane Doe
+        gender:
+          type: string
+          description: Whether person is Male of Female
+          enum:
+            - Male
+            - Female
+          example: Male
         dateOfBirth:
           type: string
           description: Date of birth
