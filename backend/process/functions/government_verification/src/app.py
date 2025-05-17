@@ -4,7 +4,7 @@ from aws_lambda_powertools.utilities.validation import validate
 from aws_lambda_powertools.utilities.validation.exceptions import SchemaValidationError
 from jubilee_esb_api import JubileeESBAPI
 from portal import Portal
-
+import datetime
 from portal import portal
 from fastjsonschema import validate
 from fastjsonschema import JsonSchemaException as SchemaValidationError
@@ -41,8 +41,6 @@ def lambda_handler(event, context):
                     return handle_passport_verification(data)
                 case '/government/kra-verification':
                     return handle_kra_verification(data)
-                case '/government/company-verification':
-                    return handle_company_verification(data)
                 case _:
                     return make_response(404, {'message': 'Path Not Found'})
 
@@ -68,14 +66,80 @@ def handle_nationalid_verification(data):
         "required": ["idNumber"],
         "additionalProperties": False
     }
+    schema = {
+        "type": "object",
+        "properties": {
+            "idNumber": {"type": "string"},
+            "fullNames": {"type": "string"},
+            "dateOfBirth": {"type": "string", "format": "date"},
+            "gender": {"type": "string"},
+        },
+        "required": ["uploadedDocumentUrl", "idNumber", "fullNames", "dateOfBirth"],
+        "additionalProperties": False
+    }
 
     try:
         validate(schema=schema,event=data)
         idNumber = data["idNumber"]
         iprs_id_result = govermentValidator.iprs.search_generic(dict(identifier="ID_NUMBER", value=idNumber))
         logger.info(iprs_id_result)
+        
+        
+        idnumberVerified = False,"Not processed"
+        namesVerified = False,"Not processed"
+        dobVerified = False,"Not processed"
+        genderVerified = False,"Not processed"
 
-        return make_response(200, iprs_id_result)
+        #verify
+        if 'ID_NUMBER' in iprs_id_result:
+            if iprs_id_result['ID_NUMBER'] == data['idNumber']:
+                idnumberVerified = True,"Matched"
+            else:
+                idnumberVerified = False,f"Mismatch - found {iprs_id_result['ID_NUMBER']} expected {data['idNumber']}"
+        else:
+            idnumberVerified = False,"ID Number field not found in identity service"
+
+
+        if 'DATE_OF_BIRTH' in iprs_id_result:
+            try:
+                    extracted_dob = datetime.strptime(iprs_id_result['DATE_OF_BIRTH'], "%d.%m.%Y").date()
+                    input_dob = datetime.strptime(data['dateOfBirth'], "%Y-%m-%d").date()
+                    if extracted_dob == input_dob:
+                        dobVerified = True, "Matched"
+                    else:
+                        dobVerified = False, f"Mismatch - found {extracted_dob} expected {input_dob}"
+            except Exception as e:
+                    dobVerified = False, f"Date parsing failed: {str(e)}"
+        else:
+            dobVerified = False,"Date of Birth field not found in the identity service response"
+
+        if 'FULL_NAMES' in iprs_id_result:
+            if iprs_id_result['FULL_NAMES'].upper() == data['fullNames'].upper():
+                namesVerified = True,"Matched"
+            else:
+                namesVerified = False,f"Mismatch - found {iprs_id_result['FULL_NAMES']} expected {data['fullNames'] }"
+        else:
+            namesVerified = False,"FullName field not found in the identity service response"
+
+        if 'SEX' in iprs_id_result:
+            if iprs_id_result['SEX'].upper() == data['gender'].upper():
+                genderVerified = True,"Matched"
+            else:
+                genderVerified = False,f"Mismatch - found {iprs_id_result['SEX']} expected {data['gender']}"
+        else:
+            genderVerified = False,"SEX field not found in the identity service response"
+        
+        
+        
+        if dobVerified[0] and idnumberVerified[0] and namesVerified[0] and genderVerified[0]:
+            status="Valid"
+        else:
+            status="Invalid"
+        matchDetails = dict(idNumber = dict(valid=idnumberVerified[0],reason=idnumberVerified[1]),
+                          names = dict(valid=namesVerified[0],reason=namesVerified[1]),
+                          dob = dict(valid=dobVerified[0],reason=dobVerified[1]),)
+        validation = dict(matchDetails=matchDetails,iprs_id_result=iprs_id_result,status=status)
+        return make_response(200, validation)
 
     except SchemaValidationError as e:
         logger.error(f"Schema validation failed for National ID verification: {e}")
@@ -157,37 +221,6 @@ def handle_kra_verification(data):
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
         logger.error(f"An unexpected error occurred in handle_kra_verification: {e}")
-        return make_response(500, {'message': 'Internal Server Error'})
-
-
-def handle_company_verification(data):
-    """
-    Validates schema (defined inline and locally) and indicates not implemented for Company verification.
-    """
-    schema = {
-        "type": "object",
-        "properties": {
-            "businessNumber": {"type": "string"},
-            "businessName": {"type": "string"}
-        },
-        "required": ["businessNumber", "businessName"],
-        "additionalProperties": False
-    }
-
-    try:
-        validate(schema=schema,event=data)
-
-        # --- Business Logic Placeholder ---
-        # No external ESB service for Company verification, process response, etc.
-        # --- End Business Logic Placeholder ---
-
-        return make_response(501, {'message': 'Company verification endpoint not implemented'})
-
-    except SchemaValidationError as e:
-        logger.error(f"Schema validation failed for Company verification: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
-    except Exception as e:
-        logger.error(f"An unexpected error occurred in handle_company_verification: {e}")
         return make_response(500, {'message': 'Internal Server Error'})
 
 

@@ -105,7 +105,7 @@ Resources:
   DocumentValidationFn:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Handles validating that uploaded documents match the provided data
+      Description: Validating that uploaded documents match the provided data
       CodeUri: process/functions/document_validation/src
       Handler: app.handler
       Environment:
@@ -204,7 +204,7 @@ Resources:
   GovernmentVerificationFn:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Handles calls to external government services (IPRS) for data
+      Description: Calls to external identity services to validate supplied data
         verification
       CodeUri: process/functions/government_verification/src
       Handler: app.handler
@@ -242,6 +242,7 @@ Resources:
                 - !Ref JubileeESBAPISecret
       Layers:
         - !Ref PortalProjectionLayer
+        - !Ref JubileeESBAPILayer
   GovernmentVerificationFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -277,6 +278,7 @@ Resources:
                 - !Ref JubileeESBAPISecret
       Layers:
         - !Ref PortalProjectionLayer
+        - !Ref JubileeESBAPILayer
   BackgroundChecksFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
