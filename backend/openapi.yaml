@@ -207,46 +207,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /government/company-verification:
-    post:
-      summary: Verify Company details against government business registration database
-      operationId: verifyCompanyGovernment
-      x-amazon-apigateway-integration:
-        uri: 
-          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GovernmentVerificationFn.Arn}/invocations"
-        responses:
-          default:
-            statusCode: "200"
-        passthroughBehavior: when_no_match
-        httpMethod: POST
-        contentHandling: CONVERT_TO_TEXT
-        type: aws_proxy
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CompanyVerificationRequest'
-      responses:
-        '200':
-          description: Verification successful
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GovernmentVerificationResult'
-        '400':
-          description: Invalid input or data not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Error communicating with government service
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
   /document/nationalid-validation:
     post:
       summary: Validate National ID document details
@@ -724,23 +684,6 @@ components:
         - kraPin
         - fullNames
         - idNumber
-      additionalProperties: false
-
-    CompanyVerificationRequest:
-      type: object
-      properties:
-        businessNumber:
-          type: string
-          description: Business Registration Number
-          example: BN123456
-        fullNames:
-          # Assuming this maps to Registered Company Name
-          type: string
-          description: Registered Company Name
-          example: ABC Ltd
-      required:
-        - businessNumber
-        - fullNames
       additionalProperties: false
 
     GovernmentVerificationResult:

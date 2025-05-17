@@ -231,12 +231,6 @@ Resources:
             Path: /government/passport-verification
             Method: POST
             RestApiId: !Ref ApiGateway
-        ApiGatewayPOSTCompany:
-          Type: Api
-          Properties:
-            Path: /government/company-verification
-            Method: POST
-            RestApiId: !Ref ApiGateway
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
