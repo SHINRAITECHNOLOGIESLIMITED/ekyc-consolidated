@@ -15,7 +15,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from PIL import Image
 import io
-    
+
 KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
 assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
 
@@ -27,15 +27,15 @@ s3_client = boto3.client('s3')
 def convert_to_pdf(file_name, content_type):
     """
     Read file_name format based on content type.
-    
+
     Parameters:
     - file_name: document path
     - content_type: MIME type of the document
-    
+
     Returns:
     - PDF binary data
     """
-    
+
     #update function to convert using filename
     if content_type == 'application/pdf':
         # If it's already a PDF, just return the binary data
@@ -46,7 +46,7 @@ def convert_to_pdf(file_name, content_type):
         # Handle image conversion
         img_buffer = io.BytesIO()
         img = Image.open(file_name)
-        
+
         # Create PDF with the same dimensions as the image
         width, height = img.size
         c = canvas.Canvas(img_buffer, pagesize=(width, height))
@@ -71,10 +71,10 @@ def copy_to_s3(url, object_key):
     try:
         tmp_dir = '/tmp'
         file_name = f"{tmp_dir}/{os.path.basename(object_key)}"
-        
+
         # Ensure the directory exists
         os.makedirs(os.path.dirname(file_name), exist_ok=True)
-    
+
         #if url is s3 ulr use s3_client to download the document
         if url.startswith('s3://'):
             bucket_name, key = url[5:].split('/', 1)
@@ -83,7 +83,7 @@ def copy_to_s3(url, object_key):
                 s3_client.download_file(bucket_name, key, file_name)
             except Exception as e:
                 logger.error(f"Error downloading document from S3: {e}")
-                raise Exception(f"Error downloading document from S3: {e}")                
+                raise Exception(f"Error downloading document from S3: {e}")
         else:
             # Download the object from url using requests
             response = requests.get(url)
@@ -95,7 +95,7 @@ def copy_to_s3(url, object_key):
                 f.write(response.content)
             content_type = response.headers.get('Content-Type')
         #check if downloaded document is pdf - if not make it PDF
-        
+
         try:
             binary = convert_to_pdf(file_name,content_type)
         except Exception as e:
@@ -103,7 +103,7 @@ def copy_to_s3(url, object_key):
             raise Exception(f"Error converting to PDF: {e}")
 
         s3_client.upload_fileobj(
-            BytesIO(binary),  
+            BytesIO(binary),
             KYCDOCUMENTSBUCKET_NAME,
             object_key,
             ExtraArgs={'ContentType': 'application/pdf'}
@@ -268,7 +268,7 @@ def handle_passport_document_validation(data):
     try:
         object_key = f"Passports/{data['passportNumber']}.pdf"
         url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
-        
+
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extractedData =  extract(s3Path)["form"]
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
@@ -395,7 +395,7 @@ def handle_company_document_validation(data):
             "businessNumber": {"type": "string"},
             "businessName": {"type": "string"},
         },
-        "required": ["uploadedDocumentUrl", "businessNumber"],
+        "required": ["uploadedDocumentUrl", "businessNumber", "businessName"],
         "additionalProperties": False
     }
     validate(schema=schema,event=data)
@@ -408,7 +408,10 @@ def handle_company_document_validation(data):
         extractedData = extract(s3Path)["phrases"]
 
         logger.info(f"Textracted {data['uploadedDocumentUrl']}")
-        
+
+        bsNoinValid = False,"Not processed"
+        bsNameinValid = False,"Not processed"
+
         # logger.info(extractedData)
         bsNoinValid = False,"Not processed"
         bsNameinValid = False,"Not processed"
@@ -422,19 +425,20 @@ def handle_company_document_validation(data):
         else:
             bsNoinValid = False,"Not found"
         if len(extractedData) >= 5:
-            companyName = extractedData[4].strip()
-            if companyName.upper() == data['businessName'].upper():
+            businessName = extractedData[4].strip()
+            if businessName.upper() == data['businessName'].upper():
                 bsNameinValid = True,"Matched"
             else:
-                bsNameinValid = False,f"Mismatch - found {companyName} expected {data['companyName']}"
+                bsNameinValid = False,f"Mismatch - found {businessName} expected {data['businessName']}"
         else:
             bsNameinValid = False,"Not found"
 
-        if bsNoinValid[0]:
+        if bsNoinValid[0] and bsNameinValid[0]:
             status="Valid"
         else:
             status="Invalid"
-        matchdetails = dict(businessNumber = dict(valid=bsNoinValid[0], reason=bsNoinValid[1]),name = dict(valid=bsNameinValid[0], reason=bsNameinValid[1]))
+        matchdetails = dict(businessNumber = dict(valid=bsNoinValid[0], reason=bsNoinValid[1]),
+                            businessName = dict(valid=bsNameinValid[0], reason=bsNameinValid[1]))
         validation = dict(matchdetails=matchdetails, extractedData=extractedData, status=status)
         return make_response(200, validation)
 
