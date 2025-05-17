@@ -5,7 +5,11 @@ from aws_lambda_powertools.utilities.validation.exceptions import SchemaValidati
 from jubilee_esb_api import JubileeESBAPI
 from portal import Portal
 
-from portal import Portal
+from portal import portal
+from fastjsonschema import validate
+from fastjsonschema import JsonSchemaException as SchemaValidationError
+from aws_lambda_powertools import Logger, Tracer
+
 logger = Logger()
 tracer = Tracer()
 portal = Portal()
@@ -29,7 +33,7 @@ def lambda_handler(event, context):
     if http_method == 'POST':
         try:
             data = json.loads(event.get('body', '{}'))
-            
+
             match path:
                 case '/government/nationalid-verification':
                     return handle_nationalid_verification(data)
@@ -49,7 +53,7 @@ def lambda_handler(event, context):
             logger.error(f"An unexpected error occurred in lambda_handler: {e}")
             return make_response(500, {'message': 'Internal Server Error'})
     else:
-        logger.error('Method Not Allowed - received {http_method}')
+        logger.error(f'Method Not Allowed - received {http_method}')
         return make_response(405, {'message': 'Method Not Allowed'})
 
 def handle_nationalid_verification(data):
@@ -60,45 +64,18 @@ def handle_nationalid_verification(data):
         "type": "object",
         "properties": {
             "idNumber": {"type": "string"},
-            "fullNames": {"type": "string"},
-            "dateOfBirth": {"type": "string", "format": "date"}
         },
-        "required": ["idNumber", "fullNames", "dateOfBirth"],
+        "required": ["idNumber"],
         "additionalProperties": False
     }
-    
+
     try:
         validate(schema=schema,event=data)
         idNumber = data["idNumber"]
-        iprs_result = govermentValidator.iprs.search_generic(dict(identifier="ID_NUMBER", value=idNumber))
-        logger.info(iprs_result)
-        
-        
-        idNumberValid = False,"Not processed"
-        namesValid = False,"Not processed"
-        dobValid = False,"Not processed"
-        
-        
-        #check if id number was found
-        if "error" in iprs_result: #TODO: Rewrite according to actual behaviour of IPRS
-            idNumberValid = False,"Error calling Identity Services"
-        elif "missing" in iprs_result: #TODO: Rewrite according to actual behaviour of IPRS
-            idNumberValid = False,"ID Number not found"
-        else:
-            idNumberValid = True,"Exists"
-            
-        #Effie to continue
-        
-        
-        if dobValid[0] and idNumberValid[0] and namesValid[0]:
-            status="Valid"
-        else:
-            status="Invalid"
-        matchDetails = dict(idNumber = dict(valid=idNumberValid[0],reason=idNumberValid[1]),
-                          names = dict(valid=namesValid[0],reason=namesValid[1]),
-                          dob = dict(valid=dobValid[0],reason=dobValid[1]),)
-        validation = dict(matchDetails=matchDetails,extractedData=iprs_result,status=status)
-        return make_response(200, validation)
+        iprs_id_result = govermentValidator.iprs.search_generic(dict(identifier="ID_NUMBER", value=idNumber))
+        logger.info(iprs_id_result)
+
+        return make_response(200, iprs_id_result)
 
     except SchemaValidationError as e:
         logger.error(f"Schema validation failed for National ID verification: {e}")
@@ -116,21 +93,23 @@ def handle_passport_verification(data):
         "type": "object",
         "properties": {
             "passportNumber": {"type": "string"},
-            "fullNames": {"type": "string"},
-            "dateOfBirth": {"type": "string", "format": "date"}
+            "idNumber": {"type": "string"}
         },
-        "required": ["passportNumber", "fullNames", "dateOfBirth"],
+        "required": ["passportNumber", "idNumber"],
         "additionalProperties": False
     }
-    
+
     try:
         validate(schema=schema,event=data)
-        
-        # --- Business Logic Placeholder ---
-        # Call external ESB service for Passport verification, process response, etc.
-        # --- End Business Logic Placeholder ---
+        idNumber = data["idNumber"]
+        passport_result = govermentValidator.iprs.search_passport_number(dict(
+            identifier = "PASSPORT",
+            value = data["passportNumber"],
+            idNumber = idNumber
+        ))
+        logger.info(passport_result)
 
-        return make_response(501, {'message': 'Passport verification endpoint not implemented'})
+        return make_response(200, passport_result)
 
     except SchemaValidationError as e:
         logger.error(f"Schema validation failed for Passport verification: {e}")
@@ -145,24 +124,33 @@ def handle_kra_verification(data):
     Validates schema (defined inline and locally) and indicates not implemented for KRA verification.
     """
     schema = {
-        "type": "object",
-        "properties": {
-            "kraPin": {"type": "string"},
-            "fullNames": {"type": "string"},
-            "idNumber": {"type": "string"} # Could be National ID or Passport number
-        },
-        "required": ["kraPin", "fullNames", "idNumber"],
-        "additionalProperties": False
-    }
-    
+                "type": "object",
+                "properties": {
+                    "country": {
+                        "type": "string",
+                        "enum": ["COMP", "KE", "NKE", "NKENR"],
+                        "description": "COMP: Non-Individual – Company, KE: Individual - Kenyan Citizen, NKE: Individual – Non-Kenyan Resident, NKENR: Individual – Non-Kenyan Non-Resident"
+                    },
+                    "idNo": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": ["idNo", "country"]
+            }
+
     try:
         validate(schema=schema,event=data)
-        
-        # --- Business Logic Placeholder ---
-        # Call external ESB service for KRA verification, process response, etc.
-        # --- End Business Logic Placeholder ---
+        idNo = data['idNo']
+        country = data['country']
+        kra_result = govermentValidator.iprs.validate_id(dict(
+            identifier = "KRA",
+            value = idNo,
+            country = country
+        ))
+        logger.info(kra_result)
 
-        return make_response(501, {'message': 'KRA verification endpoint not implemented'})
+        return make_response(200, kra_result)
 
     except SchemaValidationError as e:
         logger.error(f"Schema validation failed for KRA verification: {e}")
@@ -180,17 +168,17 @@ def handle_company_verification(data):
         "type": "object",
         "properties": {
             "businessNumber": {"type": "string"},
-            "fullNames": {"type": "string"} # Maps to Registered Company Name
+            "businessName": {"type": "string"}
         },
-        "required": ["businessNumber", "fullNames"],
+        "required": ["businessNumber", "businessName"],
         "additionalProperties": False
     }
-    
+
     try:
         validate(schema=schema,event=data)
-        
+
         # --- Business Logic Placeholder ---
-        # Call external ESB service for Company verification, process response, etc.
+        # No external ESB service for Company verification, process response, etc.
         # --- End Business Logic Placeholder ---
 
         return make_response(501, {'message': 'Company verification endpoint not implemented'})
