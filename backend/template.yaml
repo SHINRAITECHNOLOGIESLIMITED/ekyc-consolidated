@@ -289,6 +289,7 @@ Resources:
   FaceLivenessFn:
     Type: AWS::Serverless::Function
     Properties:
+      CodeUri: process/functions/face_liveness/src
       Handler: app.handler
       Environment:
         Variables:
@@ -407,11 +408,11 @@ Outputs:
     Description: API Gateway Production URL
     Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod
   FaceLivenessFnLogGroup:
-    Description: Tailing the Facelivess Logs
-    Value: FaceLivenessFnLogGroup
+    Description: Facelivess Logs
+    Value: !Ref FaceLivenessFnLogGroup
+  GovernmentVerificationFnLogGroup:
+    Description: Identity verification service log group
+    Value: !Ref GovernmentVerificationFnLogGroup
   DocumentValidationFnLogGroup:
-    Description: Tailing the upload document GW endpoint Logs
-    Value: DocumentValidationFnLogGroup
-  DocumentTextractFn:
-    Description: Tailing the document textract lambda logs
-    Value: DocumentTextractFnLogGroup
+    Description: Document validation log group
+    Value: !Ref DocumentValidationFnLogGroup

@@ -12,7 +12,8 @@ paths:
       summary: Register a new agent
       operationId: createAgent
       x-amazon-apigateway-integration:
-        uri: "${RegistrationFn}"
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RegistrationFn.Arn}/invocations"
         responses:
           default:
             statusCode: "200"
@@ -51,7 +52,8 @@ paths:
       summary: Register a new customer
       operationId: createCustomer
       x-amazon-apigateway-integration:
-        uri: "${RegistrationFn}"
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RegistrationFn.Arn}/invocations"
         responses:
           default:
             statusCode: "200"
@@ -90,7 +92,8 @@ paths:
       summary: Verify National ID details against government database
       operationId: verifyNationalIdGovernment
       x-amazon-apigateway-integration:
-        uri: "${GovernmentVerificationFn}"
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GovernmentVerificationFn.Arn}/invocations"
         responses:
           default:
             statusCode: "200"
@@ -129,7 +132,8 @@ paths:
       summary: Verify Passport details against government database
       operationId: verifyPassportGovernment
       x-amazon-apigateway-integration:
-        uri: "${GovernmentVerificationFn}"
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GovernmentVerificationFn.Arn}/invocations"
         responses:
           default:
             statusCode: "200"
@@ -168,7 +172,8 @@ paths:
       summary: Verify KRA PIN details against KRA database
       operationId: verifyKraGovernment
       x-amazon-apigateway-integration:
-        uri: "${GovernmentVerificationFn}"
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GovernmentVerificationFn.Arn}/invocations"
         responses:
           default:
             statusCode: "200"
@@ -207,7 +212,8 @@ paths:
       summary: Validate National ID document details
       operationId: validateNationalIdDocument
       x-amazon-apigateway-integration:
-        uri: "${DocumentValidationFn}"
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
         responses:
           default:
             statusCode: "200"
@@ -246,7 +252,8 @@ paths:
       summary: Validate Passport document details
       operationId: validatePassportDocument
       x-amazon-apigateway-integration:
-        uri: "${DocumentValidationFn}"
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
         responses:
           default:
             statusCode: "200"
@@ -285,7 +292,8 @@ paths:
       summary: Validate KRA PIN document details
       operationId: validateKraDocument
       x-amazon-apigateway-integration:
-        uri: "${DocumentValidationFn}"
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
         responses:
           default:
             statusCode: "200"
@@ -324,7 +332,8 @@ paths:
       summary: Validate Company Certificate of Registration document details
       operationId: validateCompanyDocument
       x-amazon-apigateway-integration:
-        uri: "${DocumentValidationFn}"
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
         responses:
           default:
             statusCode: "200"
@@ -363,7 +372,8 @@ paths:
       summary: Face liveness verification
       operationId: verifyFaceLiveness
       x-amazon-apigateway-integration:
-        uri: "${FaceLivenessFn}"
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFn.Arn}/invocations"
         responses:
           default:
             statusCode: "200"
@@ -413,7 +423,8 @@ paths:
       summary: Perform background check against Lexis Nexis
       operationId: performBackgroundCheck
       x-amazon-apigateway-integration:
-        uri: "${BackgroundChecksFn}"
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BackgroundChecksFn.Arn}/invocations"
         responses:
           default:
             statusCode: "200"

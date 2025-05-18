@@ -144,8 +144,11 @@ def handler(event, context):
 
     if http_method == 'POST':
         try:
-            data = json.loads(event.get('body', '{}'))
-            logger.error(f"Request body: {data}")
+            data = event.get('body', {})
+            #check if data is dict - if its a string convert to dict
+            if isinstance(data, str):
+                data = json.loads(data)
+            logger.info(f"Request Data (body): {data}")
             match path:
                 case  '/document/nationalid-validation':
                     return handle_nationalid_document_validation(data)
@@ -187,9 +190,10 @@ def handle_nationalid_document_validation(data):
         "required": ["uploadedDocumentUrl", "idNumber", "fullNames", "dateOfBirth","gender"],
         "additionalProperties": False
     }
-    validate(schema=schema,event=data)
+    
 
     try:
+        validate(schema=schema,event=data)
         #download document to local s3
         object_key = f"KenyanNationalIDs/{data['idNumber']}.pdf"
         url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
@@ -277,9 +281,10 @@ def handle_passport_document_validation(data):
         "required": ["uploadedDocumentUrl", "passportNumber", "fullNames", "dateOfBirth"],
         "additionalProperties": False
     }
-    validate(schema=schema,event=data)
+    
 
     try:
+        validate(schema=schema,event=data)
         object_key = f"Passports/{data['passportNumber']}.pdf"
         url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
 
@@ -349,9 +354,10 @@ def handle_kra_document_validation(data):
         "required": ["uploadedDocumentUrl", "kraPin", "taxPayersName"],
         "additionalProperties": False
     }
-    validate(schema=schema,event=data)
+    
 
     try:
+        validate(schema=schema,event=data)
         object_key = f"KRAPinCertificate/{data['kraPin']}.pdf"
         url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
@@ -412,9 +418,10 @@ def handle_company_document_validation(data):
         "required": ["uploadedDocumentUrl", "businessNumber", "businessName"],
         "additionalProperties": False
     }
-    validate(schema=schema,event=data)
+    
 
     try:
+        validate(schema=schema,event=data)
         # download doc to local s3
         object_key = f"CR12/{data['businessNumber']}.pdf"
         url,s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
