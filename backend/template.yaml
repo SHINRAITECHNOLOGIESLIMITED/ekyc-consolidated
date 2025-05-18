@@ -267,6 +267,9 @@ Resources:
             Path: /backgroundcheck
             Method: POST
             RestApiId: !Ref ApiGateway
+      Layers:
+        - !Ref PortalProjectionLayer
+        - !Ref JubileeESBAPILayer
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -276,9 +279,6 @@ Resources:
               Resource:
                 - !Ref PortalGraphQLSecret
                 - !Ref JubileeESBAPISecret
-      Layers:
-        - !Ref PortalProjectionLayer
-        - !Ref JubileeESBAPILayer
   BackgroundChecksFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -402,7 +402,6 @@ Metadata:
         - FaceLivenessResults
         - KYCDocumentsBucket
         - RegistrationFn
-        - Function
 Outputs:
   ApiGatewayUrl:
     Description: API Gateway Production URL

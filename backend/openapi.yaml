@@ -12,8 +12,7 @@ paths:
       summary: Register a new agent
       operationId: createAgent
       x-amazon-apigateway-integration:
-        uri: 
-          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RegistrationFn.Arn}/invocations"
+        uri: "${RegistrationFn}"
         responses:
           default:
             statusCode: "200"
@@ -52,8 +51,7 @@ paths:
       summary: Register a new customer
       operationId: createCustomer
       x-amazon-apigateway-integration:
-        uri: 
-          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RegistrationFn.Arn}/invocations"
+        uri: "${RegistrationFn}"
         responses:
           default:
             statusCode: "200"
@@ -92,8 +90,7 @@ paths:
       summary: Verify National ID details against government database
       operationId: verifyNationalIdGovernment
       x-amazon-apigateway-integration:
-        uri: 
-          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GovernmentVerificationFn.Arn}/invocations"
+        uri: "${GovernmentVerificationFn}"
         responses:
           default:
             statusCode: "200"
@@ -132,8 +129,7 @@ paths:
       summary: Verify Passport details against government database
       operationId: verifyPassportGovernment
       x-amazon-apigateway-integration:
-        uri: 
-          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GovernmentVerificationFn.Arn}/invocations"
+        uri: "${GovernmentVerificationFn}"
         responses:
           default:
             statusCode: "200"
@@ -172,8 +168,7 @@ paths:
       summary: Verify KRA PIN details against KRA database
       operationId: verifyKraGovernment
       x-amazon-apigateway-integration:
-        uri: 
-          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GovernmentVerificationFn.Arn}/invocations"
+        uri: "${GovernmentVerificationFn}"
         responses:
           default:
             statusCode: "200"
@@ -212,8 +207,7 @@ paths:
       summary: Validate National ID document details
       operationId: validateNationalIdDocument
       x-amazon-apigateway-integration:
-        uri: 
-          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
+        uri: "${DocumentValidationFn}"
         responses:
           default:
             statusCode: "200"
@@ -252,8 +246,7 @@ paths:
       summary: Validate Passport document details
       operationId: validatePassportDocument
       x-amazon-apigateway-integration:
-        uri: 
-          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
+        uri: "${DocumentValidationFn}"
         responses:
           default:
             statusCode: "200"
@@ -292,8 +285,7 @@ paths:
       summary: Validate KRA PIN document details
       operationId: validateKraDocument
       x-amazon-apigateway-integration:
-        uri: 
-          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
+        uri: "${DocumentValidationFn}"
         responses:
           default:
             statusCode: "200"
@@ -332,8 +324,7 @@ paths:
       summary: Validate Company Certificate of Registration document details
       operationId: validateCompanyDocument
       x-amazon-apigateway-integration:
-        uri: 
-          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
+        uri: "${DocumentValidationFn}"
         responses:
           default:
             statusCode: "200"
@@ -372,8 +363,7 @@ paths:
       summary: Face liveness verification
       operationId: verifyFaceLiveness
       x-amazon-apigateway-integration:
-        uri: 
-          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFn.Arn}/invocations"
+        uri: "${FaceLivenessFn}"
         responses:
           default:
             statusCode: "200"
@@ -423,8 +413,7 @@ paths:
       summary: Perform background check against Lexis Nexis
       operationId: performBackgroundCheck
       x-amazon-apigateway-integration:
-        uri: 
-          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BackgroundChecksFn.Arn}/invocations"
+        uri: "${BackgroundChecksFn}"
         responses:
           default:
             statusCode: "200"
@@ -588,7 +577,7 @@ components:
           description: Registration success message
           example: Customer registered successfully
         customerId:
-          type: string # Or integer, depending on your system
+          type: string
           description: Unique identifier assigned to the registered customer
           example: CUST789012
 
@@ -620,6 +609,7 @@ components:
         - relationship
         - gender
         - dateOfBirth
+        
     NationalIdVerificationRequest:
       type: object
       properties:
@@ -743,8 +733,6 @@ components:
             idNumber:
               type: string
               description: ID number extracted from government records
-
-
 
     NationalIdDocumentValidationRequest:
       type: object
@@ -925,14 +913,9 @@ components:
           description: More detailed information about the error
           nullable: true
           example: The provided ID number format is incorrect.
-        businessName:
-          type: string
-          description: Registered Company Name provided by user
-          example: ABC Ltd
       required:
-        - uploadedDocumentUrl
-        - businessNumber
-        - businessName
+        - statusCode
+        - message
       additionalProperties: false
 
     DocumentValidationResult:
@@ -972,831 +955,3 @@ components:
                   type: boolean
                 reason:
                   type: string
-
-    BackgroundCheckRequest:
-      type: object
-      properties:
-        firstName:
-          type: string
-          description: First name of the individual
-          example: John
-        middleName:
-          type: string
-          description: Middle name of the individual
-          example: David
-        lastName:
-          type: string
-          description: Last name of the individual
-          example: Smith
-        gender:
-          type: string
-          description: Gender of the individual
-          example: Male
-        dateOfBirth:
-          type: string
-          description: Date of birth in ISO format
-          format: date
-          example: 1990-01-31
-        nationalIdentificationNumber:
-          type: string
-          description: National ID number of the individual
-          example: 12345678
-      required:
-        - firstName
-        - lastName
-        - gender
-        - dateOfBirth
-        - nationalIdentificationNumber
-      additionalProperties: false
-      
-    BackgroundCheckResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Status of the background check
-        riskScore:
-          type: number
-          description: Risk score from the background check
-        matches:
-          type: array
-          description: List of potential matches found
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              score:
-                type: number
-              details:
-                type: object
-        message:
-          type: string
-          description: Additional information about the background check result
-          
-    ErrorResponse:
-      type: object
-      properties:
-        statusCode:
-          type: integer
-          description: HTTP status code of the error
-          example: 400
-        message:
-          type: string
-          description: A human-readable error message
-          example: Invalid input data provided.
-        details:
-          type: string
-          description: More detailed information about the error
-          nullable: true
-          example: The provided ID number format is incorrect.
-        businessName:
-          type: string
-          description: Registered Company Name provided by user
-          example: ABC Ltd
-      required:
-        - uploadedDocumentUrl
-        - businessNumber
-        - businessName
-      additionalProperties: false
-
-    DocumentValidationResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Document validation status
-          enum:
-            - Valid
-            - Invalid
-        extractedData:
-          type: object
-          description: Data extracted from the document (e.g., name, ID number, expiry date)
-        matchDetails:
-          type: object
-          description: Details indicating if provided data matches extracted data
-          properties:
-            idNumber:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-            names:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-            dob:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-
-    BackgroundCheckRequest:
-      type: object
-      properties:
-        firstName:
-          type: string
-          description: First name of the individual
-          example: John
-        middleName:
-          type: string
-          description: Middle name of the individual
-          example: David
-        lastName:
-          type: string
-          description: Last name of the individual
-          example: Smith
-        gender:
-          type: string
-          description: Gender of the individual
-          example: Male
-        dateOfBirth:
-          type: string
-          description: Date of birth in ISO format
-          format: date
-          example: 1990-01-31
-        nationalIdentificationNumber:
-          type: string
-          description: National ID number of the individual
-          example: 12345678
-      required:
-        - firstName
-        - lastName
-        - gender
-        - dateOfBirth
-        - nationalIdentificationNumber
-      additionalProperties: false
-      
-    BackgroundCheckResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Status of the background check
-        riskScore:
-          type: number
-          description: Risk score from the background check
-        matches:
-          type: array
-          description: List of potential matches found
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              score:
-                type: number
-              details:
-                type: object
-        message:
-          type: string
-          description: Additional information about the background check result
-          
-    ErrorResponse:
-      type: object
-      properties:
-        statusCode:
-          type: integer
-          description: HTTP status code of the error
-          example: 400
-        message:
-          type: string
-          description: A human-readable error message
-          example: Invalid input data provided.
-        details:
-          type: string
-          description: More detailed information about the error
-          nullable: true
-          example: The provided ID number format is incorrect.
-        businessName:
-          type: string
-          description: Registered Company Name provided by user
-          example: ABC Ltd
-      required:
-        - uploadedDocumentUrl
-        - businessNumber
-        - businessName
-      additionalProperties: false
-
-    DocumentValidationResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Document validation status
-          enum:
-            - Valid
-            - Invalid
-        extractedData:
-          type: object
-          description: Data extracted from the document (e.g., name, ID number, expiry date)
-        matchDetails:
-          type: object
-          description: Details indicating if provided data matches extracted data
-          properties:
-            idNumber:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-            names:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-            dob:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-
-    BackgroundCheckRequest:
-      type: object
-      properties:
-        firstName:
-          type: string
-          description: First name of the individual
-          example: John
-        middleName:
-          type: string
-          description: Middle name of the individual
-          example: David
-        lastName:
-          type: string
-          description: Last name of the individual
-          example: Smith
-        gender:
-          type: string
-          description: Gender of the individual
-          example: Male
-        dateOfBirth:
-          type: string
-          description: Date of birth in ISO format
-          format: date
-          example: 1990-01-31
-        nationalIdentificationNumber:
-          type: string
-          description: National ID number of the individual
-          example: 12345678
-      required:
-        - firstName
-        - lastName
-        - gender
-        - dateOfBirth
-        - nationalIdentificationNumber
-      additionalProperties: false
-      
-    BackgroundCheckResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Status of the background check
-        riskScore:
-          type: number
-          description: Risk score from the background check
-        matches:
-          type: array
-          description: List of potential matches found
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              score:
-                type: number
-              details:
-                type: object
-        message:
-          type: string
-          description: Additional information about the background check result
-          
-    ErrorResponse:
-      type: object
-      properties:
-        statusCode:
-          type: integer
-          description: HTTP status code of the error
-          example: 400
-        message:
-          type: string
-          description: A human-readable error message
-          example: Invalid input data provided.
-        details:
-          type: string
-          description: More detailed information about the error
-          nullable: true
-          example: The provided ID number format is incorrect.
-        businessName:
-          type: string
-          description: Registered Company Name provided by user
-          example: ABC Ltd
-      required:
-        - uploadedDocumentUrl
-        - businessNumber
-        - businessName
-      additionalProperties: false
-
-    DocumentValidationResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Document validation status
-          enum:
-            - Valid
-            - Invalid
-        extractedData:
-          type: object
-          description: Data extracted from the document (e.g., name, ID number, expiry date)
-        matchDetails:
-          type: object
-          description: Details indicating if provided data matches extracted data
-          properties:
-            idNumber:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-            names:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-            dob:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-
-    BackgroundCheckRequest:
-      type: object
-      properties:
-        firstName:
-          type: string
-          description: First name of the individual
-          example: John
-        middleName:
-          type: string
-          description: Middle name of the individual
-          example: David
-        lastName:
-          type: string
-          description: Last name of the individual
-          example: Smith
-        gender:
-          type: string
-          description: Gender of the individual
-          example: Male
-        dateOfBirth:
-          type: string
-          description: Date of birth in ISO format
-          format: date
-          example: 1990-01-31
-        nationalIdentificationNumber:
-          type: string
-          description: National ID number of the individual
-          example: 12345678
-      required:
-        - firstName
-        - lastName
-        - gender
-        - dateOfBirth
-        - nationalIdentificationNumber
-      additionalProperties: false
-      
-    BackgroundCheckResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Status of the background check
-        riskScore:
-          type: number
-          description: Risk score from the background check
-        matches:
-          type: array
-          description: List of potential matches found
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              score:
-                type: number
-              details:
-                type: object
-        message:
-          type: string
-          description: Additional information about the background check result
-          
-    ErrorResponse:
-      type: object
-      properties:
-        statusCode:
-          type: integer
-          description: HTTP status code of the error
-          example: 400
-        message:
-          type: string
-          description: A human-readable error message
-          example: Invalid input data provided.
-        details:
-          type: string
-          description: More detailed information about the error
-          nullable: true
-          example: The provided ID number format is incorrect.
-        businessName:
-          type: string
-          description: Registered Company Name provided by user
-          example: ABC Ltd
-      required:
-        - uploadedDocumentUrl
-        - businessNumber
-        - businessName
-      additionalProperties: false
-
-    DocumentValidationResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Document validation status
-          enum:
-            - Valid
-            - Invalid
-        extractedData:
-          type: object
-          description: Data extracted from the document (e.g., name, ID number, expiry date)
-        matchDetails:
-          type: object
-          description: Details indicating if provided data matches extracted data
-          properties:
-            idNumber:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-            names:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-            dob:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-
-    BackgroundCheckRequest:
-      type: object
-      properties:
-        firstName:
-          type: string
-          description: First name of the individual
-          example: John
-        middleName:
-          type: string
-          description: Middle name of the individual
-          example: David
-        lastName:
-          type: string
-          description: Last name of the individual
-          example: Smith
-        gender:
-          type: string
-          description: Gender of the individual
-          example: Male
-        dateOfBirth:
-          type: string
-          description: Date of birth in ISO format
-          format: date
-          example: 1990-01-31
-        nationalIdentificationNumber:
-          type: string
-          description: National ID number of the individual
-          example: 12345678
-      required:
-        - firstName
-        - lastName
-        - gender
-        - dateOfBirth
-        - nationalIdentificationNumber
-      additionalProperties: false
-      
-    BackgroundCheckResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Status of the background check
-        riskScore:
-          type: number
-          description: Risk score from the background check
-        matches:
-          type: array
-          description: List of potential matches found
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              score:
-                type: number
-              details:
-                type: object
-        message:
-          type: string
-          description: Additional information about the background check result
-          
-    ErrorResponse:
-      type: object
-      properties:
-        statusCode:
-          type: integer
-          description: HTTP status code of the error
-          example: 400
-        message:
-          type: string
-          description: A human-readable error message
-          example: Invalid input data provided.
-        details:
-          type: string
-          description: More detailed information about the error
-          nullable: true
-          example: The provided ID number format is incorrect.
-        businessName:
-          type: string
-          description: Registered Company Name provided by user
-          example: ABC Ltd
-      required:
-        - uploadedDocumentUrl
-        - businessNumber
-        - businessName
-      additionalProperties: false
-
-    DocumentValidationResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Document validation status
-          enum:
-            - Valid
-            - Invalid
-        extractedData:
-          type: object
-          description: Data extracted from the document (e.g., name, ID number, expiry date)
-        matchDetails:
-          type: object
-          description: Details indicating if provided data matches extracted data
-          properties:
-            idNumber:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-            names:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-            dob:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-
-    BackgroundCheckRequest:
-      type: object
-      properties:
-        firstName:
-          type: string
-          description: First name of the individual
-          example: John
-        middleName:
-          type: string
-          description: Middle name of the individual
-          example: David
-        lastName:
-          type: string
-          description: Last name of the individual
-          example: Smith
-        gender:
-          type: string
-          description: Gender of the individual
-          example: Male
-        dateOfBirth:
-          type: string
-          description: Date of birth in ISO format
-          format: date
-          example: 1990-01-31
-        nationalIdentificationNumber:
-          type: string
-          description: National ID number of the individual
-          example: 12345678
-      required:
-        - firstName
-        - lastName
-        - gender
-        - dateOfBirth
-        - nationalIdentificationNumber
-      additionalProperties: false
-      
-    BackgroundCheckResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Status of the background check
-        riskScore:
-          type: number
-          description: Risk score from the background check
-        matches:
-          type: array
-          description: List of potential matches found
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              score:
-                type: number
-              details:
-                type: object
-        message:
-          type: string
-          description: Additional information about the background check result
-          
-    ErrorResponse:
-      type: object
-      properties:
-        statusCode:
-          type: integer
-          description: HTTP status code of the error
-          example: 400
-        message:
-          type: string
-          description: A human-readable error message
-          example: Invalid input data provided.
-        details:
-          type: string
-          description: More detailed information about the error
-          nullable: true
-          example: The provided ID number format is incorrect.
-        businessName:
-          type: string
-          description: Registered Company Name provided by user
-          example: ABC Ltd
-      required:
-        - uploadedDocumentUrl
-        - businessNumber
-        - businessName
-      additionalProperties: false
-
-    DocumentValidationResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Document validation status
-          enum:
-            - Valid
-            - Invalid
-        extractedData:
-          type: object
-          description: Data extracted from the document (e.g., name, ID number, expiry date)
-        matchDetails:
-          type: object
-          description: Details indicating if provided data matches extracted data
-          properties:
-            idNumber:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-            names:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-            dob:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                reason:
-                  type: string
-
-    BackgroundCheckRequest:
-      type: object
-      properties:
-        firstName:
-          type: string
-          description: First name of the individual
-          example: John
-        middleName:
-          type: string
-          description: Middle name of the individual
-          example: David
-        lastName:
-          type: string
-          description: Last name of the individual
-          example: Smith
-        gender:
-          type: string
-          description: Gender of the individual
-          example: Male
-        dateOfBirth:
-          type: string
-          description: Date of birth in ISO format
-          format: date
-          example: 1990-01-31
-        nationalIdentificationNumber:
-          type: string
-          description: National ID number of the individual
-          example: 12345678
-      required:
-        - firstName
-        - lastName
-        - gender
-        - dateOfBirth
-        - nationalIdentificationNumber
-      additionalProperties: false
-      
-    BackgroundCheckResult:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Status of the background check
-        riskScore:
-          type: number
-          description: Risk score from the background check
-        matches:
-          type: array
-          description: List of potential matches found
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              score:
-                type: number
-              details:
-                type: object
-        message:
-          type: string
-          description: Additional information about the background check result
-          
-    ErrorResponse:
-      type: object
-      properties:
-        statusCode:
-          type: integer
-          description: HTTP status code of the error
-          example: 400
-        message:
-          type: string
-          description: A human-readable error message
-          example: Invalid input data provided.
-        details:
-          type: string
-          description: More detailed information about the error
-          nullable: true
-          example: The provided ID number format is incorrect.
