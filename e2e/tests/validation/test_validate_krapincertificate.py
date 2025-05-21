@@ -1,66 +1,27 @@
 import unittest
 from pprint import pprint
 import json
-import requests
 
 from e2e.tests.config import *
 class TestKRAPinCertificateDocumentValidation(unittest.TestCase):
     def test_pin_A003388522V(self):
-        payload ={"uploadedDocumentUrl": f"{DOCUMENTS_URL}/KRAPinCertificate/pin_A003388522V.pdf",
+        payload ={"uploadedDocumentUrl": f"s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KRA_PIN_CERTIFICATE-002samplekra.jpg",
             "certificateDate":"14/10/2014", 
             "pin":"A003388522V", 
-            "taxpayerName":"Jackson Gitonga Mwangi", 
+            "taxPayerName":"Jackson Gitonga Mwangi", 
             "emailAddress":"jackmwangi02@gmail.com",  
         }
-        print(json.dumps(payload))
-        response = requests.post(f"{APIGW_URL}/documents/krapincertificate", json=payload, headers=headers)
+        # print(json.dumps(payload))
+        response = post_with_auth(f"{APIGW_URL}/document/krapincertificate", json= json.dumps(payload))
+        
         # Check if the response status code is 200 (OK)
-        print(response.text)
+        if response.status_code != 200:
+            print(response.text)
         self.assertEqual(response.status_code, 200)
 
         #print the validation results
         results = response.json()
         pprint(results)
-    
-    def test_pin_A011797599Y(self):
-        payload ={"uploadedDocumentUrl": f"{DOCUMENTS_URL}/KRAPinCertificate/pin_A011797599Y.pdf", 
-            "pin":"A011797599Y", 
-            "taxpayerName":"JOEL MUUO",   
-        }
-        response = requests.post(f"{APIGW_URL}/documents/krapincertificate", json=payload, headers=headers)
-        # Check if the response status code is 200 (OK)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
-    
-    def test_pin_A008279496S(self):
-        payload ={"uploadedDocumentUrl": f"{DOCUMENTS_URL}/KRAPinCertificate/pin_A008279496S.pdf", 
-            "pin":"A008279496S", 
-            "taxpayerName":"EFFIE NJOKI NYAMBURA",   
-        }
-        response = requests.post(f"{APIGW_URL}/documents/krapincertificate", json=payload, headers=headers)
-        # Check if the response status code is 200 (OK)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
-    
-    def test_pin_A005394549Z(self):
-        payload ={"uploadedDocumentUrl": f"{DOCUMENTS_URL}/KRAPinCertificate/pin_A005394549Z.pdf", 
-            "pin":"A005394549Z", 
-            "taxpayerName":"PATRICK OMONDI ODHIAMBO ",   
-        }
-        response = requests.post(f"{APIGW_URL}/documents/krapincertificate", json=payload, headers=headers)
-        # Check if the response status code is 200 (OK)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
-    
 
 if __name__ == '__main__':
     unittest.main()

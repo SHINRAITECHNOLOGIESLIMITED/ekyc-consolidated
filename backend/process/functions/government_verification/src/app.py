@@ -27,12 +27,11 @@ def handler(event, context):
 
     http_method = event.get('httpMethod')
     path = event.get('path')
-
     if http_method == 'POST':
         try:
             data = event.get('body', {})
             # check if data is dict - if its a string convert to dict
-            if isinstance(data, str):
+            while isinstance(data, str):
                 data = json.loads(data)
             logger.info(f"Request Data (body): {data}")
 
