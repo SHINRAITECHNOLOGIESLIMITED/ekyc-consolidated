@@ -41,84 +41,74 @@ class Portal:
         }
         logger.info(f"Loaded portal graphql credentials. GraphQL URL: {self.PORTAL_GRAPHQL_URL}")
 
-    def update_kyc_document(self, document):
+    def capture_doc_validation(self, documentType, s3Path, documentIdentifier, matchResults, keywords_checks):
+        """
+        Create a new document validation record in the portal using Amplify GraphQL API.
+        
+        Args:
+            documentType: Type of document (ID, Passport, etc.)
+            s3Path: Path to the document in S3
+            documentIdentifier: Identifier for the document (ID number, passport number)
+            matchResults: JSON object with match results
+            keywords_checks: JSON object with keyword check results
+            
+        Returns:
+            The created document validation record or None if there was an error
+        """
         try:
-            # First try to update the document if it exists
-            update_mutation = """
-                mutation UpdateKYCDocument($input: UpdateKYCDocumentInput!) {
-                    updateKYCDocument(input: $input) {
-                        documentId
+            # Create a new document validation
+            create_mutation = """
+                mutation CreateDocumentValidation($input: CreateDocumentValidationInput!) {
+                    createDocumentValidation(input: $input) {
+                        validationId
+                        documentType
+                        s3Path
                     }
                 }
             """
             
-            update_variables = {
+            # Prepare input with required fields from Amplify schema
+            validation_id = str(uuid.uuid4())
+            document = {
+                "validationId": validation_id,
+                "documentType": documentType,
+                "s3Path": s3Path,
+                "documentIdentifier": documentIdentifier,
+                "matchResults": json.dumps(matchResults) if matchResults else None,
+                "keywords_checks": json.dumps(keywords_checks) if keywords_checks else None
+            }
+            
+            create_variables = {
                 "input": document
             }
             
-            # Prepare the update request body
-            update_payload = {
-                'query': update_mutation,
-                'variables': update_variables
+            # Prepare the create request body
+            create_payload = {
+                'query': create_mutation,
+                'variables': create_variables
             }
             
-            # Make the update request to AppSync
-            update_response = requests.post(
+            # Make the create request to AppSync
+            create_response = requests.post(
                 self.PORTAL_GRAPHQL_URL,
                 headers=self.headers,
-                json=update_payload
+                json=create_payload
             )
             
-            # Check if update was successful
-            if update_response.status_code == 200:
-                update_result = update_response.json()
-                if 'errors' not in update_result:
-                    logger.info(f"Document updated successfully: {document['documentId']}")
-                    return update_result['data']['updateKYCDocument']
-                else:
-                    logger.info(f"Document doesn't exist, attempting to create: {document['documentId']}")
-                    # If update fails, try to create the document
-                    create_mutation = """
-                        mutation CreateKYCDocument($input: CreateKYCDocumentInput!) {
-                            createKYCDocument(input: $input) {
-                                documentId
-                            }
-                        }
-                    """
-                    
-                    create_variables = {
-                        "input": document
-                    }
-                    
-                    # Prepare the create request body
-                    create_payload = {
-                        'query': create_mutation,
-                        'variables': create_variables
-                    }
-                    
-                    # Make the create request to AppSync
-                    create_response = requests.post(
-                        self.PORTAL_GRAPHQL_URL,
-                        headers=self.headers,
-                        json=create_payload
-                    )
-                    
-                    # Check if create was successful
-                    if create_response.status_code == 200:
-                        create_result = create_response.json()
-                        if 'errors' in create_result:
-                            logger.error(f"GraphQL Errors during create: {create_result['errors']}")
-                            return None
-                        return create_result['data']['createKYCDocument']
-                    else:
-                        logger.error(f"HTTP Error during create: {create_response.status_code}")
-                        return None
+            # Check if create was successful
+            if create_response.status_code == 200:
+                create_result = create_response.json()
+                if 'errors' in create_result:
+                    logger.error(f"GraphQL Errors during create: {create_result['errors']}")
+                    return None
+                logger.info(f"Document validation created successfully: {validation_id}")
+                return create_result['data']['createDocumentValidation']
             else:
-                logger.error(f"HTTP Error during update: {update_response.status_code}")
+                logger.error(f"HTTP Error during create: {create_response.status_code}")
                 return None
 
         except Exception as e:
-            logger.error(f"Error projecting to portal: {str(e)}")
+            logger.error(f"Error creating document validation: {str(e)}")
             return None
 
     def log_api_call(self, response: Response, api_name: str, api_method: str, duration_ms: int,
