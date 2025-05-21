@@ -11,20 +11,26 @@ const schema = a.schema({
         authorize.publicApiKey().to(['create', 'read', 'update', 'delete'])
     ]).identifier(['sessionId'])
     ,
-    KYCDocument: a.model({
-        documentId: a.string().required(),
-        customerId: a.string().required(),
+    DocumentValidation: a.model({
+        validationId: a.id().required(),
         documentType: a.string().required(),
-        documentStatus: a.string().required(),
         s3Path: a.string().required(),
-        identifier: a.string(),
-        extractedData: a.json(),
-        searchedData: a.json(),
-        verifiedData: a.json()
+        documentIdentifier: a.string(),
+        matchResults: a.json(),
+        keywords_checks: a.json()
     }).authorization(authorize => [
         authorize.authenticated().to(['read']),
         authorize.publicApiKey().to(['create', 'read', 'update', 'delete'])
-    ]).identifier(['documentId']),
+    ]).identifier(['validationId']),
+    DocumentVerification: a.model({
+        verificationId: a.id().required(),
+        documentType: a.string().required(),
+        documentIdentifier: a.string(),
+        matchResults: a.json()
+    }).authorization(authorize => [
+        authorize.authenticated().to(['read']),
+        authorize.publicApiKey().to(['create', 'read', 'update', 'delete'])
+    ]).identifier(['verificationId']),
     APICall: a.model({
         apiCallId: a.id().required(),
         traceId: a.string().required(),

@@ -8,7 +8,8 @@ import {fetchMetrics} from "@/services/DataService";
 
 const Dashboard: React.FC = () => {
     const [metrics, setMetrics] = useState<DashboardMetrics>({
-        kycDocuments: 0,
+        documentValidations: 0,
+        documentVerifications: 0,
         apiCalls: 0,
         faceLivenessCount: 0,
     });
@@ -41,9 +42,14 @@ const Dashboard: React.FC = () => {
 
     const metricCards = [
         {
-            title: 'KYC Documents',
-            value: metrics.kycDocuments,
-            description: 'How many KYC documents have been uploaded',
+            title: 'Document Validations',
+            value: metrics.documentValidations,
+            description: 'How many KYC documents have been check against uploaded copies',
+        },
+        {
+            title: 'Document Verifications',
+            value: metrics.documentVerifications,
+            description: 'How many documents have been verified by the system (against Identity Services)',
         },
         {
             title: 'API Calls',
