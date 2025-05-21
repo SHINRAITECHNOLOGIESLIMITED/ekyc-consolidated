@@ -240,7 +240,7 @@ def validate_nationalid(event_data):
                             )
 
         portal.capture_doc_validation(documentType="NationalID", s3Path=s3Path,
-                                      documentIdentifier=event_data['idNumber'], matchResults=matchResults)
+                                      documentIdentifier=event_data['idNumber'], matchResults=matchResults,keywords_checks=checks)
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path, results=results))
@@ -340,7 +340,7 @@ def validate_passport(event_data):
                             )
 
         portal.capture_doc_validation(documentType="Passport", s3Path=s3Path,
-                                      documentIdentifier=event_data['passportNumber'], matchResults=matchResults)
+                                      documentIdentifier=event_data['passportNumber'], matchResults=matchResults,keywords_checks=checks)
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path, results=results))
@@ -397,7 +397,7 @@ def validate_krapincertificate(event_data):
                             )
 
         portal.capture_doc_validation(documentType="KRAPinCertificate", s3Path=s3Path,
-                                      documentIdentifier=event_data['pin'], matchResults=matchResults)
+                                      documentIdentifier=event_data['pin'], matchResults=matchResults,keywords_checks=checks)
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path, results=results))
@@ -454,7 +454,7 @@ def validate_cr12(event_data):
                             )
 
         portal.capture_doc_validation(documentType="CertificateOfIncorporation ", s3Path=s3Path,
-                                      documentIdentifier=event_data['businessNumber'], matchResults=matchResults)
+                                      documentIdentifier=event_data['businessNumber'], matchResults=matchResults,keywords_checks=checks)
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path, results=results))
@@ -464,9 +464,6 @@ def validate_cr12(event_data):
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_cr12: {e}")
         return make_response(500, {'message': 'Internal Server Error'})
-
-
-
 
 
 def extract_form_from_cr12_phrases(extractedData):

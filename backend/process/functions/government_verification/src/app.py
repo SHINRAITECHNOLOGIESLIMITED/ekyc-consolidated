@@ -74,7 +74,6 @@ def verify_nationalid(event_data):
             "dateOfIssue": {"type": "string", "format": "GENDER"},
             "gender": {"type": "string", "format": "date"},
             "districtOfBirth": {"type": "string"},
-            "placeOfIssue": {"type": "string", "format": "date"},
         },
         "required": ["idNumber"],
         "additionalProperties": False
@@ -100,8 +99,6 @@ def verify_nationalid(event_data):
                                     api_result=api_result)
         districtOfBirthMatchResult = process(event_name='districtOfBirth', api_field_name='placeOfBirth',
                                              event=event_data, api_result=api_result)
-        placeOfIssueMatchResult = process(event_name='placeOfIssue', api_field_name='None', event=event_data,
-                                          api_result=api_result)
 
         matchResults = dict(serialNumber=serialNumberMatchResult,
                             idNumber=idNumberMatchResult,
@@ -110,11 +107,10 @@ def verify_nationalid(event_data):
                             dateOfIssue=dateOfIssueMatchResult,
                             gender=genderMatchResult,
                             districtOfBirth=districtOfBirthMatchResult,
-                            placeOfIssue=placeOfIssueMatchResult,
                             )
 
-        portal.capture_doc_validation(documentType="NationalID", documentIdentifier=event_data['idNumber'],
-                                      matchResults=matchResults)
+        portal.capture_doc_verification(documentType="NationalID", documentIdentifier=event_data['idNumber'],
+                                        matchResults=matchResults)
         logger.info(f"Match results: {matchResults}")
         return make_response(200, dict(results=matchResults))
     except SchemaValidationError as e:
@@ -123,6 +119,7 @@ def verify_nationalid(event_data):
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_nationalid: {e}")
         return make_response(500, {'message': 'Internal Server Error'})
+
 
 def verify_passport(event_data):
     schema = {
@@ -195,8 +192,8 @@ def verify_passport(event_data):
                             issuingAuthority=issuingAuthorityMatchResult,
                             )
 
-        portal.capture_doc_validation(documentType="Passport", documentIdentifier=event_data['passportNumber'],
-                                      matchResults=matchResults)
+        portal.capture_doc_verification(documentType="Passport", documentIdentifier=event_data['passportNumber'],
+                                        matchResults=matchResults)
         logger.info(f"Match results: {matchResults}")
         return make_response(200, dict(results=matchResults))
     except SchemaValidationError as e:
@@ -206,18 +203,18 @@ def verify_passport(event_data):
         logger.error(f"An unexpected error occurred in validate_passport: {e}")
         return make_response(500, {'message': 'Internal Server Error'})
 
+
 def verify_krapincertificate(event_data):
     schema = {
         "type": "object",
         "properties": {
-            "certificateDate": {"type": "string", "format": "date"},
             "pin": {"type": "string"},
             "taxpayerName": {"type": "string"},
-            "emailAddress": {"type": "string", "format": "email"},
         },
         "required": ["pin"],
         "additionalProperties": False
     }
+
     try:
         validate(schema=schema, event=event_data)
 
@@ -227,22 +224,16 @@ def verify_krapincertificate(event_data):
         ))
         logger.info(api_result)
 
-        certificateDateMatchResult = process(event_name='certificateDate', api_field_name='None', event=event_data,
-                                             api_result=api_result)
         pinMatchResult = process(event_name='pin', api_field_name='=B7', event=event_data, api_result=api_result)
         taxpayerNameMatchResult = process(event_name='taxpayerName', api_field_name='=B8', event=event_data,
                                           api_result=api_result)
-        emailAddressMatchResult = process(event_name='emailAddress', api_field_name='None', event=event_data,
-                                          api_result=api_result)
 
-        matchResults = dict(certificateDate=certificateDateMatchResult,
-                            pin=pinMatchResult,
+        matchResults = dict(pin=pinMatchResult,
                             taxpayerName=taxpayerNameMatchResult,
-                            emailAddress=emailAddressMatchResult,
                             )
 
-        portal.capture_doc_validation(documentType="KRAPinCertificate", documentIdentifier=event_data['pin'],
-                                      matchResults=matchResults)
+        portal.capture_doc_verification(documentType="KRAPinCertificate", documentIdentifier=event_data['pin'],
+                                        matchResults=matchResults)
         logger.info(f"Match results: {matchResults}")
         return make_response(200, dict(results=matchResults))
     except SchemaValidationError as e:
@@ -251,6 +242,8 @@ def verify_krapincertificate(event_data):
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_krapincertificate: {e}")
         return make_response(500, {'message': 'Internal Server Error'})
+
+
 def make_response(status_code, body):
     """
     Helper function to format responses for API Gateway.
