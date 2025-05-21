@@ -1,12 +1,9 @@
 import unittest
+from pprint import pprint
+
 import requests
 
-APIGW_URL = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-DOCUMENTS_URL = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-headers = {
-    "Content-Type": "application/json",
-    "Authorization": "XXXXXXXXXXXXXXXXXXXXXX"
-}
+from e2e.tests.config import *
 class TestPassportDocumentValidation(unittest.TestCase):
     def test_passportnumber_DK9038(self):
         payload ={"uploadedDocumentUrl": f"{DOCUMENTS_URL}/Passport/passportnumber_DK9038.pdf",

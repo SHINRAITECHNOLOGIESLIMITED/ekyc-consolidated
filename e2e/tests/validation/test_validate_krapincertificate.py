@@ -1,12 +1,9 @@
 import unittest
+from pprint import pprint
+
 import requests
 
-APIGW_URL = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-DOCUMENTS_URL = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-headers = {
-    "Content-Type": "application/json",
-    "Authorization": "XXXXXXXXXXXXXXXXXXXXXX"
-}
+from e2e.tests.config import *
 class TestKRAPinCertificateDocumentValidation(unittest.TestCase):
     def test_pin_A003388522V(self):
         payload ={"uploadedDocumentUrl": f"{DOCUMENTS_URL}/KRAPinCertificate/pin_A003388522V.pdf",

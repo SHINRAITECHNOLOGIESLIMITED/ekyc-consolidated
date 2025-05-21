@@ -1,12 +1,7 @@
 import unittest
 import requests
 
-APIGW_URL = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-DOCUMENTS_URL = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-headers = {
-    "Content-Type": "application/json",
-    "Authorization": "XXXXXXXXXXXXXXXXXXXXXX"
-}
+from e2e.tests.config import *
 class TestNationalIDDocumentValidation(unittest.TestCase):
     def test_idnumber_23667272(self):
         payload ={"uploadedDocumentUrl": f"{DOCUMENTS_URL}/NationalID/idnumber_23667272.pdf",

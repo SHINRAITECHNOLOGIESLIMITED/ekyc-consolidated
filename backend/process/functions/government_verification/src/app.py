@@ -151,31 +151,33 @@ def verify_passport(event_data):
             value=event_data["passportNumber"]))
         logger.info(api_result)
 
-        documentTypeMatchResult = process(event_name='documentType', api_field_name='=B6', event=event_data,
+        documentTypeMatchResult = process(event_name='documentType', api_field_name='documentType', event=event_data,
                                           api_result=api_result)
-        countryCodeMatchResult = process(event_name='countryCode', api_field_name='=B7', event=event_data,
+        countryCodeMatchResult = process(event_name='countryCode', api_field_name='countryCode', event=event_data,
                                          api_result=api_result)
-        passportNumberMatchResult = process(event_name='passportNumber', api_field_name='=B8', event=event_data,
-                                            api_result=api_result)
-        personalNumberMatchResult = process(event_name='personalNumber', api_field_name='=B9', event=event_data,
-                                            api_result=api_result)
-        surnameMatchResult = process(event_name='surname', api_field_name='=B10', event=event_data,
+        passportNumberMatchResult = process(event_name='passportNumber', api_field_name='passportNumber',
+                                            event=event_data, api_result=api_result)
+        personalNumberMatchResult = process(event_name='personalNumber', api_field_name='personalNumber',
+                                            event=event_data, api_result=api_result)
+        surnameMatchResult = process(event_name='surname', api_field_name='surname', event=event_data,
                                      api_result=api_result)
-        givenNamesMatchResult = process(event_name='givenNames', api_field_name='=B11', event=event_data,
+        givenNamesMatchResult = process(event_name='givenNames', api_field_name='givenNames', event=event_data,
                                         api_result=api_result)
-        genderMatchResult = process(event_name='gender', api_field_name='=B12', event=event_data, api_result=api_result)
-        dateOfBirthMatchResult = process(event_name='dateOfBirth', api_field_name='=B13', event=event_data,
+        genderMatchResult = process(event_name='gender', api_field_name='gender', event=event_data,
+                                    api_result=api_result)
+        dateOfBirthMatchResult = process(event_name='dateOfBirth', api_field_name='dateOfBirth', event=event_data,
                                          api_result=api_result)
-        placeOfBirthMatchResult = process(event_name='placeOfBirth', api_field_name='=B14', event=event_data,
+        placeOfBirthMatchResult = process(event_name='placeOfBirth', api_field_name='placeOfBirth', event=event_data,
                                           api_result=api_result)
-        dateOfIssueMatchResult = process(event_name='dateOfIssue', api_field_name='=B15', event=event_data,
+        dateOfIssueMatchResult = process(event_name='dateOfIssue', api_field_name='dateOfIssue', event=event_data,
                                          api_result=api_result)
-        dateOfExpiryMatchResult = process(event_name='dateOfExpiry', api_field_name='=B16', event=event_data,
+        dateOfExpiryMatchResult = process(event_name='dateOfExpiry', api_field_name='dateOfExpiry', event=event_data,
                                           api_result=api_result)
-        nationalityMatchResult = process(event_name='nationality', api_field_name='=B17', event=event_data,
+        nationalityMatchResult = process(event_name='nationality', api_field_name='nationality', event=event_data,
                                          api_result=api_result)
-        issuingAuthorityMatchResult = process(event_name='issuingAuthority', api_field_name='=B18', event=event_data,
-                                              api_result=api_result)
+        issuingAuthorityMatchResult = process(event_name='issuingAuthority', api_field_name='issuingAuthority',
+                                              event=event_data, api_result=api_result)
+
 
         matchResults = dict(documentType=documentTypeMatchResult,
                             countryCode=countryCodeMatchResult,
