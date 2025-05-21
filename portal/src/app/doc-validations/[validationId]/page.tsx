@@ -35,7 +35,7 @@ const itemDetails = (documentValidation: DocumentValidation) => (
 
           <div>
             <Box variant="awsui-key-label">Identifier</Box>
-            <div>{documentValidation.validationIdentifier}</div>
+            <div>{documentValidation.documentIdentifier}</div>
           </div>
           <div>
             <Box variant="awsui-key-label">S3 Path</Box>

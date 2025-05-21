@@ -49,6 +49,11 @@ Resources:
         - ${ResourceName} From Stack ${AWS::StackName}
         - ResourceName: ApiGateway
       StageName: Prod
+      Auth:
+        DefaultAuthorizer: LambdaTokenAuthorizer
+        Authorizers:
+          LambdaTokenAuthorizer:
+            FunctionArn: !GetAtt AuthorizerFn.Arn
       DefinitionBody: !Transform
         Name: AWS::Include
         Parameters:
@@ -61,7 +66,19 @@ Resources:
           X-Amz-Security-Token'''
         AllowMethods: '''POST, OPTIONS'''
         MaxAge: 60
-
+  AuthorizerFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Lambda Authorizer Function
+      CodeUri: process/functions/authorizer/src
+      Handler: app.handler
+  AuthorizerFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AuthorizerFn}
+      RetentionInDays: 30
   RegistrationFn:
     Type: AWS::Serverless::Function
     Properties:
