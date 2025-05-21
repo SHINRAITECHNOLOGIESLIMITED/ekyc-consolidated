@@ -180,287 +180,287 @@ def process(event_name, textract_name, event, form):
     distance = 0
     return dict(valid=valid, match=dict(distance=distance))
 
-    def validate_nationalid(event_data):
-        schema = {
-            "type": "object",
-            "properties": {
-                "uploadedDocumentUrl": {"type": "string", "format": "uri"},
-                "serialNumber": {"type": "integer"},
-                "idNumber": {"type": "integer"},
-                "fullNames": {"type": "string"},
-                "dateOfBirth": {"type": "string", "format": "date"},
-                "dateOfIssue": {"type": "string", "format": "GENDER"},
-                "gender": {"type": "string", "format": "date"},
-                "districtOfBirth": {"type": "string"},
-                "placeOfIssue": {"type": "string", "format": "date"},
-            },
-            "required": ["uploadedDocumentUrl", "idNumber"],
-            "additionalProperties": False
-        }
+def validate_nationalid(event_data):
+    schema = {
+        "type": "object",
+        "properties": {
+            "uploadedDocumentUrl": {"type": "string", "format": "uri"},
+            "serialNumber": {"type": "integer"},
+            "idNumber": {"type": "integer"},
+            "fullNames": {"type": "string"},
+            "dateOfBirth": {"type": "string", "format": "date"},
+            "dateOfIssue": {"type": "string", "format": "GENDER"},
+            "gender": {"type": "string", "format": "date"},
+            "districtOfBirth": {"type": "string"},
+            "placeOfIssue": {"type": "string", "format": "date"},
+        },
+        "required": ["uploadedDocumentUrl", "idNumber"],
+        "additionalProperties": False
+    }
 
-        try:
-            validate(schema=schema, event=event_data)
-            object_key = f"NationalID/{event_data['idNumber']}.pdf"
-            url, s3Path = copy_to_s3(url=event_data['uploadedDocumentUrl'], object_key=object_key)
-            logger.info(f"Downloaded {event_data['uploadedDocumentUrl']} to {url}")
-            extracted = extract(s3Path)
-            extracted_form = extracted["form"]
-            extracted_prose = " ".join(extracted["phrases"]).lower()
-            checks = []
+    try:
+        validate(schema=schema, event=event_data)
+        object_key = f"NationalID/{event_data['idNumber']}.pdf"
+        url, s3Path = copy_to_s3(url=event_data['uploadedDocumentUrl'], object_key=object_key)
+        logger.info(f"Downloaded {event_data['uploadedDocumentUrl']} to {url}")
+        extracted = extract(s3Path)
+        extracted_form = extracted["form"]
+        extracted_prose = " ".join(extracted["phrases"]).lower()
+        checks = []
 
-            checks.append({"check": 'Contains the words "Jamhuri ya Kenya" ',
-                           "result": "Jamhuri ya Kenya".lower() in extracted_prose})
-            checks.append({"check": 'Contains the words "Republic of Kenya" written in English',
-                           "result": "Republic of Kenya".lower() in extracted_prose})
-            serialNumberMatchResult = process(event_name='serialNumber', textract_name='SERIAL_NUMBER',
-                                              event=event_data, form=extracted_form)
-            idNumberMatchResult = process(event_name='idNumber', textract_name='ID_NUMBER', event=event_data,
-                                          form=extracted_form)
-            fullNamesMatchResult = process(event_name='fullNames', textract_name='FULL_NAMES', event=event_data,
-                                           form=extracted_form)
-            dateOfBirthMatchResult = process(event_name='dateOfBirth', textract_name='DATE_OF_BIRTH', event=event_data,
-                                             form=extracted_form)
-            dateOfIssueMatchResult = process(event_name='dateOfIssue', textract_name='DATE_OF_ISSUE', event=event_data,
-                                             form=extracted_form)
-            genderMatchResult = process(event_name='gender', textract_name='SEX', event=event_data, form=extracted_form)
-            districtOfBirthMatchResult = process(event_name='districtOfBirth', textract_name='DISTRICT_OF_BIRTH',
-                                                 event=event_data, form=extracted_form)
-            placeOfIssueMatchResult = process(event_name='placeOfIssue', textract_name='PLACE_OF_ISSUE',
-                                              event=event_data, form=extracted_form)
+        checks.append({"check": 'Contains the words "Jamhuri ya Kenya" ',
+                       "result": "Jamhuri ya Kenya".lower() in extracted_prose})
+        checks.append({"check": 'Contains the words "Republic of Kenya" written in English',
+                       "result": "Republic of Kenya".lower() in extracted_prose})
+        serialNumberMatchResult = process(event_name='serialNumber', textract_name='SERIAL_NUMBER',
+                                          event=event_data, form=extracted_form)
+        idNumberMatchResult = process(event_name='idNumber', textract_name='ID_NUMBER', event=event_data,
+                                      form=extracted_form)
+        fullNamesMatchResult = process(event_name='fullNames', textract_name='FULL_NAMES', event=event_data,
+                                       form=extracted_form)
+        dateOfBirthMatchResult = process(event_name='dateOfBirth', textract_name='DATE_OF_BIRTH', event=event_data,
+                                         form=extracted_form)
+        dateOfIssueMatchResult = process(event_name='dateOfIssue', textract_name='DATE_OF_ISSUE', event=event_data,
+                                         form=extracted_form)
+        genderMatchResult = process(event_name='gender', textract_name='SEX', event=event_data, form=extracted_form)
+        districtOfBirthMatchResult = process(event_name='districtOfBirth', textract_name='DISTRICT_OF_BIRTH',
+                                             event=event_data, form=extracted_form)
+        placeOfIssueMatchResult = process(event_name='placeOfIssue', textract_name='PLACE_OF_ISSUE',
+                                          event=event_data, form=extracted_form)
 
-            matchResults = dict(serialNumber=serialNumberMatchResult,
-                                idNumber=idNumberMatchResult,
-                                fullNames=fullNamesMatchResult,
-                                dateOfBirth=dateOfBirthMatchResult,
-                                dateOfIssue=dateOfIssueMatchResult,
-                                gender=genderMatchResult,
-                                districtOfBirth=districtOfBirthMatchResult,
-                                placeOfIssue=placeOfIssueMatchResult,
-                                )
+        matchResults = dict(serialNumber=serialNumberMatchResult,
+                            idNumber=idNumberMatchResult,
+                            fullNames=fullNamesMatchResult,
+                            dateOfBirth=dateOfBirthMatchResult,
+                            dateOfIssue=dateOfIssueMatchResult,
+                            gender=genderMatchResult,
+                            districtOfBirth=districtOfBirthMatchResult,
+                            placeOfIssue=placeOfIssueMatchResult,
+                            )
 
-            portal.capture_doc_validation(documentType="NationalID", documentIdentifier={event_data['idNumber']},
-                                          matchResults=matchResults)
-            results = dict(checks=checks, matchResults=matchResults)
-            logger.info(f"Results: {results}")
-            return make_response(200, dict(results=results))
-        except SchemaValidationError as e:
-            logger.error(f"Schema validation failed for NationalID document validation: {e}")
-            return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
-        except Exception as e:
-            logger.error(f"An unexpected error occurred in validate_nationalid: {e}")
-            return make_response(500, {'message': 'Internal Server Error'})
+        portal.capture_doc_validation(documentType="NationalID", s3Path=s3Path,
+                                      documentIdentifier=event_data['idNumber'], matchResults=matchResults)
+        results = dict(keywords_checks=checks, matchResults=matchResults)
+        logger.info(f"Results: {results}")
+        return make_response(200, dict(s3Path, results=results))
+    except SchemaValidationError as e:
+        logger.error(f"Schema validation failed for NationalID document validation: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+    except Exception as e:
+        logger.error(f"An unexpected error occurred in validate_nationalid: {e}")
+        return make_response(500, {'message': 'Internal Server Error'})
 
-    def validate_passport(event_data):
-        schema = {
-            "type": "object",
-            "properties": {
-                "uploadedDocumentUrl": {"type": "string", "format": "uri"},
-                "documentType": {"type": "string"},
-                "countryCode": {"type": "string"},
-                "passportNumber": {"type": "string"},
-                "personalNumber": {"type": "integer"},
-                "surname": {"type": "string"},
-                "givenNames": {"type": "string"},
-                "gender": {"type": "string"},
-                "dateOfBirth": {"type": "string", "format": "date"},
-                "placeOfBirth": {"type": "string"},
-                "dateOfIssue": {"type": "string", "format": "date"},
-                "dateOfExpiry": {"type": "string", "format": "date"},
-                "nationality": {"type": "string"},
-                "issuingAuthority": {"type": "string"},
-            },
-            "required": ["uploadedDocumentUrl", "passportNumber"],
-            "additionalProperties": False
-        }
+def validate_passport(event_data):
+    schema = {
+        "type": "object",
+        "properties": {
+            "uploadedDocumentUrl": {"type": "string", "format": "uri"},
+            "documentType": {"type": "string"},
+            "countryCode": {"type": "string"},
+            "passportNumber": {"type": "string"},
+            "personalNumber": {"type": "integer"},
+            "surname": {"type": "string"},
+            "givenNames": {"type": "string"},
+            "gender": {"type": "string"},
+            "dateOfBirth": {"type": "string", "format": "date"},
+            "placeOfBirth": {"type": "string"},
+            "dateOfIssue": {"type": "string", "format": "date"},
+            "dateOfExpiry": {"type": "string", "format": "date"},
+            "nationality": {"type": "string"},
+            "issuingAuthority": {"type": "string"},
+        },
+        "required": ["uploadedDocumentUrl", "passportNumber"],
+        "additionalProperties": False
+    }
 
-        try:
-            validate(schema=schema, event=event_data)
-            object_key = f"Passport/{event_data['passportNumber']}.pdf"
-            url, s3Path = copy_to_s3(url=event_data['uploadedDocumentUrl'], object_key=object_key)
-            logger.info(f"Downloaded {event_data['uploadedDocumentUrl']} to {url}")
-            extracted = extract(s3Path)
-            extracted_form = extracted["form"]
-            extracted_prose = " ".join(extracted["phrases"]).lower()
-            checks = []
+    try:
+        validate(schema=schema, event=event_data)
+        object_key = f"Passport/{event_data['passportNumber']}.pdf"
+        url, s3Path = copy_to_s3(url=event_data['uploadedDocumentUrl'], object_key=object_key)
+        logger.info(f"Downloaded {event_data['uploadedDocumentUrl']} to {url}")
+        extracted = extract(s3Path)
+        extracted_form = extracted["form"]
+        extracted_prose = " ".join(extracted["phrases"]).lower()
+        checks = []
 
-            checks.append({"check": 'Contains the words "Jamhuri ya Kenya"',
-                           "result": "Jamhuri ya Kenya".lower() in extracted_prose})
-            checks.append({"check": 'Contains the words "Republic of Kenya"',
-                           "result": "Republic of Kenya".lower() in extracted_prose})
-            checks.append({"check": 'Contains the words "Republique de Kenya"',
-                           "result": "Republique de Kenya".lower() in extracted_prose})
-            documentTypeMatchResult = process(event_name='documentType', textract_name='TYPEAINA/TYPE',
-                                              event=event_data, form=extracted_form)
-            countryCodeMatchResult = process(event_name='countryCode',
-                                             textract_name='COUNTRY_CODE_NAMBARI_YA_NCHICODE_DU_PAYS', event=event_data,
-                                             form=extracted_form)
-            passportNumberMatchResult = process(event_name='passportNumber',
-                                                textract_name='PASSPORT_NO_NAMBARI_YA_PAST_N�_DE_PASSEPORT',
-                                                event=event_data, form=extracted_form)
-            personalNumberMatchResult = process(event_name='personalNumber',
-                                                textract_name='PERSONAL_NO_NAMBARI_YA_KIBINAFSI/NO_PERSONNEL',
-                                                event=event_data, form=extracted_form)
-            surnameMatchResult = process(event_name='surname', textract_name='SURNAME./INA_LA_UKAO-NOM',
-                                         event=event_data, form=extracted_form)
-            givenNamesMatchResult = process(event_name='givenNames',
-                                            textract_name='GIVEN_NAMES/MAJINA_ALIYOPEWA,_PRENOMS', event=event_data,
-                                            form=extracted_form)
-            genderMatchResult = process(event_name='gender', textract_name='None', event=event_data,
+        checks.append({"check": 'Contains the words "Jamhuri ya Kenya"',
+                       "result": "Jamhuri ya Kenya".lower() in extracted_prose})
+        checks.append({"check": 'Contains the words "Republic of Kenya"',
+                       "result": "Republic of Kenya".lower() in extracted_prose})
+        checks.append({"check": 'Contains the words "Republique de Kenya"',
+                       "result": "Republique de Kenya".lower() in extracted_prose})
+        documentTypeMatchResult = process(event_name='documentType', textract_name='TYPEAINA/TYPE',
+                                          event=event_data, form=extracted_form)
+        countryCodeMatchResult = process(event_name='countryCode',
+                                         textract_name='COUNTRY_CODE_NAMBARI_YA_NCHICODE_DU_PAYS', event=event_data,
+                                         form=extracted_form)
+        passportNumberMatchResult = process(event_name='passportNumber',
+                                            textract_name='PASSPORT_NO_NAMBARI_YA_PAST_N�_DE_PASSEPORT',
+                                            event=event_data, form=extracted_form)
+        personalNumberMatchResult = process(event_name='personalNumber',
+                                            textract_name='PERSONAL_NO_NAMBARI_YA_KIBINAFSI/NO_PERSONNEL',
+                                            event=event_data, form=extracted_form)
+        surnameMatchResult = process(event_name='surname', textract_name='SURNAME./INA_LA_UKAO-NOM',
+                                     event=event_data, form=extracted_form)
+        givenNamesMatchResult = process(event_name='givenNames',
+                                        textract_name='GIVEN_NAMES/MAJINA_ALIYOPEWA,_PRENOMS', event=event_data,
                                         form=extracted_form)
-            dateOfBirthMatchResult = process(event_name='dateOfBirth',
-                                             textract_name='DATE_OF_BIRTH/TAREHE_YA_KUZALIWA_DATE_DE_NAISSANCE',
+        genderMatchResult = process(event_name='gender', textract_name='None', event=event_data,
+                                    form=extracted_form)
+        dateOfBirthMatchResult = process(event_name='dateOfBirth',
+                                         textract_name='DATE_OF_BIRTH/TAREHE_YA_KUZALIWA_DATE_DE_NAISSANCE',
+                                         event=event_data, form=extracted_form)
+        placeOfBirthMatchResult = process(event_name='placeOfBirth',
+                                          textract_name='SEXUINSIASEXE_PLACE_OF_BIRTH_MAHAH_PA_KUZALIWALIEU_DE_NAISSANCE',
+                                          event=event_data, form=extracted_form)
+        dateOfIssueMatchResult = process(event_name='dateOfIssue', textract_name='DATE_OF_ISSUE_TAREHE_VA_KUTOLENA',
+                                         event=event_data, form=extracted_form)
+        dateOfExpiryMatchResult = process(event_name='dateOfExpiry', textract_name='DATE_OF_EXPIRY',
+                                          event=event_data, form=extracted_form)
+        nationalityMatchResult = process(event_name='nationality', textract_name='NATIONALITY/UTAIFA/NATIONALIT�',
+                                         event=event_data, form=extracted_form)
+        issuingAuthorityMatchResult = process(event_name='issuingAuthority',
+                                              textract_name='ISSUING_AUTHORITY_MAMLAKA_YA_KUTOA_PASIAUTORITE',
+                                              event=event_data, form=extracted_form)
+
+        matchResults = dict(documentType=documentTypeMatchResult,
+                            countryCode=countryCodeMatchResult,
+                            passportNumber=passportNumberMatchResult,
+                            personalNumber=personalNumberMatchResult,
+                            surname=surnameMatchResult,
+                            givenNames=givenNamesMatchResult,
+                            gender=genderMatchResult,
+                            dateOfBirth=dateOfBirthMatchResult,
+                            placeOfBirth=placeOfBirthMatchResult,
+                            dateOfIssue=dateOfIssueMatchResult,
+                            dateOfExpiry=dateOfExpiryMatchResult,
+                            nationality=nationalityMatchResult,
+                            issuingAuthority=issuingAuthorityMatchResult,
+                            )
+
+        portal.capture_doc_validation(documentType="Passport", s3Path=s3Path,
+                                      documentIdentifier=event_data['passportNumber'], matchResults=matchResults)
+        results = dict(keywords_checks=checks, matchResults=matchResults)
+        logger.info(f"Results: {results}")
+        return make_response(200, dict(s3Path, results=results))
+    except SchemaValidationError as e:
+        logger.error(f"Schema validation failed for Passport document validation: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+    except Exception as e:
+        logger.error(f"An unexpected error occurred in validate_passport: {e}")
+        return make_response(500, {'message': 'Internal Server Error'})
+
+def validate_krapincertificate(event_data):
+    schema = {
+        "type": "object",
+        "properties": {
+            "uploadedDocumentUrl": {"type": "string", "format": "uri"},
+            "certificateDate": {"type": "string", "format": "date"},
+            "pin": {"type": "string"},
+            "taxpayerName": {"type": "string"},
+            "emailAddress": {"type": "string", "format": "email"},
+        },
+        "required": ["uploadedDocumentUrl", "pin"],
+        "additionalProperties": False
+    }
+
+    try:
+        validate(schema=schema, event=event_data)
+        object_key = f"KRAPinCertificate/{event_data['pin']}.pdf"
+        url, s3Path = copy_to_s3(url=event_data['uploadedDocumentUrl'], object_key=object_key)
+        logger.info(f"Downloaded {event_data['uploadedDocumentUrl']} to {url}")
+        extracted = extract(s3Path)
+        extracted_form = extracted["form"]
+        extracted_prose = " ".join(extracted["phrases"]).lower()
+        checks = []
+
+        checks.append({"check": 'Contains the words "Kenya Revenue Authority"',
+                       "result": "Kenya Revenue Authority".lower() in extracted_prose})
+        checks.append({"check": 'Contains the words "PIN Certificate"',
+                       "result": "PIN Certificate".lower() in extracted_prose})
+        checks.append({"check": 'The url "www.kra.go.ke"', "result": "None".lower() in extracted_prose})
+        certificateDateMatchResult = process(event_name='certificateDate', textract_name='CERTIFICATE_DATE',
                                              event=event_data, form=extracted_form)
-            placeOfBirthMatchResult = process(event_name='placeOfBirth',
-                                              textract_name='SEXUINSIASEXE_PLACE_OF_BIRTH_MAHAH_PA_KUZALIWALIEU_DE_NAISSANCE',
-                                              event=event_data, form=extracted_form)
-            dateOfIssueMatchResult = process(event_name='dateOfIssue', textract_name='DATE_OF_ISSUE_TAREHE_VA_KUTOLENA',
-                                             event=event_data, form=extracted_form)
-            dateOfExpiryMatchResult = process(event_name='dateOfExpiry', textract_name='DATE_OF_EXPIRY',
-                                              event=event_data, form=extracted_form)
-            nationalityMatchResult = process(event_name='nationality', textract_name='NATIONALITY/UTAIFA/NATIONALIT�',
-                                             event=event_data, form=extracted_form)
-            issuingAuthorityMatchResult = process(event_name='issuingAuthority',
-                                                  textract_name='ISSUING_AUTHORITY_MAMLAKA_YA_KUTOA_PASIAUTORITE',
-                                                  event=event_data, form=extracted_form)
+        pinMatchResult = process(event_name='pin', textract_name='PERSONAL_IDENTIFICATION_NUMBER', event=event_data,
+                                 form=extracted_form)
+        taxpayerNameMatchResult = process(event_name='taxpayerName', textract_name='TAXPAYER_NAME',
+                                          event=event_data, form=extracted_form)
+        emailAddressMatchResult = process(event_name='emailAddress', textract_name='EMAIL_ADDRESS',
+                                          event=event_data, form=extracted_form)
 
-            matchResults = dict(documentType=documentTypeMatchResult,
-                                countryCode=countryCodeMatchResult,
-                                passportNumber=passportNumberMatchResult,
-                                personalNumber=personalNumberMatchResult,
-                                surname=surnameMatchResult,
-                                givenNames=givenNamesMatchResult,
-                                gender=genderMatchResult,
-                                dateOfBirth=dateOfBirthMatchResult,
-                                placeOfBirth=placeOfBirthMatchResult,
-                                dateOfIssue=dateOfIssueMatchResult,
-                                dateOfExpiry=dateOfExpiryMatchResult,
-                                nationality=nationalityMatchResult,
-                                issuingAuthority=issuingAuthorityMatchResult,
-                                )
+        matchResults = dict(certificateDate=certificateDateMatchResult,
+                            pin=pinMatchResult,
+                            taxpayerName=taxpayerNameMatchResult,
+                            emailAddress=emailAddressMatchResult,
+                            )
 
-            portal.capture_doc_validation(documentType="Passport", documentIdentifier={event_data['passportNumber']},
-                                          matchResults=matchResults)
-            results = dict(checks=checks, matchResults=matchResults)
-            logger.info(f"Results: {results}")
-            return make_response(200, dict(results=results))
-        except SchemaValidationError as e:
-            logger.error(f"Schema validation failed for Passport document validation: {e}")
-            return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
-        except Exception as e:
-            logger.error(f"An unexpected error occurred in validate_passport: {e}")
-            return make_response(500, {'message': 'Internal Server Error'})
+        portal.capture_doc_validation(documentType="KRAPinCertificate", s3Path=s3Path,
+                                      documentIdentifier=event_data['pin'], matchResults=matchResults)
+        results = dict(keywords_checks=checks, matchResults=matchResults)
+        logger.info(f"Results: {results}")
+        return make_response(200, dict(s3Path, results=results))
+    except SchemaValidationError as e:
+        logger.error(f"Schema validation failed for KRAPinCertificate document validation: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+    except Exception as e:
+        logger.error(f"An unexpected error occurred in validate_krapincertificate: {e}")
+        return make_response(500, {'message': 'Internal Server Error'})
 
-    def validate_krapincertificate(event_data):
-        schema = {
-            "type": "object",
-            "properties": {
-                "uploadedDocumentUrl": {"type": "string", "format": "uri"},
-                "certificateDate": {"type": "string", "format": "date"},
-                "pin": {"type": "string"},
-                "taxpayerName": {"type": "string"},
-                "emailAddress": {"type": "string", "format": "email"},
-            },
-            "required": ["uploadedDocumentUrl", "pin"],
-            "additionalProperties": False
-        }
+def validate_cr12(event_data):
+    schema = {
+        "type": "object",
+        "properties": {
+            "uploadedDocumentUrl": {"type": "string", "format": "uri"},
+            "businessNumber": {"type": "string"},
+            "businessName": {"type": "string"},
+            "dateOfIncorporation": {"type": "string", "format": "date"},
+            "businessType": {"type": "string"},
+        },
+        "required": ["uploadedDocumentUrl", "businessNumber"],
+        "additionalProperties": False
+    }
 
-        try:
-            validate(schema=schema, event=event_data)
-            object_key = f"KRAPinCertificate/{event_data['pin']}.pdf"
-            url, s3Path = copy_to_s3(url=event_data['uploadedDocumentUrl'], object_key=object_key)
-            logger.info(f"Downloaded {event_data['uploadedDocumentUrl']} to {url}")
-            extracted = extract(s3Path)
-            extracted_form = extracted["form"]
-            extracted_prose = " ".join(extracted["phrases"]).lower()
-            checks = []
+    try:
+        validate(schema=schema, event=event_data)
+        object_key = f"CertificateOfIncorporation /{event_data['businessNumber']}.pdf"
+        url, s3Path = copy_to_s3(url=event_data['uploadedDocumentUrl'], object_key=object_key)
+        logger.info(f"Downloaded {event_data['uploadedDocumentUrl']} to {url}")
+        extracted = extract(s3Path)
 
-            checks.append({"check": 'Contains the words "Kenya Revenue Authority"',
-                           "result": "Kenya Revenue Authority".lower() in extracted_prose})
-            checks.append({"check": 'Contains the words "PIN Certificate"',
-                           "result": "PIN Certificate".lower() in extracted_prose})
-            checks.append({"check": 'The url "www.kra.go.ke"', "result": "None".lower() in extracted_prose})
-            certificateDateMatchResult = process(event_name='certificateDate', textract_name='CERTIFICATE_DATE',
-                                                 event=event_data, form=extracted_form)
-            pinMatchResult = process(event_name='pin', textract_name='PERSONAL_IDENTIFICATION_NUMBER', event=event_data,
-                                     form=extracted_form)
-            taxpayerNameMatchResult = process(event_name='taxpayerName', textract_name='TAXPAYER_NAME',
-                                              event=event_data, form=extracted_form)
-            emailAddressMatchResult = process(event_name='emailAddress', textract_name='EMAIL_ADDRESS',
-                                              event=event_data, form=extracted_form)
+        extractedData = extracted["phrases"]
+        extracted_form = extract_form_from_cr12_phrases(extractedData)
+        extracted_prose = " ".join(extracted["phrases"]).lower()
+        checks = []
 
-            matchResults = dict(certificateDate=certificateDateMatchResult,
-                                pin=pinMatchResult,
-                                taxpayerName=taxpayerNameMatchResult,
-                                emailAddress=emailAddressMatchResult,
-                                )
+        checks.append({"check": 'Contains the words  "Certificate Of Incorporation"',
+                       "result": "Certificate Of Incorporation".lower() in extracted_prose})
+        businessNumberMatchResult = process(event_name='businessNumber', textract_name='No.', event=event_data,
+                                            form=extracted_form)
+        businessNameMatchResult = process(event_name='businessName', textract_name='BUSINESS_NAME',
+                                          event=event_data, form=extracted_form)
+        dateOfIncorporationMatchResult = process(event_name='dateOfIncorporation',
+                                                 textract_name='DATE_OF_INCORPORATION', event=event_data,
+                                                 form=extracted_form)
+        businessTypeMatchResult = process(event_name='businessType', textract_name='BUSINESS_TYPE',
+                                          event=event_data, form=extracted_form)
 
-            portal.capture_doc_validation(documentType="KRAPinCertificate", documentIdentifier={event_data['pin']},
-                                          matchResults=matchResults)
-            results = dict(checks=checks, matchResults=matchResults)
-            logger.info(f"Results: {results}")
-            return make_response(200, dict(results=results))
-        except SchemaValidationError as e:
-            logger.error(f"Schema validation failed for KRAPinCertificate document validation: {e}")
-            return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
-        except Exception as e:
-            logger.error(f"An unexpected error occurred in validate_krapincertificate: {e}")
-            return make_response(500, {'message': 'Internal Server Error'})
+        matchResults = dict(businessNumber=businessNumberMatchResult,
+                            businessName=businessNameMatchResult,
+                            dateOfIncorporation=dateOfIncorporationMatchResult,
+                            businessType=businessTypeMatchResult,
+                            )
 
-    def validate_cr12(event_data):
-        schema = {
-            "type": "object",
-            "properties": {
-                "uploadedDocumentUrl": {"type": "string", "format": "uri"},
-                "businessNumber": {"type": "string"},
-                "businessName": {"type": "string"},
-                "dateOfIncorporation": {"type": "string", "format": "date"},
-                "businessType": {"type": "string"},
-            },
-            "required": ["uploadedDocumentUrl", "businessNumber"],
-            "additionalProperties": False
-        }
-
-        try:
-            validate(schema=schema, event=event_data)
-            object_key = f"CertificateOfIncorporation /{event_data['businessNumber']}.pdf"
-            url, s3Path = copy_to_s3(url=event_data['uploadedDocumentUrl'], object_key=object_key)
-            logger.info(f"Downloaded {event_data['uploadedDocumentUrl']} to {url}")
-            extracted = extract(s3Path)
-            extractedData = extracted["phrases"]
-            extracted_form = extract_form_from_cr12_phrases(extractedData)
-            extracted_prose = " ".join(extracted["phrases"]).lower()
-            checks = []
-
-            checks.append({"check": 'Contains the words  "Certificate Of Incorporation"',
-                           "result": "Certificate Of Incorporation".lower() in extracted_prose})
-            businessNumberMatchResult = process(event_name='businessNumber', textract_name='No.', event=event_data,
-                                                form=extracted_form)
-            businessNameMatchResult = process(event_name='businessName', textract_name='BUSINESS_NAME',
-                                              event=event_data, form=extracted_form)
-            dateOfIncorporationMatchResult = process(event_name='dateOfIncorporation',
-                                                     textract_name='DATE_OF_INCORPORATION', event=event_data,
-                                                     form=extracted_form)
-            businessTypeMatchResult = process(event_name='businessType', textract_name='BUSINESS_TYPE',
-                                              event=event_data, form=extracted_form)
-
-            matchResults = dict(businessNumber=businessNumberMatchResult,
-                                businessName=businessNameMatchResult,
-                                dateOfIncorporation=dateOfIncorporationMatchResult,
-                                businessType=businessTypeMatchResult,
-                                )
-
-            portal.capture_doc_validation(documentType="CertificateOfIncorporation ",
-                                          documentIdentifier={event_data['businessNumber']}, matchResults=matchResults)
-            results = dict(checks=checks, matchResults=matchResults)
-            logger.info(f"Results: {results}")
-            return make_response(200, dict(results=results))
-        except SchemaValidationError as e:
-            logger.error(f"Schema validation failed for CertificateOfIncorporation  document validation: {e}")
-            return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
-        except Exception as e:
-            logger.error(f"An unexpected error occurred in validate_cr12: {e}")
-            return make_response(500, {'message': 'Internal Server Error'})
-
+        portal.capture_doc_validation(documentType="CertificateOfIncorporation ", s3Path=s3Path,
+                                      documentIdentifier=event_data['businessNumber'], matchResults=matchResults)
+        results = dict(keywords_checks=checks, matchResults=matchResults)
+        logger.info(f"Results: {results}")
+        return make_response(200, dict(s3Path, results=results))
+    except SchemaValidationError as e:
+        logger.error(f"Schema validation failed for CertificateOfIncorporation  document validation: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+    except Exception as e:
+        logger.error(f"An unexpected error occurred in validate_cr12: {e}")
+        return make_response(500, {'message': 'Internal Server Error'})
 
 
 
