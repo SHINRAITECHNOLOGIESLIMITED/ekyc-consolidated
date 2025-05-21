@@ -180,6 +180,7 @@ def process(event_name, textract_name, event, form):
     distance = 0
     return dict(valid=valid, match=dict(distance=distance))
 
+
 def validate_nationalid(event_data):
     schema = {
         "type": "object",
@@ -212,8 +213,8 @@ def validate_nationalid(event_data):
                        "result": "Jamhuri ya Kenya".lower() in extracted_prose})
         checks.append({"check": 'Contains the words "Republic of Kenya" written in English',
                        "result": "Republic of Kenya".lower() in extracted_prose})
-        serialNumberMatchResult = process(event_name='serialNumber', textract_name='SERIAL_NUMBER',
-                                          event=event_data, form=extracted_form)
+        serialNumberMatchResult = process(event_name='serialNumber', textract_name='SERIAL_NUMBER', event=event_data,
+                                          form=extracted_form)
         idNumberMatchResult = process(event_name='idNumber', textract_name='ID_NUMBER', event=event_data,
                                       form=extracted_form)
         fullNamesMatchResult = process(event_name='fullNames', textract_name='FULL_NAMES', event=event_data,
@@ -225,8 +226,8 @@ def validate_nationalid(event_data):
         genderMatchResult = process(event_name='gender', textract_name='SEX', event=event_data, form=extracted_form)
         districtOfBirthMatchResult = process(event_name='districtOfBirth', textract_name='DISTRICT_OF_BIRTH',
                                              event=event_data, form=extracted_form)
-        placeOfIssueMatchResult = process(event_name='placeOfIssue', textract_name='PLACE_OF_ISSUE',
-                                          event=event_data, form=extracted_form)
+        placeOfIssueMatchResult = process(event_name='placeOfIssue', textract_name='PLACE_OF_ISSUE', event=event_data,
+                                          form=extracted_form)
 
         matchResults = dict(serialNumber=serialNumberMatchResult,
                             idNumber=idNumberMatchResult,
@@ -249,6 +250,7 @@ def validate_nationalid(event_data):
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_nationalid: {e}")
         return make_response(500, {'message': 'Internal Server Error'})
+
 
 def validate_passport(event_data):
     schema = {
@@ -283,14 +285,14 @@ def validate_passport(event_data):
         extracted_prose = " ".join(extracted["phrases"]).lower()
         checks = []
 
-        checks.append({"check": 'Contains the words "Jamhuri ya Kenya"',
-                       "result": "Jamhuri ya Kenya".lower() in extracted_prose})
+        checks.append(
+            {"check": 'Contains the words "Jamhuri ya Kenya"', "result": "Jamhuri ya Kenya".lower() in extracted_prose})
         checks.append({"check": 'Contains the words "Republic of Kenya"',
                        "result": "Republic of Kenya".lower() in extracted_prose})
         checks.append({"check": 'Contains the words "Republique de Kenya"',
                        "result": "Republique de Kenya".lower() in extracted_prose})
-        documentTypeMatchResult = process(event_name='documentType', textract_name='TYPEAINA/TYPE',
-                                          event=event_data, form=extracted_form)
+        documentTypeMatchResult = process(event_name='documentType', textract_name='TYPEAINA/TYPE', event=event_data,
+                                          form=extracted_form)
         countryCodeMatchResult = process(event_name='countryCode',
                                          textract_name='COUNTRY_CODE_NAMBARI_YA_NCHICODE_DU_PAYS', event=event_data,
                                          form=extracted_form)
@@ -300,23 +302,22 @@ def validate_passport(event_data):
         personalNumberMatchResult = process(event_name='personalNumber',
                                             textract_name='PERSONAL_NO_NAMBARI_YA_KIBINAFSI/NO_PERSONNEL',
                                             event=event_data, form=extracted_form)
-        surnameMatchResult = process(event_name='surname', textract_name='SURNAME./INA_LA_UKAO-NOM',
-                                     event=event_data, form=extracted_form)
-        givenNamesMatchResult = process(event_name='givenNames',
-                                        textract_name='GIVEN_NAMES/MAJINA_ALIYOPEWA,_PRENOMS', event=event_data,
-                                        form=extracted_form)
-        genderMatchResult = process(event_name='gender', textract_name='None', event=event_data,
+        surnameMatchResult = process(event_name='surname', textract_name='SURNAME./INA_LA_UKAO-NOM', event=event_data,
+                                     form=extracted_form)
+        givenNamesMatchResult = process(event_name='givenNames', textract_name='GIVEN_NAMES/MAJINA_ALIYOPEWA,_PRENOMS',
+                                        event=event_data, form=extracted_form)
+        genderMatchResult = process(event_name='gender', textract_name='SEXUINSIASEXE', event=event_data,
                                     form=extracted_form)
         dateOfBirthMatchResult = process(event_name='dateOfBirth',
                                          textract_name='DATE_OF_BIRTH/TAREHE_YA_KUZALIWA_DATE_DE_NAISSANCE',
                                          event=event_data, form=extracted_form)
         placeOfBirthMatchResult = process(event_name='placeOfBirth',
-                                          textract_name='SEXUINSIASEXE_PLACE_OF_BIRTH_MAHAH_PA_KUZALIWALIEU_DE_NAISSANCE',
+                                          textract_name='PLACE_OF_BIRTH_MAHAH_PA_KUZALIWALIEU_DE_NAISSANCE',
                                           event=event_data, form=extracted_form)
         dateOfIssueMatchResult = process(event_name='dateOfIssue', textract_name='DATE_OF_ISSUE_TAREHE_VA_KUTOLENA',
                                          event=event_data, form=extracted_form)
-        dateOfExpiryMatchResult = process(event_name='dateOfExpiry', textract_name='DATE_OF_EXPIRY',
-                                          event=event_data, form=extracted_form)
+        dateOfExpiryMatchResult = process(event_name='dateOfExpiry', textract_name='DATE_OF_EXPIRY', event=event_data,
+                                          form=extracted_form)
         nationalityMatchResult = process(event_name='nationality', textract_name='NATIONALITY/UTAIFA/NATIONALIT�',
                                          event=event_data, form=extracted_form)
         issuingAuthorityMatchResult = process(event_name='issuingAuthority',
@@ -350,6 +351,7 @@ def validate_passport(event_data):
         logger.error(f"An unexpected error occurred in validate_passport: {e}")
         return make_response(500, {'message': 'Internal Server Error'})
 
+
 def validate_krapincertificate(event_data):
     schema = {
         "type": "object",
@@ -376,17 +378,17 @@ def validate_krapincertificate(event_data):
 
         checks.append({"check": 'Contains the words "Kenya Revenue Authority"',
                        "result": "Kenya Revenue Authority".lower() in extracted_prose})
-        checks.append({"check": 'Contains the words "PIN Certificate"',
-                       "result": "PIN Certificate".lower() in extracted_prose})
+        checks.append(
+            {"check": 'Contains the words "PIN Certificate"', "result": "PIN Certificate".lower() in extracted_prose})
         checks.append({"check": 'The url "www.kra.go.ke"', "result": "None".lower() in extracted_prose})
         certificateDateMatchResult = process(event_name='certificateDate', textract_name='CERTIFICATE_DATE',
                                              event=event_data, form=extracted_form)
         pinMatchResult = process(event_name='pin', textract_name='PERSONAL_IDENTIFICATION_NUMBER', event=event_data,
                                  form=extracted_form)
-        taxpayerNameMatchResult = process(event_name='taxpayerName', textract_name='TAXPAYER_NAME',
-                                          event=event_data, form=extracted_form)
-        emailAddressMatchResult = process(event_name='emailAddress', textract_name='EMAIL_ADDRESS',
-                                          event=event_data, form=extracted_form)
+        taxpayerNameMatchResult = process(event_name='taxpayerName', textract_name='TAXPAYER_NAME', event=event_data,
+                                          form=extracted_form)
+        emailAddressMatchResult = process(event_name='emailAddress', textract_name='EMAIL_ADDRESS', event=event_data,
+                                          form=extracted_form)
 
         matchResults = dict(certificateDate=certificateDateMatchResult,
                             pin=pinMatchResult,
@@ -405,6 +407,7 @@ def validate_krapincertificate(event_data):
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_krapincertificate: {e}")
         return make_response(500, {'message': 'Internal Server Error'})
+
 
 def validate_cr12(event_data):
     schema = {
@@ -436,13 +439,13 @@ def validate_cr12(event_data):
                        "result": "Certificate Of Incorporation".lower() in extracted_prose})
         businessNumberMatchResult = process(event_name='businessNumber', textract_name='No.', event=event_data,
                                             form=extracted_form)
-        businessNameMatchResult = process(event_name='businessName', textract_name='BUSINESS_NAME',
-                                          event=event_data, form=extracted_form)
+        businessNameMatchResult = process(event_name='businessName', textract_name='BUSINESS_NAME', event=event_data,
+                                          form=extracted_form)
         dateOfIncorporationMatchResult = process(event_name='dateOfIncorporation',
                                                  textract_name='DATE_OF_INCORPORATION', event=event_data,
                                                  form=extracted_form)
-        businessTypeMatchResult = process(event_name='businessType', textract_name='BUSINESS_TYPE',
-                                          event=event_data, form=extracted_form)
+        businessTypeMatchResult = process(event_name='businessType', textract_name='BUSINESS_TYPE', event=event_data,
+                                          form=extracted_form)
 
         matchResults = dict(businessNumber=businessNumberMatchResult,
                             businessName=businessNameMatchResult,
@@ -461,6 +464,8 @@ def validate_cr12(event_data):
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_cr12: {e}")
         return make_response(500, {'message': 'Internal Server Error'})
+
+
 
 
 
