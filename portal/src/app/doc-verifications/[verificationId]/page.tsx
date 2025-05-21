@@ -35,7 +35,7 @@ const itemDetails = (documentVerification: DocumentVerification) => (
 
           <div>
             <Box variant="awsui-key-label">Identifier</Box>
-            <div>{documentVerification.verificationIdentifier}</div>
+            <div>{documentVerification.documentIdentifier}</div>
           </div>
         </SpaceBetween>
       </ColumnLayout>
