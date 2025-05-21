@@ -110,7 +110,72 @@ class Portal:
         except Exception as e:
             logger.error(f"Error creating document validation: {str(e)}")
             return None
+    def capture_doc_verification(self, documentType,documentIdentifier, matchResults):
+        """
+        Create a new document verification record in the portal using Amplify GraphQL API.
 
+        Args:
+            documentType: Type of document (ID, Passport, etc.)
+            documentIdentifier: Identifier for the document (ID number, passport number)
+            matchResults: JSON object with match results
+
+        Returns:
+            The created document verification record or None if there was an error
+        """
+        try:
+            # Create a new document verification
+            create_mutation = """
+                mutation CreateDocumentVerification($input: CreateDocumentVerificationInput!) {
+                    createDocumentVerification(input: $input) {
+                        verificationId
+                        documentType
+                    }
+                }
+            """
+
+            # Prepare input with required fields from Amplify schema
+            verification_id = str(uuid.uuid4())
+            document = {
+                "verificationId": verification_id,
+                "documentType": documentType,
+                "documentIdentifier": documentIdentifier,
+                "matchResults": json.dumps(matchResults) if matchResults else None
+            }
+
+            create_variables = {
+                "input": document
+            }
+
+            # Prepare the create request body
+            create_payload = {
+                'query': create_mutation,
+                'variables': create_variables
+            }
+
+            # Make the create request to AppSync
+            create_response = requests.post(
+                self.PORTAL_GRAPHQL_URL,
+                headers=self.headers,
+                json=create_payload
+            )
+
+            # Check if create was successful
+            if create_response.status_code == 200:
+                create_result = create_response.json()
+                if 'errors' in create_result:
+                    logger.error(f"GraphQL Errors during create: {create_result['errors']}")
+                    return None
+                logger.info(f"Document verification created successfully: {verification_id}")
+                return create_result['data']['createDocumentVerification']
+            else:
+                logger.error(f"HTTP Error during create: {create_response.status_code}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error creating document verification: {str(e)}")
+            return None
+        pass
+        
     def log_api_call(self, response: Response, api_name: str, api_method: str, duration_ms: int,
                      trace_id: str, capture_data=False):
         mutation = """

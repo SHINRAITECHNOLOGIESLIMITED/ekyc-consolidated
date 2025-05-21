@@ -37,11 +37,11 @@ def handler(event, context):
             logger.info(f"Request Data (body): {data}")
 
             match path:
-                case '/government/nationalid-verification':
+                case '/government/nationalid':
                     return verify_nationalid(data)
-                case '/government/passport-verification':
+                case '/government/passport':
                     return verify_passport(data)
-                case '/government/kra-verification':
+                case '/government/krapincertificate':
                     return verify_krapincertificate(data)
                 case _:
                     return make_response(404, {'message': 'Path Not Found'})
@@ -56,11 +56,43 @@ def handler(event, context):
         logger.error(f'Method Not Allowed - received {http_method}')
         return make_response(405, {'message': 'Method Not Allowed'})
 
+def levenshtein_distance(s1, s2):
+    """Calculate the Levenshtein distance between two strings."""
+    if len(s1) < len(s2):
+        return levenshtein_distance(s2, s1)
+    
+    if len(s2) == 0:
+        return len(s1)
+    
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    
+    return previous_row[-1]
 
-def process(event_name, textract_name, event, api_result):
-    valid = False
-    distance = 0
-    return dict(valid=valid, match=dict(distance=distance))
+def process(event_name, variable_name, event, api_result):
+    if event_name in event:
+        status = "Not provided"
+        details = None
+    else:
+        expected = api_result['data'][variable_name]
+        actual = event[event_name]
+        if actual.strip().lower() == expected.strip().lower():
+            status = "Matched"
+            editdistance = 0
+        else:
+            status = "Not Matched"
+            # calculate edit distance
+            editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
+        details = dict(editdistance=editdistance, expected=expected, actual=actual)
+    
+    return dict(status=status, details=details)
 
 
 def verify_nationalid(event_data):
