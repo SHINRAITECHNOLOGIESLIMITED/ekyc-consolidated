@@ -30,7 +30,6 @@ Globals:
     LoggingConfig:
       LogFormat: JSON
 Resources:
-
   JubileeESBAPISecret:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -43,20 +42,103 @@ Resources:
       Name: !Sub ${AWS::StackName}-portal-graphql-credentials
       Description: Portal GraphQL API Credentials
       SecretString: !Ref PortalGraphQLCredentials
-  UploadDocumentFn:
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub
+        - ${ResourceName} From Stack ${AWS::StackName}
+        - ResourceName: ApiGateway
+      StageName: Prod
+      DefinitionBody: !Transform
+        Name: AWS::Include
+        Parameters:
+          Location: openapi.yaml
+      EndpointConfiguration: REGIONAL
+      TracingEnabled: true
+      Cors:
+        AllowOrigin: '''https://main.d2896e60a8d7f8.amplifyapp.com'''
+        AllowHeaders: '''Content-Type, Authorization, X-Api-Key, X-Amz-Date,
+          X-Amz-Security-Token'''
+        AllowMethods: '''POST, OPTIONS'''
+        MaxAge: 60
+
+  RegistrationFn:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Process for handling KYC document upload
-      CodeUri: process/functions/updloaddocument/src
+      Description: Handles agent and customer registration
+      CodeUri: process/functions/registration/src
       Handler: app.handler
       Environment:
         Variables:
-          NEWDOCUMENTREGISTRATION_STATE_MACHINE_NAME: !GetAtt NewDocumentRegistration.Name
-          NEWDOCUMENTREGISTRATION_STATE_MACHINE_ARN: !Ref NewDocumentRegistration
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+      Events:
+        ApiGatewayPOSTAgentRegistration:
+          Type: Api
+          Properties:
+            Path: /agent-registration
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTCustomerRegistration:
+          Type: Api
+          Properties:
+            Path: /customer-registration
+            Method: POST
+            RestApiId: !Ref ApiGateway
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref PortalGraphQLSecret
+      Layers:
+        - !Ref PortalProjectionLayer
+
+  RegistrationFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${RegistrationFn}
+      RetentionInDays: 30
+  DocumentValidationFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Validating that uploaded documents match the provided data
+      CodeUri: process/functions/document_validation/src
+      Handler: app.handler
+      Environment:
+        Variables:
           KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
           KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
-          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
           AMPLIFY_S3_BUCKET_NAME: !Ref AmplifyS3BucketName
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+      Events:
+        ApiGatewayPOSTKRA:
+          Type: Api
+          Properties:
+            Path: /document/kra-validation
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTID:
+          Type: Api
+          Properties:
+            Path: /document/nationalid-validation
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTPassport:
+          Type: Api
+          Properties:
+            Path: /document/passport-validation
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTCompany:
+          Type: Api
+          Properties:
+            Path: /document/company-validation
+            Method: POST
+            RestApiId: !Ref ApiGateway
       Policies:
         - Statement:
             - Effect: Allow
@@ -65,14 +147,6 @@ Resources:
               Resource:
                 - !Ref PortalGraphQLSecret
         - AWSLambdaBasicExecutionRole
-        - StepFunctionsExecutionPolicy:
-            StateMachineName: !GetAtt NewDocumentRegistration.Name
-        - Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource:
-                - !Ref PortalGraphQLSecret
         - Statement:
             - Effect: Allow
               Action:
@@ -99,32 +173,123 @@ Resources:
               Resource:
                 - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}
                 - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:GetObjectVersion
+                - s3:ListBucket
+                - s3:ListBucketVersions
+              Resource:
                 - !Sub arn:${AWS::Partition}:s3:::${AmplifyS3BucketName}
                 - !Sub arn:${AWS::Partition}:s3:::${AmplifyS3BucketName}/*
-        - StepFunctionsExecutionPolicy:
-            StateMachineName: !GetAtt NewDocumentRegistration.Name
+        - Statement:
+            - Effect: Allow
+              Action:
+                - textract:AnalyzeDocument
+                - textract:DetectDocumentText
+                - textract:GetDocumentAnalysis
+                - textract:GetDocumentTextDetection
+              Resource: '*'
       Layers:
         - !Ref PortalProjectionLayer
-      Events:
-        ApiGatewayPOSTuploaddocument:
-          Type: Api
-          Properties:
-            Path: /uploaddocument
-            Method: POST
-            RestApiId: !Ref ApiGateway
-  UploadDocumentFnLogGroup:
+        - !Ref DocumentTextractLayer
+  DocumentValidationFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub /aws/lambda/${UploadDocumentFn}
+      LogGroupName: !Sub /aws/lambda/${DocumentValidationFn}
       RetentionInDays: 30
-
+  GovernmentVerificationFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Calls to external identity services to validate supplied data
+        verification
+      CodeUri: process/functions/government_verification/src
+      Handler: app.handler
+      Environment:
+        Variables:
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+          JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
+      Events:
+        ApiGatewayPOSTKRA:
+          Type: Api
+          Properties:
+            Path: /government/kra-verification
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTID:
+          Type: Api
+          Properties:
+            Path: /government/nationalid-verification
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTPassport:
+          Type: Api
+          Properties:
+            Path: /government/passport-verification
+            Method: POST
+            RestApiId: !Ref ApiGateway
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref PortalGraphQLSecret
+                - !Ref JubileeESBAPISecret
+      Layers:
+        - !Ref PortalProjectionLayer
+        - !Ref JubileeESBAPILayer
+  GovernmentVerificationFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${GovernmentVerificationFn}
+      RetentionInDays: 30
+  BackgroundChecksFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Handles background checking against Lexis Nexis API
+      CodeUri: process/functions/background_check/src
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+          JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
+      Events:
+        ApiGatewayPOSTBackgroundCheck:
+          Type: Api
+          Properties:
+            Path: /backgroundcheck
+            Method: POST
+            RestApiId: !Ref ApiGateway
+      Layers:
+        - !Ref PortalProjectionLayer
+        - !Ref JubileeESBAPILayer
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref PortalGraphQLSecret
+                - !Ref JubileeESBAPISecret
+  BackgroundChecksFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${BackgroundChecksFn}
+      RetentionInDays: 30
   FaceLivenessFn:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Process for checking faceliveness
-      CodeUri: process/functions/faceliveness/src
+      CodeUri: process/functions/face_liveness/src
       Handler: app.handler
       Environment:
         Variables:
@@ -162,112 +327,6 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${FaceLivenessFn}
       RetentionInDays: 30
-  APIAuthorizerFn:
-    Type: AWS::Serverless::Function
-    Properties:
-      Description: Authorizer function
-      CodeUri: process/functions/api_authorizer/src
-      Handler: app.handler
-      Policies:
-        - AWSLambdaBasicExecutionRole
-  APIAuthorizerFnLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${APIAuthorizerFn}
-      RetentionInDays: 30
-  JubileeESBCallFn:
-    Type: AWS::Serverless::Function
-    Properties:
-      Description: Jubilee ESB IPRS,LexisNexis and KRA verification
-      CodeUri: core/functions/jubilee_esb_call/src
-      Handler: app.handler
-      Environment:
-        Variables:
-          JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
-          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource:
-                - !Ref JubileeESBAPISecret
-                - !Ref PortalGraphQLSecret
-        - AWSLambdaBasicExecutionRole
-      Layers:
-        - !Ref JubileeESBAPILayer
-        - !Ref PortalProjectionLayer
-  JubileeESBCallFnLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${JubileeESBCallFn}
-      RetentionInDays: 30
-  DocumentTextractFn:
-    Type: AWS::Serverless::Function
-    Properties:
-      Description: Extract of form fields from documents
-      CodeUri: core/functions/document_textract/src
-      Handler: app.handler
-      Environment:
-        Variables:
-          KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
-          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
-          KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource:
-                - !Ref PortalGraphQLSecret
-        - AWSLambdaBasicExecutionRole
-        - Statement:
-            - Effect: Allow
-              Action:
-                - textract:AnalyzeDocument
-                - textract:DetectDocumentText
-                - textract:GetDocumentAnalysis
-                - textract:GetDocumentTextDetection
-              Resource: '*'
-        - Statement:
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-                - s3:GetObjectAcl
-                - s3:GetObjectLegalHold
-                - s3:GetObjectRetention
-                - s3:GetObjectTorrent
-                - s3:GetObjectVersion
-                - s3:GetObjectVersionAcl
-                - s3:GetObjectVersionForReplication
-                - s3:GetObjectVersionTorrent
-                - s3:ListBucket
-                - s3:ListBucketMultipartUploads
-                - s3:ListBucketVersions
-                - s3:ListMultipartUploadParts
-                - s3:AbortMultipartUpload
-                - s3:DeleteObject
-                - s3:DeleteObjectVersion
-                - s3:PutObject
-                - s3:PutObjectLegalHold
-                - s3:PutObjectRetention
-                - s3:RestoreObject
-              Resource:
-                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}
-                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
-      Layers:
-        - !Ref PortalProjectionLayer
-  DocumentTextractFnLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${DocumentTextractFn}
-      RetentionInDays: 30
   FaceLivenessResults:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -280,37 +339,14 @@ Resources:
           KeyType: HASH
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
-  NewDocumentRegistration:
-    Type: AWS::Serverless::StateMachine
+  DocumentTextractLayer:
+    Type: AWS::Serverless::LayerVersion
     Properties:
-      Logging:
-        Level: ALL
-        IncludeExecutionData: true
-        Destinations:
-          - CloudWatchLogsLogGroup:
-              LogGroupArn: !GetAtt NewDocumentRegistrationLogGroup.Arn
-      Tracing:
-        Enabled: true
-      Type: EXPRESS
-      DefinitionSubstitutions:
-        DocumentExtractArn: !GetAtt DocumentTextractFn.Arn
-        JubileeESBCallFnArn: !GetAtt JubileeESBCallFn.Arn
-        NewDocumentRegistrationResultsTableName: !Ref NewDocumentRegistrationResults
-      Policies:
-        - LambdaInvokePolicy:
-            FunctionName: !Ref DocumentTextractFn
-        - LambdaInvokePolicy:
-            FunctionName: !Ref JubileeESBCallFn
-        - DynamoDBCrudPolicy:
-            TableName: !Ref NewDocumentRegistrationResults
-        - CloudWatchLogsFullAccess
-      DefinitionUri: process/state_machines/new_document_registration.yaml
-  NewDocumentRegistrationLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub
-        - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
-        - ResourceId: NewDocumentRegistration
+      Description: Textract Layer
+      ContentUri: core/layers/document_textract/src
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: python3.11
   JubileeESBAPILayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -356,88 +392,27 @@ Resources:
             Condition:
               Bool:
                 aws:SecureTransport: 'false'
-  NewDocumentRegistrationResults:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      AttributeDefinitions:
-        - AttributeName: documentId
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-      KeySchema:
-        - AttributeName: documentId
-          KeyType: HASH
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
-  ApiGateway:
-    Type: AWS::Serverless::Api
-    Properties:
-      Name: !Sub
-        - ${ResourceName} From Stack ${AWS::StackName}
-        - ResourceName: ApiGateway
-      StageName: Prod
-      DefinitionBody:
-        openapi: '3.0'
-        info: {}
-        paths:
-          /uploaddocument:
-            post:
-              x-amazon-apigateway-integration:
-                httpMethod: POST
-                type: aws_proxy
-                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadDocumentFn.Arn}/invocations
-              responses: {}
-          /faceliveness:
-            post:
-              x-amazon-apigateway-integration:
-                httpMethod: POST
-                type: aws_proxy
-                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFn.Arn}/invocations
-              responses: {}
-      EndpointConfiguration: REGIONAL
-      TracingEnabled: true
-      Cors:
-        AllowOrigin: '''https://main.d2896e60a8d7f8.amplifyapp.com'''
-        AllowHeaders: '''Content-Type, Authorization, X-Api-Key, X-Amz-Date,
-          X-Amz-Security-Token'''
-        AllowMethods: '''POST, OPTIONS'''
-        MaxAge: 60
 Metadata:
   AWS::Composer::Groups:
     Group2:
       Label: 'Layer2: Process orchestration'
       Members:
+        - GovernmentVerificationFn
+        - DocumentValidationFn
         - FaceLivenessFn
-        - UploadDocumentFn
         - FaceLivenessResults
         - KYCDocumentsBucket
-        - NewDocumentRegistration
-        - NewDocumentRegistrationResults
-    Group4:
-      Label: 'Layer3b: KYC Validation (Core)'
-      Members:
-        - JubileeESBCallFn
-        - JubileeESBAPILayer
-    Group5:
-      Label: Secrets
-      Members:
-        - JubileeESBAPISecret
-        - PortalGraphQLSecret
+        - RegistrationFn
 Outputs:
   ApiGatewayUrl:
     Description: API Gateway Production URL
     Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod
-  APIAuthorizerFnLogGroup:
-    Description: Tailing the Facelivess Logs
-    Value: APIAuthorizerFnLogGroup
   FaceLivenessFnLogGroup:
-    Description: Tailing the Facelivess Logs
-    Value: FaceLivenessFnLogGroup
-  UploadDocumentFnLogGroup:
-    Description: Tailing the upload document GW endpoint Logs
-    Value: UploadDocumentFnLogGroup
-  DocumentTextractFn:
-    Description: Tailing the document textract lambda logs
-    Value: DocumentTextractFnLogGroup
-  JubileeESBCallFnLogGroup:
-    Description: Tailing the upload document GW endpoint Logs
-    Value: JubileeESBCallFnLogGroup
+    Description: Facelivess Logs
+    Value: !Ref FaceLivenessFnLogGroup
+  GovernmentVerificationFnLogGroup:
+    Description: Identity verification service log group
+    Value: !Ref GovernmentVerificationFnLogGroup
+  DocumentValidationFnLogGroup:
+    Description: Document validation log group
+    Value: !Ref DocumentValidationFnLogGroup

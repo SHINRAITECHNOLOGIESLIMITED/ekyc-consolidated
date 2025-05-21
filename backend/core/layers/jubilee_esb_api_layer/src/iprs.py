@@ -17,7 +17,7 @@ class IPRS:
 
     # search Interface
     @tracer.capture_method
-    def search_generic(self, data) -> Dict:
+    def search_generic(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generic IPRS searches for an individual in the system.(Sec 5-6)
         """
@@ -94,7 +94,7 @@ class IPRS:
 
     # search Passport Number Interface
     @tracer.capture_method
-    def search_passport_number(self, data) -> Dict:
+    def search_passport_number(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         searches for an individual in the system based on the passport number.(Sec 10-12)
         """

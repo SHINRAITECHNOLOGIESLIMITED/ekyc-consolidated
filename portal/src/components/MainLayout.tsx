@@ -64,33 +64,10 @@ const Navigation = () => {
           href: "/",
         },
         { type: "divider" },
-        // KYC Operations Section
+        // Docuements Section
         {
           type: "section-group",
-          title: "KYC Operations",
-          items: [
-            {
-              type: "link",
-              text: "Capture new FaceLiveness",
-              href: "/captureliveness",
-              info: (
-                <Badge color="red" size="small">
-                  WIP
-                </Badge>
-              )
-            },
-            {
-              type: "link",
-              text: "Upload new KYC Document",
-              href: "/uploadkycdocument",
-            },
-          ],
-        },
-        { type: "divider" },
-        // Reports Section
-        {
-          type: "section-group",
-          title: "Results & Analytics",
+          title: "Documents",
           items: [
             {
               type: "link",
@@ -104,19 +81,15 @@ const Navigation = () => {
             },
             {
               type: "link",
-              text: "KYC Documents",
-              href: "/documents",
+              text: "Validated Documents",
+              href: "/doc-validations",
             },
             {
               type: "link",
-              text: "KYC Certificates",
-              href: "/certificates",
-              info: (
-                <Badge color="red" size="small">
-                  WIP
-                </Badge>
-              ),
+              text: "Verified Documents",
+              href: "/doc-verifications",
             },
+            
           ],
         },
         { type: "divider" },

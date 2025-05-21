@@ -1,0 +1,968 @@
+openapi: 3.0.0
+
+info:
+  title: eKYC Identity Verification System API
+  version: 1.0.0
+  description: API endpoints to support the KYC Identity Verification System for
+    agent and customer onboarding and verification processes.
+
+paths:
+  /agent-registration:
+    post:
+      summary: Register a new agent
+      operationId: createAgent
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RegistrationFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRegistrationRequest'
+      responses:
+        '201':
+          description: Agent registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRegistrationSuccess'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /customer-registration:
+    post:
+      summary: Register a new customer
+      operationId: createCustomer
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RegistrationFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRegistrationRequest'
+      responses:
+        '201':
+          description: Customer registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerRegistrationSuccess'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /government/nationalid-verification:
+    post:
+      summary: Verify National ID details against government database
+      operationId: verifyNationalIdGovernment
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GovernmentVerificationFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NationalIdVerificationRequest'
+      responses:
+        '200':
+          description: Verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernmentVerificationResult'
+        '400':
+          description: Invalid input or data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error communicating with government service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /government/passport-verification:
+    post:
+      summary: Verify Passport details against government database
+      operationId: verifyPassportGovernment
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GovernmentVerificationFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PassportVerificationRequest'
+      responses:
+        '200':
+          description: Verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernmentVerificationResult'
+        '400':
+          description: Invalid input or data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error communicating with government service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /government/kra-verification:
+    post:
+      summary: Verify KRA PIN details against KRA database
+      operationId: verifyKraGovernment
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GovernmentVerificationFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KRAVerificationRequest'
+      responses:
+        '200':
+          description: Verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernmentVerificationResult'
+        '400':
+          description: Invalid input or data not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error communicating with government service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /document/nationalid-validation:
+    post:
+      summary: Validate National ID document details
+      operationId: validateNationalIdDocument
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NationalIdDocumentValidationRequest'
+      responses:
+        '200':
+          description: Document validation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentValidationResult'
+        '400':
+          description: Invalid input or document validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error or document processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /document/passport-validation:
+    post:
+      summary: Validate Passport document details
+      operationId: validatePassportDocument
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PassportDocumentValidationRequest'
+      responses:
+        '200':
+          description: Document validation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentValidationResult'
+        '400':
+          description: Invalid input or document validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error or document processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /document/kra-validation:
+    post:
+      summary: Validate KRA PIN document details
+      operationId: validateKraDocument
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KRADocumentValidationRequest'
+      responses:
+        '200':
+          description: Document validation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentValidationResult'
+        '400':
+          description: Invalid input or document validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error or document processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /document/company-validation:
+    post:
+      summary: Validate Company Certificate of Registration document details
+      operationId: validateCompanyDocument
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyDocumentValidationRequest'
+      responses:
+        '200':
+          description: Document validation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentValidationResult'
+        '400':
+          description: Invalid input or document validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error or document processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+                
+  /faceliveness:
+    post:
+      summary: Face liveness verification
+      operationId: verifyFaceLiveness
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FaceLivenessFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  description: User identifier for the face liveness check
+      responses:
+        '200':
+          description: Face liveness verification successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionId:
+                    type: string
+                  status:
+                    type: string
+                  confidence:
+                    type: number
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+                
+  /backgroundcheck:
+    post:
+      summary: Perform background check against Lexis Nexis
+      operationId: performBackgroundCheck
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BackgroundChecksFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackgroundCheckRequest'
+      responses:
+        '200':
+          description: Background check completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackgroundCheckResult'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    AgentRegistrationRequest:
+      type: object
+      properties:
+        agentType:
+          type: string
+          description: Type of agent (Individual or Company)
+          enum:
+            - Individual
+            - Company
+        name:
+          type: string
+          description: Full legal name (individual or company)
+          example: Jane Doe or ABC Ltd
+        pinNumber:
+          type: string
+          description: KRA Personal Identification Number
+          example: A000000000B
+        idNumber:
+          type: string
+          description: National ID Card number (required for individuals)
+          nullable: true
+          example: '12345678'
+        passportPhotoUrl:
+          type: string
+          description: URL of the uploaded passport photo document
+          format: url
+        nationalIdCardUrl:
+          type: string
+          description: URL of the uploaded National ID Card document (required for
+            individuals)
+          format: url
+          nullable: true
+        companyCertificateUrl:
+          type: string
+          description: URL of the uploaded Company Certificate of Registration document
+            (required for companies)
+          format: url
+          nullable: true
+        dateOfBirth:
+          type: string
+          description: Date of birth (required for individuals)
+          format: date
+          nullable: true
+          example: 1990-01-31
+        businessNumber:
+          type: string
+          description: Business Registration Number (required for companies)
+          nullable: true
+          example: BN123456
+      required:
+        - agentType
+        - name
+        - pinNumber
+        - passportPhotoUrl
+
+    AgentRegistrationSuccess:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Registration success message
+          example: Agent registered successfully
+        agentCode:
+          type: string
+          description: Unique identifier assigned to the registered agent
+          example: AGT123456
+
+    CustomerRegistrationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Full legal name of the customer
+          example: John Smith
+        pinNumber:
+          type: string
+          description: Customer's KRA Personal Identification Number
+          example: A000000000C
+        idNumber:
+          type: string
+          description: Customer's National ID Card number or Passport number
+          example: 87654321 or P123456
+        gender:
+          type: string
+          description: Customer's gender
+          enum:
+            - Male
+            - Female
+        dateOfBirth:
+          type: string
+          description: Customer's date of birth
+          format: date
+          example: 1985-05-15
+        passportPhotoUrl:
+          type: string
+          description: URL of the uploaded customer passport photo document
+          format: url
+        nationalIdOrPassportUrl:
+          type: string
+          description: URL of the uploaded National ID Card or Passport document
+          format: url
+        kraPinCardUrl:
+          type: string
+          description: URL of the uploaded KRA PIN Card document
+          format: url
+        beneficiaries:
+          type: array
+          description: List of customer policy beneficiaries
+          items:
+            $ref: '#/components/schemas/Beneficiary'
+      required:
+        - name
+        - pinNumber
+        - idNumber
+        - gender
+        - dateOfBirth
+        - passportPhotoUrl
+        - nationalIdOrPassportUrl
+        - kraPinCardUrl
+
+    CustomerRegistrationSuccess:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Registration success message
+          example: Customer registered successfully
+        customerId:
+          type: string
+          description: Unique identifier assigned to the registered customer
+          example: CUST789012
+
+    Beneficiary:
+      type: object
+      properties:
+        idNumber:
+          type: string
+          description: Primary identification number for the beneficiary (ID, Birth Cert,
+            Passport)
+          example: BC987654 or '11223344'
+        relationship:
+          type: string
+          description: Relationship to the main customer (e.g., Spouse, Child)
+          example: Child
+        gender:
+          type: string
+          description: Gender of the beneficiary
+          enum:
+            - Male
+            - Female
+        dateOfBirth:
+          type: string
+          description: Date of birth of the beneficiary
+          format: date
+          example: 2010-11-22
+      required:
+        - idNumber
+        - relationship
+        - gender
+        - dateOfBirth
+        
+    NationalIdVerificationRequest:
+      type: object
+      properties:
+        idNumber:
+          type: string
+          description: National ID Card number
+          example: '12345678'
+        fullNames:
+          type: string
+          description: Full names as per National ID
+          example: Jane Doe
+        gender:
+          type: string
+          description: Whether person is Male of Female
+          enum:
+            - Male
+            - Female
+          example: Male
+        dateOfBirth:
+          type: string
+          description: Date of birth
+          format: date
+          example: 1990-01-31
+      required:
+        - idNumber
+        - fullNames
+        - dateOfBirth
+      additionalProperties: false
+
+    PassportVerificationRequest:
+      type: object
+      properties:
+        passportNumber:
+          type: string
+          description: Passport number
+          example: P123456
+        fullNames:
+          type: string
+          description: Full names as per Passport
+          example: John Smith
+        dateOfBirth:
+          type: string
+          description: Date of birth
+          format: date
+          example: 1985-05-15
+      required:
+        - passportNumber
+        - fullNames
+        - dateOfBirth
+      additionalProperties: false
+
+    KRAVerificationRequest:
+      type: object
+      properties:
+        kraPin:
+          type: string
+          description: KRA PIN Number
+          example: A000000000B
+        fullNames:
+          type: string
+          description: Full names as per KRA records
+          example: Jane Doe
+        idNumber:
+          type: string
+          description: National ID Card number or Passport number linked to KRA PIN
+          example: 12345678
+      required:
+        - kraPin
+        - fullNames
+        - idNumber
+      additionalProperties: false
+
+    GovernmentVerificationResult:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Verification status
+          enum:
+            - Valid
+            - Invalid
+        matchDetails:
+          type: object
+          description: Details of matched fields
+          properties:
+            idNumber:
+              type: object
+              properties:
+                valid:
+                  type: boolean
+                reason:
+                  type: string
+            names:
+              type: object
+              properties:
+                valid:
+                  type: boolean
+                reason:
+                  type: string
+            dob:
+              type: object
+              properties:
+                valid:
+                  type: boolean
+                reason:
+                  type: string
+        extractedData:
+          type: object
+          description: Data extracted from the government service
+          properties:
+            fullNames:
+              type: string
+              description: Full names extracted from government records
+            dateOfBirth:
+              type: string
+              format: date
+              description: Date of birth extracted from government records
+            gender:
+              type: string
+              description: Gender extracted from government records
+            idNumber:
+              type: string
+              description: ID number extracted from government records
+
+    NationalIdDocumentValidationRequest:
+      type: object
+      properties:
+        uploadedDocumentUrl:
+          type: string
+          description: URL of the uploaded document file
+          format: url
+        idNumber:
+          type: string
+          description: National ID Card number provided by user
+          example: '12345678'
+        fullNames:
+          type: string
+          description: Full names provided by user
+          example: Jane Doe
+        dateOfBirth:
+          type: string
+          description: Date of birth provided by user
+          format: date
+          example: 1990-01-31
+      required:
+        - uploadedDocumentUrl
+        - idNumber
+        - fullNames
+        - dateOfBirth
+      additionalProperties: false
+
+    PassportDocumentValidationRequest:
+      type: object
+      properties:
+        uploadedDocumentUrl:
+          type: string
+          description: URL of the uploaded document file
+          format: url
+        passportNumber:
+          type: string
+          description: Passport number provided by user
+          example: P123456
+        fullNames:
+          type: string
+          description: Full names provided by user
+          example: John Smith
+        dateOfBirth:
+          type: string
+          description: Date of birth provided by user
+          format: date
+          example: 1985-05-15
+      required:
+        - uploadedDocumentUrl
+        - passportNumber
+        - fullNames
+        - dateOfBirth
+      additionalProperties: false
+
+    KRADocumentValidationRequest:
+      type: object
+      properties:
+        uploadedDocumentUrl:
+          type: string
+          description: URL of the uploaded document file
+          format: url
+        kraPin:
+          type: string
+          description: KRA PIN Number provided by user
+          example: A000000000B
+        fullNames:
+          type: string
+          description: Full names provided by user
+          example: Jane Doe
+        idNumber:
+          type: string
+          description: National ID Card number or Passport number provided by user
+          example: 12345678 or P123456
+      required:
+        - uploadedDocumentUrl
+        - kraPin
+        - fullNames
+        - idNumber
+      additionalProperties: false
+
+    CompanyDocumentValidationRequest:
+      type: object
+      properties:
+        uploadedDocumentUrl:
+          type: string
+          description: URL of the uploaded document file
+          format: url
+        businessNumber:
+          type: string
+          description: Business Number provided by user
+          example: BN123456
+          pattern: '^BN[0-9]{6}$'
+        businessName:
+          type: string
+          description: Registered Company Name provided by user
+          example: ABC Ltd
+      required:
+        - uploadedDocumentUrl
+        - businessNumber
+        - businessName
+      additionalProperties: false
+
+    BackgroundCheckRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: First name of the individual
+          example: John
+        middleName:
+          type: string
+          description: Middle name of the individual
+          example: David
+        lastName:
+          type: string
+          description: Last name of the individual
+          example: Smith
+        gender:
+          type: string
+          description: Gender of the individual
+          example: Male
+        dateOfBirth:
+          type: string
+          description: Date of birth in ISO format
+          format: date
+          example: 1990-01-31
+        nationalIdentificationNumber:
+          type: string
+          description: National ID number of the individual
+          example: 12345678
+      required:
+        - firstName
+        - lastName
+        - gender
+        - dateOfBirth
+        - nationalIdentificationNumber
+      additionalProperties: false
+      
+    BackgroundCheckResult:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Status of the background check
+        riskScore:
+          type: number
+          description: Risk score from the background check
+        matches:
+          type: array
+          description: List of potential matches found
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              score:
+                type: number
+              details:
+                type: object
+        message:
+          type: string
+          description: Additional information about the background check result
+          
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          description: HTTP status code of the error
+          example: 400
+        message:
+          type: string
+          description: A human-readable error message
+          example: Invalid input data provided.
+        details:
+          type: string
+          description: More detailed information about the error
+          nullable: true
+          example: The provided ID number format is incorrect.
+      required:
+        - statusCode
+        - message
+      additionalProperties: false
+
+    DocumentValidationResult:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Document validation status
+          enum:
+            - Valid
+            - Invalid
+        extractedData:
+          type: object
+          description: Data extracted from the document (e.g., name, ID number, expiry date)
+        matchDetails:
+          type: object
+          description: Details indicating if provided data matches extracted data
+          properties:
+            idNumber:
+              type: object
+              properties:
+                valid:
+                  type: boolean
+                reason:
+                  type: string
+            names:
+              type: object
+              properties:
+                valid:
+                  type: boolean
+                reason:
+                  type: string
+            dob:
+              type: object
+              properties:
+                valid:
+                  type: boolean
+                reason:
+                  type: string

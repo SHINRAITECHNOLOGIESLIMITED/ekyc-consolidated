@@ -1,5 +1,5 @@
 import type {Schema} from "@/../amplify/data/resource";
-import type {APICall, KYCDocument, LivenessSession} from '@/types/models';
+import type {APICall, DocumentValidation, DocumentVerification, LivenessSession} from '@/types/models';
 import {generateClient} from 'aws-amplify/api';
 import {CognitoUser, DashboardMetrics} from "@/types/interfaces";
 import {CognitoIdentityProviderClient, ListUsersCommand} from '@aws-sdk/client-cognito-identity-provider';
@@ -45,8 +45,8 @@ export const fetchLivenessSession = async (sessionId: string): Promise<LivenessS
     return response.data;
 };
 
-export const fetchKYCDocuments = async (): Promise<KYCDocument[]> => {
-    const response = await client.models.KYCDocument.list({
+export const fetchDocumentValidations = async (): Promise<DocumentValidation[]> => {
+    const response = await client.models.DocumentValidation.list({
         limit: 5000
     });
     const sortedData = response.data.sort((a, b) => {
@@ -54,9 +54,25 @@ export const fetchKYCDocuments = async (): Promise<KYCDocument[]> => {
     });
     return sortedData;
 };
-export const fetchDocument = async (documentId: string): Promise<KYCDocument | null> => {
-    const response = await client.models.KYCDocument.get({
-        documentId: documentId
+export const fetchDocumentValidation = async (validationId: string): Promise<DocumentValidation | null> => {
+    const response = await client.models.DocumentValidation.get({
+        validationId: validationId
+    });
+
+    return response.data;
+};
+export const fetchDocumentVerifications = async (): Promise<DocumentVerification[]> => {
+    const response = await client.models.DocumentVerification.list({
+        limit: 5000
+    });
+    const sortedData = response.data.sort((a, b) => {
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+    return sortedData;
+};
+export const fetchDocumentVerification = async (verificationId: string): Promise<DocumentVerification | null> => {
+    const response = await client.models.DocumentVerification.get({
+        verificationId: verificationId
     });
 
     return response.data;
@@ -77,14 +93,16 @@ export const fetchAPICall = async (apiCallId: string): Promise<APICall | null> =
     return response.data;
 };
 export const fetchMetrics = async (): Promise<DashboardMetrics> => {
-    const [kycDocuments, apiCalls, faceLivenessCount] = await Promise.all([
-        fetchKYCDocuments(),
+    const [documentValidations,documentVerifications, apiCalls, faceLivenessCount] = await Promise.all([
+        fetchDocumentValidations(),
+        fetchDocumentVerifications(),
         fetchAPICalls(),
         fetchLivenessSessions()
     ]);
 
     return {
-        kycDocuments: kycDocuments.length,
+        documentValidations: documentValidations.length,
+        documentVerifications: documentVerifications.length,
         apiCalls: apiCalls.length,
         faceLivenessCount: faceLivenessCount.length
     };

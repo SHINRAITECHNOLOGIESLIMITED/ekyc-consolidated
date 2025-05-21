@@ -46,27 +46,27 @@ States:
       TableName: ${NewDocumentRegistrationResultsTableName}
       Item:
         documentId:
-          S.$: "$.documentId"
+          S.$: $.documentId
         customerId:
-          S.$: "$.customerId"
+          S.$: $.customerId
         documentType:
-          S.$: "$.documentType"
+          S.$: $.documentType
         s3Path:
-          S.$: "$.s3Path"
+          S.$: $.s3Path
         bucket:
-          S.$: "$.bucket"
+          S.$: $.bucket
         extractedData:
-          S.$: "$.extractedData"
+          S.$: $.extractedData
         document:
-          S.$: "$.document"
+          S.$: $.document
         search_iprs:
-          S.$: "$.search_iprs"
+          S.$: $.search_iprs
         search_kra:
-          S.$: "$.search_kra"
+          S.$: $.search_kra
         lexisNexis:
-          S.$: "$.search_lexisnexis"
+          S.$: $.search_lexisnexis
         processTimestamp:
-          S.$: "$.State.EnteredTime"
+          S.$: $.State.EnteredTime
     Retry:
       - ErrorEquals:
           - DynamoDB.ServiceException
