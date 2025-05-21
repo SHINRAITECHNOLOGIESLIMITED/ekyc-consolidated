@@ -87,7 +87,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /government/nationalid-verification:
+  /government/nationalid:
     post:
       summary: Verify National ID details against government database
       operationId: verifyNationalIdGovernment
@@ -127,7 +127,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /government/passport-verification:
+  /government/passport:
     post:
       summary: Verify Passport details against government database
       operationId: verifyPassportGovernment
@@ -170,7 +170,7 @@ paths:
   /government/kra-verification:
     post:
       summary: Verify KRA PIN details against KRA database
-      operationId: verifyKraGovernment
+      operationId: krapincertificate
       x-amazon-apigateway-integration:
         uri: 
           Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GovernmentVerificationFn.Arn}/invocations"
@@ -207,7 +207,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /document/nationalid-validation:
+  /document/nationalid:
     post:
       summary: Validate National ID document details
       operationId: validateNationalIdDocument
@@ -247,7 +247,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /document/passport-validation:
+  /document/passport:
     post:
       summary: Validate Passport document details
       operationId: validatePassportDocument
@@ -287,7 +287,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /document/kra-validation:
+  /document/krapincertificate:
     post:
       summary: Validate KRA PIN document details
       operationId: validateKraDocument
@@ -327,7 +327,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /document/company-validation:
+  /document/cr12:
     post:
       summary: Validate Company Certificate of Registration document details
       operationId: validateCompanyDocument

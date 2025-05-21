@@ -35,7 +35,7 @@ const itemDetails = (documentValidation: DocumentValidation) => (
 
           <div>
             <Box variant="awsui-key-label">Identifier</Box>
-            <div>{documentValidation.documentIdentifier}</div>
+            <div>{documentValidation.validationIdentifier}</div>
           </div>
           <div>
             <Box variant="awsui-key-label">S3 Path</Box>
@@ -87,11 +87,11 @@ const itemDetails = (documentValidation: DocumentValidation) => (
 
 const DocumentDetailsPageValidation: React.FC = () => {
   const params = useParams();
-  const documentId = Array.isArray(params.documentId)
-    ? params.documentId[0]
-    : params.documentId;
+  const validationId = Array.isArray(params.validationId)
+    ? params.validationId[0]
+    : params.validationId;
 
-  if (!documentId) {
+  if (!validationId) {
     return (
       <Alert type="error" header="Error" dismissible={false}>
         DocumentId not specified
@@ -100,7 +100,7 @@ const DocumentDetailsPageValidation: React.FC = () => {
   }
   const detailsParams: DetailsProps<DocumentValidation> = {
     title: "Contract",
-    primaryKey: documentId,
+    primaryKey: validationId,
     fetcher: (validationId: string) => fetchDocumentValidation(validationId),
     itemDetails: itemDetails,
   };

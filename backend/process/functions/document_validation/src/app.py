@@ -150,13 +150,13 @@ def handler(event, context):
                 data = json.loads(data)
             logger.info(f"Request Data (body): {data}")
             match path:
-                case '/document/nationalid-validation':
+                case '/document/nationalid':
                     return validate_nationalid(data)
-                case '/document/passport-validation':
+                case '/document/passport':
                     return validate_passport(data)
-                case '/document/kra-validation':
+                case '/document/krapincertificate':
                     return validate_krapincertificate(data)
-                case '/document/company-validation':
+                case '/document/cr12':
                     return validate_cr12(data)
                 case _:
                     return make_response(404, {'message': 'Path Not Found'})
@@ -174,11 +174,46 @@ def handler(event, context):
         logger.error('Method Not Allowed - received {http_method}')
         return make_response(405, {'message': 'Method Not Allowed'})
 
+def levenshtein_distance(s1, s2):
+    """Calculate the Levenshtein distance between two strings."""
+    if len(s1) < len(s2):
+        return levenshtein_distance(s2, s1)
+    
+    if len(s2) == 0:
+        return len(s1)
+    
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    
+    return previous_row[-1]
 
 def process(event_name, textract_name, event, form):
-    valid = False
-    distance = 0
-    return dict(valid=valid, match=dict(distance=distance))
+    if not event_name in event:
+        status = "Not provided"
+        details = None
+    elif not textract_name in form:
+        status = "Not Found"
+        details = None
+    else:
+        expected = form[textract_name]
+        actual = event[event_name]
+        if actual.strip().lower() == expected.strip().lower():
+            status = "Matched"
+            editdistance = 0
+        else:
+            status = "Not Matched"
+            # calculate edit distance
+            editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
+        details = dict(editdistance=editdistance, expected=expected, actual=actual)
+    
+    return dict(status=status, details=details)
 
 
 def validate_nationalid(event_data):
@@ -186,11 +221,11 @@ def validate_nationalid(event_data):
         "type": "object",
         "properties": {
             "uploadedDocumentUrl": {"type": "string", "format": "uri"},
-            "serialNumber": {"type": "integer"},
-            "idNumber": {"type": "integer"},
+            "serialNumber": {"type": "string"},
+            "idNumber": {"type": "string"},
             "fullNames": {"type": "string"},
             "dateOfBirth": {"type": "string", "format": "date"},
-            "dateOfIssue": {"type": "string", "format": "GENDER"},
+            "dateOfIssue": {"type": "string", "enum": ["Male", "Female"]},
             "gender": {"type": "string", "format": "date"},
             "districtOfBirth": {"type": "string"},
             "placeOfIssue": {"type": "string", "format": "date"},
@@ -260,7 +295,7 @@ def validate_passport(event_data):
             "documentType": {"type": "string"},
             "countryCode": {"type": "string"},
             "passportNumber": {"type": "string"},
-            "personalNumber": {"type": "integer"},
+            "personalNumber": {"type": "string"},
             "surname": {"type": "string"},
             "givenNames": {"type": "string"},
             "gender": {"type": "string"},
@@ -359,7 +394,7 @@ def validate_krapincertificate(event_data):
             "uploadedDocumentUrl": {"type": "string", "format": "uri"},
             "certificateDate": {"type": "string", "format": "date"},
             "pin": {"type": "string"},
-            "taxpayerName": {"type": "string"},
+            "taxPayerName": {"type": "string"},
             "emailAddress": {"type": "string", "format": "email"},
         },
         "required": ["uploadedDocumentUrl", "pin"],
@@ -385,14 +420,14 @@ def validate_krapincertificate(event_data):
                                              event=event_data, form=extracted_form)
         pinMatchResult = process(event_name='pin', textract_name='PERSONAL_IDENTIFICATION_NUMBER', event=event_data,
                                  form=extracted_form)
-        taxpayerNameMatchResult = process(event_name='taxpayerName', textract_name='TAXPAYER_NAME', event=event_data,
+        taxPayerNameMatchResult = process(event_name='taxPayerName', textract_name='TAXPAYER_NAME', event=event_data,
                                           form=extracted_form)
         emailAddressMatchResult = process(event_name='emailAddress', textract_name='EMAIL_ADDRESS', event=event_data,
                                           form=extracted_form)
 
         matchResults = dict(certificateDate=certificateDateMatchResult,
                             pin=pinMatchResult,
-                            taxpayerName=taxpayerNameMatchResult,
+                            taxPayerName=taxPayerNameMatchResult,
                             emailAddress=emailAddressMatchResult,
                             )
 

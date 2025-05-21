@@ -35,7 +35,7 @@ const itemDetails = (documentVerification: DocumentVerification) => (
 
           <div>
             <Box variant="awsui-key-label">Identifier</Box>
-            <div>{documentVerification.documentIdentifier}</div>
+            <div>{documentVerification.verificationIdentifier}</div>
           </div>
         </SpaceBetween>
       </ColumnLayout>
@@ -69,11 +69,11 @@ const itemDetails = (documentVerification: DocumentVerification) => (
 
 const DocumentDetailsPageVerification: React.FC = () => {
   const params = useParams();
-  const documentId = Array.isArray(params.documentId)
-    ? params.documentId[0]
-    : params.documentId;
+  const verificationId = Array.isArray(params.verificationId)
+    ? params.verificationId[0]
+    : params.verificationId;
 
-  if (!documentId) {
+  if (!verificationId) {
     return (
       <Alert type="error" header="Error" dismissible={false}>
         DocumentId not specified
@@ -82,7 +82,7 @@ const DocumentDetailsPageVerification: React.FC = () => {
   }
   const detailsParams: DetailsProps<DocumentVerification> = {
     title: "Contract",
-    primaryKey: documentId,
+    primaryKey: verificationId,
     fetcher: (VerificationId: string) => fetchDocumentVerification(VerificationId),
     itemDetails: itemDetails,
   };

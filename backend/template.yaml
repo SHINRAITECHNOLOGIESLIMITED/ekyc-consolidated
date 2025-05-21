@@ -118,25 +118,25 @@ Resources:
         ApiGatewayPOSTKRA:
           Type: Api
           Properties:
-            Path: /document/kra-validation
+            Path: /document/krapincertificate
             Method: POST
             RestApiId: !Ref ApiGateway
         ApiGatewayPOSTID:
           Type: Api
           Properties:
-            Path: /document/nationalid-validation
+            Path: /document/nationalid
             Method: POST
             RestApiId: !Ref ApiGateway
         ApiGatewayPOSTPassport:
           Type: Api
           Properties:
-            Path: /document/passport-validation
+            Path: /document/passport
             Method: POST
             RestApiId: !Ref ApiGateway
         ApiGatewayPOSTCompany:
           Type: Api
           Properties:
-            Path: /document/company-validation
+            Path: /document/cr12
             Method: POST
             RestApiId: !Ref ApiGateway
       Policies:
@@ -216,19 +216,19 @@ Resources:
         ApiGatewayPOSTKRA:
           Type: Api
           Properties:
-            Path: /government/kra-verification
+            Path: /government/krapincertificate
             Method: POST
             RestApiId: !Ref ApiGateway
         ApiGatewayPOSTID:
           Type: Api
           Properties:
-            Path: /government/nationalid-verification
+            Path: /government/nationalid
             Method: POST
             RestApiId: !Ref ApiGateway
         ApiGatewayPOSTPassport:
           Type: Api
           Properties:
-            Path: /government/passport-verification
+            Path: /government/passport
             Method: POST
             RestApiId: !Ref ApiGateway
       Policies:
