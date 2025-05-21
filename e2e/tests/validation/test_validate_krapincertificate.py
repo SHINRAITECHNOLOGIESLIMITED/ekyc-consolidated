@@ -1,6 +1,6 @@
 import unittest
 from pprint import pprint
-
+import json
 import requests
 
 from e2e.tests.config import *
@@ -12,8 +12,10 @@ class TestKRAPinCertificateDocumentValidation(unittest.TestCase):
             "taxpayerName":"Jackson Gitonga Mwangi", 
             "emailAddress":"jackmwangi02@gmail.com",  
         }
+        print(json.dumps(payload))
         response = requests.post(f"{APIGW_URL}/documents/krapincertificate", json=payload, headers=headers)
         # Check if the response status code is 200 (OK)
+        print(response.text)
         self.assertEqual(response.status_code, 200)
 
         #print the validation results

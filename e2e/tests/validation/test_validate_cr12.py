@@ -8,7 +8,7 @@ from e2e.tests.config import *
 
 class TestCertificateOfIncorporationDocumentValidation(unittest.TestCase):
     def test_businessnumber_PVTRXUMYGVQ(self):
-        payload ={"uploadedDocumentUrl": f"{DOCUMENTS_URL}/CertificateOfIncorporation /businessnumber_PVTRXUMYGVQ.pdf",
+        payload ={"uploadedDocumentUrl": f"{DOCUMENTS_URL}/CertificateOfIncorporation/businessnumber_PVTRXUMYGVQ.pdf",
             "businessNumber":"PVT-RXUMYGVQ", 
             "businessName":"DETALI INSURANCE AGENCY LIMITED", 
             "dateOfIncorporation":"9 Apr 2024", 
@@ -23,7 +23,7 @@ class TestCertificateOfIncorporationDocumentValidation(unittest.TestCase):
         pprint(results)
     
     def test_businessnumber_PVTV7UAY893(self):
-        payload ={"uploadedDocumentUrl": f"{DOCUMENTS_URL}/CertificateOfIncorporation /businessnumber_PVTV7UAY893.pdf",
+        payload ={"uploadedDocumentUrl": f"{DOCUMENTS_URL}/CertificateOfIncorporation/businessnumber_PVTV7UAY893.pdf",
             "businessNumber":"PVT-V7UAY893", 
             "businessName":"Cloudtech Crafters Limited", 
             "dateOfIncorporation":"20 Feb 2024", 

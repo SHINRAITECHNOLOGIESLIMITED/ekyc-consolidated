@@ -76,12 +76,15 @@ def levenshtein_distance(s1, s2):
     
     return previous_row[-1]
 
-def process(event_name, variable_name, event, api_result):
-    if event_name in event:
+def process(event_name, api_field_name, event, api_result):
+    if not event_name in event:
         status = "Not provided"
         details = None
+    elif not api_field_name in api_result:
+        status = "Not Found"
+        details = None
     else:
-        expected = api_result['data'][variable_name]
+        expected = api_result['data'][api_field_name]
         actual = event[event_name]
         if actual.strip().lower() == expected.strip().lower():
             status = "Matched"
@@ -99,11 +102,11 @@ def verify_nationalid(event_data):
     schema = {
         "type": "object",
         "properties": {
-            "serialNumber": {"type": "integer"},
-            "idNumber": {"type": "integer"},
+            "serialNumber": {"type": "string"},
+            "idNumber": {"type": "string"},
             "fullNames": {"type": "string"},
             "dateOfBirth": {"type": "string", "format": "date"},
-            "dateOfIssue": {"type": "string", "format": "GENDER"},
+            "dateOfIssue": {"type": "string", "enum": ["Male", "Female"]},
             "gender": {"type": "string", "format": "date"},
             "districtOfBirth": {"type": "string"},
         },
@@ -160,7 +163,7 @@ def verify_passport(event_data):
             "documentType": {"type": "string"},
             "countryCode": {"type": "string"},
             "passportNumber": {"type": "string"},
-            "personalNumber": {"type": "integer"},
+            "personalNumber": {"type": "string"},
             "surname": {"type": "string"},
             "givenNames": {"type": "string"},
             "gender": {"type": "string"},
@@ -243,7 +246,7 @@ def verify_krapincertificate(event_data):
         "type": "object",
         "properties": {
             "pin": {"type": "string"},
-            "taxpayerName": {"type": "string"},
+            "taxPayerName": {"type": "string"},
         },
         "required": ["pin"],
         "additionalProperties": False
@@ -259,11 +262,11 @@ def verify_krapincertificate(event_data):
         logger.info(api_result)
 
         pinMatchResult = process(event_name='pin', api_field_name='=B7', event=event_data, api_result=api_result)
-        taxpayerNameMatchResult = process(event_name='taxpayerName', api_field_name='=B8', event=event_data,
+        taxPayerNameMatchResult = process(event_name='taxPayerName', api_field_name='=B8', event=event_data,
                                           api_result=api_result)
 
         matchResults = dict(pin=pinMatchResult,
-                            taxpayerName=taxpayerNameMatchResult,
+                            taxPayerName=taxPayerNameMatchResult,
                             )
 
         portal.capture_doc_verification(documentType="KRAPinCertificate", documentIdentifier=event_data['pin'],
