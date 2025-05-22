@@ -75,20 +75,20 @@ python -m e2e.tests.validation.test_validate_cr12
 # KRA PIN Certificate validation - Tests if user-provided KRA PIN data matches the uploaded certificate
 python -m e2e.tests.validation.test_validate_krapincertificate
 
-# Passport validation - Tests validation of Kenyan passport documents
+# Passport validation - Tests if user-provided passport data matches the uploaded passport document
 python -m e2e.tests.validation.test_validate_passport
 ```
 
 #### Verification Tests
 
 ```bash
-# National ID verification - Tests verification of National ID information against government records
+# National ID verification - Tests verification of National ID information against IPRS government records
 python -m e2e.tests.verification.test_verify_nationalid
 
-# KRA PIN Certificate verification - Tests verification of KRA PIN information against KRA records
+# KRA PIN Certificate verification - Tests verification of KRA PIN information against official KRA government records
 python -m e2e.tests.verification.test_verify_krapincertificate
 
-# Passport verification - Tests verification of passport information against government records
+# Passport verification - Tests verification of passport information against IPRS government records
 python -m e2e.tests.verification.test_verify_passport
 ```
 
