@@ -27,12 +27,11 @@ def handler(event, context):
 
     http_method = event.get('httpMethod')
     path = event.get('path')
-
     if http_method == 'POST':
         try:
             data = event.get('body', {})
-            # check if data is dict - if its a string convert to dict
-            if isinstance(data, str):
+            
+            while isinstance(data, str):
                 data = json.loads(data)
             logger.info(f"Request Data (body): {data}")
 
@@ -106,8 +105,8 @@ def verify_nationalid(event_data):
             "idNumber": {"type": "string"},
             "fullNames": {"type": "string"},
             "dateOfBirth": {"type": "string", "format": "date"},
-            "dateOfIssue": {"type": "string", "enum": ["Male", "Female"]},
-            "gender": {"type": "string", "format": "date"},
+            "dateOfIssue": {"type": "string", "format": "date"},
+            "gender": {"type": "string", "enum": ["Male", "Female"]},
             "districtOfBirth": {"type": "string"},
         },
         "required": ["idNumber"],
@@ -177,7 +176,7 @@ def verify_passport(event_data):
         "required": ["passportNumber"],
         "additionalProperties": False
     }
-
+    logger.info(event_data)
     try:
         validate(schema=schema, event=event_data)
 

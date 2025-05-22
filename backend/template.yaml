@@ -49,11 +49,6 @@ Resources:
         - ${ResourceName} From Stack ${AWS::StackName}
         - ResourceName: ApiGateway
       StageName: Prod
-      Auth:
-        DefaultAuthorizer: LambdaTokenAuthorizer
-        Authorizers:
-          LambdaTokenAuthorizer:
-            FunctionArn: !GetAtt AuthorizerFn.Arn
       DefinitionBody: !Transform
         Name: AWS::Include
         Parameters:

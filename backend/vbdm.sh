@@ -52,6 +52,7 @@ echo "SAM project has been deployed to cloud" && \
 
 print_separator 7 "Trailing cloud watch logs" && \
 echo "Trailing cloud watch.." && \
+# clear_and_trail_logs "/aws/lambda/jubilee-ekyc-backend-DocumentValidationFn-7Ak7Sb4NlD8a"
 clear_and_trail_logs "/aws/lambda/jubilee-ekyc-backend-GovernmentVerificationFn-i7Hdh3VtTuT0"
 # clear_and_trail_logs "/aws/lambda/jubilee-ekyc-backend-UploadDocumentFn-eh4cpzJMpLpw"
 # clear_and_trail_logs "/aws/lambda/jubilee-ekyc-backend-JubileeESBCallFn-vESoczrYok2M"

@@ -20,7 +20,7 @@ const columnDefinitions =
         {
             id: "documentIdentifier",
             header: "Identifier",
-            cell: (item: DocumentVerification) => item.documentIdentifier
+            cell: (item: DocumentVerification) => item.documentIdentifier ?? ""
         },
         {
             id: "updatedAt",
