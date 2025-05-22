@@ -7,7 +7,7 @@ class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
     def test_pin_A003388522V(self):
         payload ={"certificateDate":"2014-10-14", 
             "pin":"A003388522V", 
-            "taxpayerName":"Jackson Gitonga Mwangi", 
+            "taxPayerName":"Jackson Gitonga Mwangi", 
             "emailAddress":"jackmwangi02@gmail.com",  
         }
         response = post_with_auth(f"{APIGW_URL}/government/krapincertificate", json= json.dumps(payload))
@@ -24,7 +24,7 @@ class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
     
     def test_pin_A011797599Y(self):
         payload ={"pin":"A011797599Y", 
-            "taxpayerName":"JOEL MUUO",   
+            "taxPayerName":"JOEL MUUO",   
         }
         response = post_with_auth(f"{APIGW_URL}/government/krapincertificate", json= json.dumps(payload))
         
@@ -39,7 +39,7 @@ class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
     
     def test_pin_A008279496S(self):
         payload ={"pin":"A008279496S", 
-            "taxpayerName":"EFFIE NJOKI NYAMBURA",   
+            "taxPayerName":"EFFIE NJOKI NYAMBURA",   
         }
         response = post_with_auth(f"{APIGW_URL}/government/krapincertificate", json= json.dumps(payload))
         
@@ -54,7 +54,7 @@ class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
     
     def test_pin_A005394549Z(self):
         payload ={"pin":"A005394549Z", 
-            "taxpayerName":"PATRICK OMONDI ODHIAMBO ",   
+            "taxPayerName":"PATRICK OMONDI ODHIAMBO ",   
         }
         response = post_with_auth(f"{APIGW_URL}/government/krapincertificate", json= json.dumps(payload))
         

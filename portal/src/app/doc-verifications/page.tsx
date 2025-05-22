@@ -36,7 +36,7 @@ const listingProps: ListingProps<DocumentVerification> = {
     pageSize: 100,
     columnDefinitions,
     itemKey: (item: DocumentVerification) => item.verificationId.toString(),
-    itemDetailsLink: (item: DocumentVerification) => `doc-Verifications/${item.verificationId}`
+    itemDetailsLink: (item: DocumentVerification) => `doc-verifications/${item.verificationId}`
 };
 
 const DocumentsListing: React.FC = () => {
