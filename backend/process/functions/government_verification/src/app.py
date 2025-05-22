@@ -161,6 +161,7 @@ def verify_passport(event_data):
         "properties": {
             "documentType": {"type": "string"},
             "countryCode": {"type": "string"},
+            "idNumber": {"type": "string"},
             "passportNumber": {"type": "string"},
             "personalNumber": {"type": "string"},
             "surname": {"type": "string"},
@@ -173,7 +174,7 @@ def verify_passport(event_data):
             "nationality": {"type": "string"},
             "issuingAuthority": {"type": "string"},
         },
-        "required": ["passportNumber"],
+        "required": ["passportNumber","idNumber"],
         "additionalProperties": False
     }
     logger.info(event_data)
@@ -182,13 +183,17 @@ def verify_passport(event_data):
 
         api_result = serviceValidator.iprs.search_passport_number(dict(
             identifier="PASSPORT",
-            value=event_data["passportNumber"]))
+            value=event_data["passportNumber"]
+            ,idNumber=event_data["idNumber"]),
+                                                                  )
         logger.info(api_result)
 
         documentTypeMatchResult = process(event_name='documentType', api_field_name='documentType', event=event_data,
                                           api_result=api_result)
         countryCodeMatchResult = process(event_name='countryCode', api_field_name='countryCode', event=event_data,
                                          api_result=api_result)
+        passportNumberMatchResult = process(event_name='idNumber', api_field_name='idNumber',
+                                            event=event_data, api_result=api_result)
         passportNumberMatchResult = process(event_name='passportNumber', api_field_name='passportNumber',
                                             event=event_data, api_result=api_result)
         personalNumberMatchResult = process(event_name='personalNumber', api_field_name='personalNumber',
