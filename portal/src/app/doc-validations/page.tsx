@@ -6,6 +6,7 @@ import { fetchDocumentValidations } from "@/services/DataService";
 import type { DocumentValidation } from "@/types/models";
 import { SpaceBetween } from "@cloudscape-design/components";
 import ValidationDetails from "./ValidationDetails";
+import { formatPercentage } from "@/utils/formatters";
 
 const columnDefinitions = [
   {
@@ -22,6 +23,16 @@ const columnDefinitions = [
     id: "documentIdentifier",
     header: "Identifier",
     cell: (item: DocumentValidation) => item.documentIdentifier,
+  },
+  {
+    id: "accuracy",
+    header: "Accuracy",
+    cell: (item: DocumentValidation) => formatPercentage(item.overall_accuracy),
+  },
+  {
+    id: "confidence",
+    header: "Confidence",
+    cell: (item: DocumentValidation) => formatPercentage(item.overall_confidence),
   },
   {
     id: "path",

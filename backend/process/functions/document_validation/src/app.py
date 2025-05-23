@@ -203,7 +203,10 @@ def process(event_name, textract_name, event, form,is_date_field = False):
         status = "Not Found"
         details = None
     else:
-        expected = form[textract_name]
+        expected = form[textract_name]['value']
+        key_confidence= form[textract_name]['key_confidence']
+        value_confidence= form[textract_name]['value_confidence']
+        
         actual = event[event_name]
         if is_date_field:
             expected = expected.replace(".","-")
@@ -245,8 +248,8 @@ def process(event_name, textract_name, event, form,is_date_field = False):
                 status = "Not Matched"
                 # calculate edit distance
                 editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
-        details = dict(editdistance=editdistance, expected=expected, actual=actual)
-    
+        details = dict(editdistance=editdistance, expected=expected, actual=actual, key_confidence = key_confidence, value_confidence = value_confidence)
+
     return dict(status=status, details=details)
 
 
@@ -276,7 +279,7 @@ def validate_nationalid(data):
         extracted = extract(s3Path)
         extracted_form = extracted["form"]
         logger.info(extracted_form)
-        extracted_prose = " ".join(extracted["phrases"]).lower()
+        extracted_prose = " ".join(item['text'] for item in extracted["phrases"]).lower()
         checks = []
 
         checks.append({"check": 'Contains the words "Jamhuri ya Kenya"',
@@ -353,7 +356,7 @@ def validate_passport(data):
         extracted = extract(s3Path)
         extracted_form = extracted["form"]
         logger.info(extracted_form)
-        extracted_prose = " ".join(extracted["phrases"]).lower()
+        extracted_prose = " ".join(item['text'] for item in extracted["phrases"]).lower()
         checks = []
         checks.append(
             {"check": 'Contains the words "Jamhuri ya Kenya"', "result": "Jamhuri ya Kenya".lower() in extracted_prose})
@@ -443,7 +446,7 @@ def validate_krapincertificate(data):
         extracted = extract(s3Path)
         extracted_form = extracted["form"]
         logger.info(extracted_form)
-        extracted_prose = " ".join(extracted["phrases"]).lower()
+        extracted_prose = " ".join(item['text'] for item in extracted["phrases"]).lower()
         checks = []
 
         checks.append({"check": 'Contains the words "Kenya Revenue Authority"',
@@ -499,11 +502,11 @@ def validate_cr12(data):
         url, s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extracted = extract(s3Path)
-
         extractedData = extracted["phrases"]
+        logger.info(extractedData)
         extracted_form = extract_form_from_cr12_phrases(extractedData)
         logger.info(extracted_form)
-        extracted_prose = " ".join(extracted["phrases"]).lower()
+        extracted_prose = " ".join(item['text'] for item in extracted["phrases"]).lower()
         checks = []
 
         checks.append({"check": 'Contains the words  "Certificate Of Incorporation"',
@@ -539,18 +542,25 @@ def validate_cr12(data):
 
 def extract_form_from_cr12_phrases(extractedData):
     if len(extractedData) >= 2:
-        bsNumber = extractedData[1].replace("No.", "").strip()
+        bsNumber = extractedData[1]['text'].replace("No.", "").strip()
+        bsNumber_confidence = extractedData[1]['confidence']
     else:
         bsNumber = ""
+        bsNumber_confidence = 0
     if len(extractedData) >= 5:
-        businessName = extractedData[4].strip()
+        businessName = extractedData[4]["text"].strip()
+        businessName_confidence = extractedData[4]['confidence']
     else:
         businessName = extractedData[4].strip()
+        businessName_confidence = 0
+        
     dateOfIncorporation = ""
     businessType = ""
-    extracted_form = dict(businessNumber=bsNumber, businessName=businessName,
-                          dateOfIncorporation=dateOfIncorporation,
-                          businessType=businessType)
+            
+    extracted_form = dict(businessNumber=dict(value = bsNumber,key_confidence=100,value_confidence=bsNumber_confidence),
+                          businessName=dict(value = businessName,key_confidence=100,value_confidence=businessName_confidence),
+                          dateOfIncorporation=dict(value = dateOfIncorporation,key_confidence=100,value_confidence=0),
+                          businessType=dict(value = businessType,key_confidence=100,value_confidence=0))
     return extracted_form
 
 
