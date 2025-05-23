@@ -1,10 +1,9 @@
 "use client";
 
-import KYCValidationResults, {
-  ValidationResults,
-} from "@/components/KYCValidationResults";
+import { ValidationResults } from "@/components/KYCValidationResults";
+import KYCVerificationResults from "@/components/KYCVerificationResults";
 import { DocumentVerification } from "@/types/models";
-import { formatDateTime } from "@/utils/formatters";
+import { formatDateTime, formatPercentage } from "@/utils/formatters";
 import {
   Box,
   ColumnLayout,
@@ -25,10 +24,8 @@ const VerificationDetails = (documentVerification: DocumentVerification) => (
         <div>{documentVerification.documentIdentifier ?? ""}</div>
       </div>
       <div>
-        <Box variant="awsui-key-label">
-          Accuracy (%)
-        </Box>
-        <div>formatPercentage(documentVerification.overall_accuracy)</div>
+        <Box variant="awsui-key-label">Accuracy (%)</Box>
+        <div>{formatPercentage(documentVerification.overall_accuracy)}</div>
       </div>
       <div>
         <Box variant="awsui-key-label">Updated</Box>
@@ -40,7 +37,7 @@ const VerificationDetails = (documentVerification: DocumentVerification) => (
       </div>
     </ColumnLayout>
     {documentVerification.matchResults && (
-      <KYCValidationResults
+      <KYCVerificationResults
         results={
           typeof documentVerification.matchResults === "string"
             ? JSON.parse(documentVerification.matchResults)

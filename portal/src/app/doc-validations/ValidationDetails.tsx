@@ -9,7 +9,7 @@ import KYCValidationResults, {
 } from "@/components/KYCValidationResults";
 import { API_CONFIG } from "@/constants/api"; // or wherever it's defined
 import { DocumentValidation } from "@/types/models";
-import { formatDateTime } from "@/utils/formatters";
+import { formatDateTime, formatPercentage } from "@/utils/formatters";
 import {
   Box,
   ColumnLayout,
@@ -34,13 +34,13 @@ const ValidationDetails = (documentValidation: DocumentValidation) => (
         <Box variant="awsui-key-label">
           Accuracy (%)
         </Box>
-        <div>formatPercentage(documentValidation.overall_accuracy)</div>
+        <div>{formatPercentage(documentValidation.overall_accuracy)}</div>
       </div>
       <div>
         <Box variant="awsui-key-label">
           Confidence (%)
         </Box>
-        <div>formatPercentage(documentValidation.overall_confidence)</div>
+        <div>{formatPercentage(documentValidation.overall_confidence)}</div>
       </div>
       <div>
         <Box variant="awsui-key-label">Updated</Box>

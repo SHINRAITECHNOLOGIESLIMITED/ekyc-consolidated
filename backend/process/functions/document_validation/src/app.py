@@ -248,7 +248,7 @@ def process(event_name, textract_name, event, form,is_date_field = False):
                 status = "Not Matched"
                 # calculate edit distance
                 editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
-        details = dict(editdistance=editdistance, expected=expected, actual=actual, key_confidence = key_confidence, value_confidence = value_confidence)
+        details = dict(editdistance=editdistance, expected=expected, actual=actual, keyConfidence = key_confidence, valueConfidence = value_confidence)
 
     return dict(status=status, details=details)
 def rate(matchResults):
@@ -263,10 +263,10 @@ def rate(matchResults):
         for field,result in matchResults.items():
             if "details" in result:
                 if result["details"]:
-                    if "key_confidence" in result["details"]:
-                        confidence_scores.append(result["details"]["key_confidence"])
-                    if "value_confidence" in result["details"]:
-                        confidence_scores.append(result["details"]["value_confidence"])
+                    if "keyConfidence" in result["details"]:
+                        confidence_scores.append(result["details"]["keyConfidence"])
+                    if "valueConfidence" in result["details"]:
+                        confidence_scores.append(result["details"]["valueConfidence"])
             if 'status' in result:
                 if result['status'] == 'Matched':
                     passed += 1
