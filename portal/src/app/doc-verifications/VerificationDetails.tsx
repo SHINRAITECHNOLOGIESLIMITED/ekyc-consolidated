@@ -25,6 +25,12 @@ const VerificationDetails = (documentVerification: DocumentVerification) => (
         <div>{documentVerification.documentIdentifier ?? ""}</div>
       </div>
       <div>
+        <Box variant="awsui-key-label">
+          Accuracy (%)
+        </Box>
+        <div>formatPercentage(documentVerification.overall_accuracy)</div>
+      </div>
+      <div>
         <Box variant="awsui-key-label">Updated</Box>
         <div>{formatDateTime(documentVerification.updatedAt)}</div>
       </div>

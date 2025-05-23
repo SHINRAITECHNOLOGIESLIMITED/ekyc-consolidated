@@ -30,7 +30,18 @@ const ValidationDetails = (documentValidation: DocumentValidation) => (
         </Box>
         <div>{documentValidation.documentIdentifier}</div>
       </div>
-
+      <div>
+        <Box variant="awsui-key-label">
+          Accuracy (%)
+        </Box>
+        <div>formatPercentage(documentValidation.overall_accuracy)</div>
+      </div>
+      <div>
+        <Box variant="awsui-key-label">
+          Confidence (%)
+        </Box>
+        <div>formatPercentage(documentValidation.overall_confidence)</div>
+      </div>
       <div>
         <Box variant="awsui-key-label">Updated</Box>
         <div>{formatDateTime(documentValidation.updatedAt)}</div>

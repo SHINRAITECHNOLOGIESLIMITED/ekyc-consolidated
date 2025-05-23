@@ -1,11 +1,12 @@
 "use client";
 
 import Listing, { ListingProps } from "@/components/Listing";
+import NotImplemented from "@/components/NotImplemented";
 import { fetchDocumentVerifications } from "@/services/DataService";
 import type { DocumentVerification } from "@/types/models";
-import VerificationDetails from "./VerificationDetails";
-import NotImplemented from "@/components/NotImplemented";
 import { SpaceBetween } from "@cloudscape-design/components";
+import VerificationDetails from "./VerificationDetails";
+import { formatPercentage } from "@/utils/formatters";
 
 const columnDefinitions = [
   {
@@ -23,6 +24,11 @@ const columnDefinitions = [
     header: "Identifier",
     cell: (item: DocumentVerification) => item.documentIdentifier ?? "",
   },
+  {
+    id: "accuracy",
+    header: "Accuracy",
+    cell: (item: DocumentVerification) => formatPercentage(item.overall_accuracy),
+  },
 ];
 
 const listingProps: ListingProps<DocumentVerification> = {
@@ -35,31 +41,31 @@ const listingProps: ListingProps<DocumentVerification> = {
     `doc-verifications/${item.verificationId}`,
   renderItemDetails: (item: DocumentVerification) => VerificationDetails(item),
   actions: [
-      {
-        label: "New NationalId Verification",
-        render: () => (
-          <SpaceBetween size={"s"}>
-            <NotImplemented title={"NationalID Verification"} />
-          </SpaceBetween>
-        ),
-      },
-      {
-        label: "New Passport Verification",
-        render: () => (
-          <SpaceBetween size={"s"}>
-            <NotImplemented title={"Passport Verification"} />
-          </SpaceBetween>
-        ),
-      },
-      {
-        label: "New KRAPinCertificate Verification",
-        render: () => (
-          <SpaceBetween size={"s"}>
-            <NotImplemented title={"KRAPinCertificate Verification"} />
-          </SpaceBetween>
-        ),
-      }      
-    ],
+    {
+      label: "New NationalId Verification",
+      render: () => (
+        <SpaceBetween size={"s"}>
+          <NotImplemented title={"NationalID Verification"} />
+        </SpaceBetween>
+      ),
+    },
+    {
+      label: "New Passport Verification",
+      render: () => (
+        <SpaceBetween size={"s"}>
+          <NotImplemented title={"Passport Verification"} />
+        </SpaceBetween>
+      ),
+    },
+    {
+      label: "New KRAPinCertificate Verification",
+      render: () => (
+        <SpaceBetween size={"s"}>
+          <NotImplemented title={"KRAPinCertificate Verification"} />
+        </SpaceBetween>
+      ),
+    },
+  ],
 };
 
 const DocumentsListing: React.FC = () => {
