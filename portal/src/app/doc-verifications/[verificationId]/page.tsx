@@ -1,45 +1,12 @@
 "use client";
 
 import { Details, DetailsProps } from "@/components/Details";
-import KYCValidationResults, {
-  ValidationResults,
-} from "@/components/KYCValidationResults";
 import { fetchDocumentVerification } from "@/services/DataService";
 import { DocumentVerification } from "@/types/models";
-import {
-  Alert,
-  Box,
-  ColumnLayout,
-  Header,
-  SpaceBetween,
-} from "@cloudscape-design/components";
+import { Alert } from "@cloudscape-design/components";
 import { useParams } from "next/navigation";
 import React from "react";
-
-const itemDetails = (documentVerification: DocumentVerification) => (
-  <SpaceBetween size="l">
-    <Header variant="h1" >{documentVerification.documentType} Verification</Header>
-    <ColumnLayout columns={3} variant="text-grid">
-        <div>
-          <Box variant="awsui-key-label">{documentVerification.documentType} Identifier</Box>
-          <div>{documentVerification.documentIdentifier ?? ""}</div>
-        </div>
-        <div>
-          <Box variant="awsui-key-label">Verification ID</Box>
-          <div>{documentVerification.verificationId}</div>
-        </div>
-    </ColumnLayout>
-    {documentVerification.matchResults && (
-      <KYCValidationResults
-        results={
-          typeof documentVerification.matchResults === "string"
-            ? JSON.parse(documentVerification.matchResults)
-            : (documentVerification.matchResults as ValidationResults)
-        }
-      />
-    )}
-  </SpaceBetween>
-);
+import VerificationDetails from "./VerificationDetails";
 
 const DocumentDetailsPageVerification: React.FC = () => {
   const params = useParams();
@@ -59,7 +26,7 @@ const DocumentDetailsPageVerification: React.FC = () => {
     primaryKey: verificationId,
     fetcher: (VerificationId: string) =>
       fetchDocumentVerification(VerificationId),
-    itemDetails: itemDetails,
+    itemDetails: VerificationDetails,
   };
 
   return <Details {...detailsParams} />;

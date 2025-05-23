@@ -86,7 +86,7 @@ const Navigation = () => {
             },
             {
               type: "link",
-              text: "Verifications",
+              text: "Document Verifications",
               href: "/doc-verifications",
             },
             
