@@ -6,7 +6,7 @@ import { DocumentVerification } from "@/types/models";
 import { Alert } from "@cloudscape-design/components";
 import { useParams } from "next/navigation";
 import React from "react";
-import VerificationDetails from "./VerificationDetails";
+import VerificationDetails from "../VerificationDetails";
 
 const DocumentDetailsPageVerification: React.FC = () => {
   const params = useParams();

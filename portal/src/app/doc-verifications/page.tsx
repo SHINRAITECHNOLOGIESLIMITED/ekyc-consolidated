@@ -3,7 +3,9 @@
 import Listing, { ListingProps } from "@/components/Listing";
 import { fetchDocumentVerifications } from "@/services/DataService";
 import type { DocumentVerification } from "@/types/models";
-import VerificationDetails from "./[verificationId]/VerificationDetails";
+import VerificationDetails from "./VerificationDetails";
+import NotImplemented from "@/components/NotImplemented";
+import { SpaceBetween } from "@cloudscape-design/components";
 
 const columnDefinitions = [
   {
@@ -32,6 +34,42 @@ const listingProps: ListingProps<DocumentVerification> = {
   itemDetailsLink: (item: DocumentVerification) =>
     `doc-verifications/${item.verificationId}`,
   renderItemDetails: (item: DocumentVerification) => VerificationDetails(item),
+  actions: [
+      {
+        label: "New NationalId Verification",
+        render: () => (
+          <SpaceBetween size={"s"}>
+            <NotImplemented title={"NationalID Verification"} />
+          </SpaceBetween>
+        ),
+      },
+      {
+        label: "New Passport Verification",
+        render: () => (
+          <SpaceBetween size={"s"}>
+            <NotImplemented title={"Passport Verification"} />
+          </SpaceBetween>
+        ),
+      },
+      {
+        label: "New KRAPinCertificate Verification",
+        render: () => (
+          <SpaceBetween size={"s"}>
+            <NotImplemented title={"KRAPinCertificate Verification"} />
+          </SpaceBetween>
+        ),
+      },
+      {
+        label: "Certification of Incoporation (CR12) Verification",
+        render: () => (
+          <SpaceBetween size={"s"}>
+            <NotImplemented
+              title={"New Certification of Incoporation (CR12) Verification"}
+            />
+          </SpaceBetween>
+        ),
+      },
+    ],
 };
 
 const DocumentsListing: React.FC = () => {
