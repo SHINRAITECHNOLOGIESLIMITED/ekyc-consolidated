@@ -139,11 +139,12 @@ def rate(matchResults):
     else:
         passed = 0
         failed = 0
-        for matchResult in matchResults:
-            if matchResult['status'] == 'Matched':
-                passed += 1
-            elif matchResult['status'] in ["Not Matched","Not Found"]:
-                failed += 1
+        for field,result in matchResults.items():
+            if 'status' in result:
+                if result['status'] == 'Matched':
+                    passed += 1
+                elif result['status'] in ["Not Matched","Not Found"]:
+                    failed += 1
         if failed + passed == 0:
             accuracy = 0.0
         else:

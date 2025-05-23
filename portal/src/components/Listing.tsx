@@ -38,7 +38,7 @@ export interface ListingProps<T> {
   itemKey: (item: T) => string;
   itemDetailsLink?: (item: T) => string;
   renderItemDetails?: (item: T) => React.ReactNode;
-  actions?: ActionProps<T>[];
+  actions?: ActionProps[];
 }
 
 export function getMatchesCountText(count: number | undefined) {
@@ -187,7 +187,10 @@ export const Listing = <T,>({
         {error}
       </Alert>
     );
-
+  const action_items = actions?.map((action) => ({
+                      id: action.label,
+                      text: action.label
+                    })) ?? [];
   return (
     <>
       <Table
@@ -204,11 +207,7 @@ export const Listing = <T,>({
               <SpaceBetween direction="horizontal" size="xs">
                 {actions && actions.length > 0 && (
                   <ButtonDropdown
-                    items={actions.map((action, index) => ({
-                      id: String(index),
-                      text: action.label,
-                      iconName: action.iconName,
-                    }))}
+                    items={action_items}
                     onItemClick={({ detail }) => {
                       const action = actions[parseInt(detail.id)];
                       setModal(action.render());

@@ -261,7 +261,6 @@ def rate(matchResults):
         failed = 0
         confidence_scores = []
         for field,result in matchResults.items():
-            logger.info(result)
             if "details" in result:
                 if result["details"]:
                     if "key_confidence" in result["details"]:
