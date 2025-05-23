@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 
 from aws_lambda_powertools import Logger, Tracer
@@ -75,23 +76,59 @@ def levenshtein_distance(s1, s2):
     
     return previous_row[-1]
 
-def process(event_name, api_field_name, event, api_result):
+def process(event_name, api_field_name, event, api_result,is_date_field = False):
     if not event_name in event:
         status = "Not provided"
         details = None
-    elif not api_field_name in api_result:
+    elif not "data" in api_result:
+        status = "Error in API response"
+        details = None
+    elif not api_field_name in api_result["data"]:
         status = "Not Found"
         details = None
     else:
         expected = api_result['data'][api_field_name]
         actual = event[event_name]
-        if actual.strip().lower() == expected.strip().lower():
-            status = "Matched"
-            editdistance = 0
+        if is_date_field:
+            expected = expected.replace(".","-")
+            actual = actual.replace(".","-")
+            #convert expected and actual in date objects and check for equality
+            # Try different date formats
+            date_formats = ['%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d']
+            
+            expected_date = None
+            actual_date = None
+            
+            # Try to parse expected date
+            for fmt in date_formats:
+                try:
+                    expected_date = datetime.strptime(expected.strip(), fmt).date()
+                    break
+                except ValueError:
+                    continue
+            
+            # Try to parse actual date
+            for fmt in date_formats:
+                try:
+                    actual_date = datetime.strptime(actual.strip(), fmt).date()
+                    break
+                except ValueError:
+                    continue
+            
+            if expected_date and actual_date and expected_date == actual_date:
+                status = "Matched"
+                editdistance = 0
+            else:
+                status = "Not Matched"
+                editdistance = 10
         else:
-            status = "Not Matched"
-            # calculate edit distance
-            editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
+            if actual.strip().lower() == expected.strip().lower():
+                status = "Matched"
+                editdistance = 0
+            else:
+                status = "Not Matched"
+                # calculate edit distance
+                editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
         details = dict(editdistance=editdistance, expected=expected, actual=actual)
     
     return dict(status=status, details=details)
@@ -117,6 +154,16 @@ def verify_nationalid(event_data):
         validate(schema=schema, event=event_data)
 
         api_result = serviceValidator.iprs.search_generic(dict(identifier="ID_NUMBER", value=event_data['idNumber']))
+        
+        #construscting fullNames fields         
+        firstName = api_result['data']['firstName'] if 'firstName' in api_result['data'] else ''
+        otherName = api_result['data']['otherName'] if 'otherName' in api_result['data'] else ''
+        surname = api_result['data']['surname'] if 'surname' in api_result['data'] else ''
+        
+        fullNames = f"{firstName} {otherName} {surname}".replace("  ", " ").strip()
+        api_result['data']['fullNames'] = fullNames
+
+
         logger.info(api_result)
 
         serialNumberMatchResult = process(event_name='serialNumber', api_field_name='serialNumber', event=event_data,
@@ -126,9 +173,9 @@ def verify_nationalid(event_data):
         fullNamesMatchResult = process(event_name='fullNames', api_field_name='firstName, otherName, surname',
                                        event=event_data, api_result=api_result)
         dateOfBirthMatchResult = process(event_name='dateOfBirth', api_field_name='dateOfBirth', event=event_data,
-                                         api_result=api_result)
+                                         api_result=api_result,is_date_field=True)
         dateOfIssueMatchResult = process(event_name='dateOfIssue', api_field_name='dateOfIssue', event=event_data,
-                                         api_result=api_result)
+                                         api_result=api_result,is_date_field=True)
         genderMatchResult = process(event_name='gender', api_field_name='gender', event=event_data,
                                     api_result=api_result)
         districtOfBirthMatchResult = process(event_name='districtOfBirth', api_field_name='placeOfBirth',
@@ -205,11 +252,11 @@ def verify_passport(event_data):
         genderMatchResult = process(event_name='gender', api_field_name='gender', event=event_data,
                                     api_result=api_result)
         dateOfBirthMatchResult = process(event_name='dateOfBirth', api_field_name='dateOfBirth', event=event_data,
-                                         api_result=api_result)
+                                         api_result=api_result,is_date_field=True)
         placeOfBirthMatchResult = process(event_name='placeOfBirth', api_field_name='placeOfBirth', event=event_data,
                                           api_result=api_result)
         dateOfIssueMatchResult = process(event_name='dateOfIssue', api_field_name='dateOfIssue', event=event_data,
-                                         api_result=api_result)
+                                         api_result=api_result,is_date_field=True)
         dateOfExpiryMatchResult = process(event_name='dateOfExpiry', api_field_name='dateOfExpiry', event=event_data,
                                           api_result=api_result)
         nationalityMatchResult = process(event_name='nationality', api_field_name='nationality', event=event_data,
@@ -265,8 +312,8 @@ def verify_krapincertificate(event_data):
         ))
         logger.info(api_result)
 
-        pinMatchResult = process(event_name='pin', api_field_name='=B7', event=event_data, api_result=api_result)
-        taxPayerNameMatchResult = process(event_name='taxPayerName', api_field_name='=B8', event=event_data,
+        pinMatchResult = process(event_name='pin', api_field_name='pin', event=event_data, api_result=api_result)
+        taxPayerNameMatchResult = process(event_name='taxPayerName', api_field_name='taxPayerName', event=event_data,
                                           api_result=api_result)
 
         matchResults = dict(pin=pinMatchResult,

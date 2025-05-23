@@ -12,6 +12,7 @@ from aws_lambda_powertools.utilities.validation.exceptions import SchemaValidati
 from botocore.exceptions import ClientError
 from reportlab.pdfgen import canvas
 from textract_utils import extract
+from datetime import datetime
 
 from portal import Portal
 
@@ -194,7 +195,7 @@ def levenshtein_distance(s1, s2):
     
     return previous_row[-1]
 
-def process(event_name, textract_name, event, form):
+def process(event_name, textract_name, event, form,is_date_field = False):
     if not event_name in event:
         status = "Not provided"
         details = None
@@ -204,13 +205,46 @@ def process(event_name, textract_name, event, form):
     else:
         expected = form[textract_name]
         actual = event[event_name]
-        if actual.strip().lower() == expected.strip().lower():
-            status = "Matched"
-            editdistance = 0
+        if is_date_field:
+            expected = expected.replace(".","-")
+            actual = actual.replace(".","-")
+            #convert expected and actual in date objects and check for equality
+            # Try different date formats
+            date_formats = ['%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d']
+            
+            expected_date = None
+            actual_date = None
+            
+            # Try to parse expected date
+            for fmt in date_formats:
+                try:
+                    expected_date = datetime.strptime(expected.strip(), fmt).date()
+                    break
+                except ValueError:
+                    continue
+            
+            # Try to parse actual date
+            for fmt in date_formats:
+                try:
+                    actual_date = datetime.strptime(actual.strip(), fmt).date()
+                    break
+                except ValueError:
+                    continue
+            
+            if expected_date and actual_date and expected_date == actual_date:
+                status = "Matched"
+                editdistance = 0
+            else:
+                status = "Not Matched"
+                editdistance = 10  # Default edit distance for dates that don't match
         else:
-            status = "Not Matched"
-            # calculate edit distance
-            editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
+            if actual.strip().lower() == expected.strip().lower():
+                status = "Matched"
+                editdistance = 0
+            else:
+                status = "Not Matched"
+                # calculate edit distance
+                editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
         details = dict(editdistance=editdistance, expected=expected, actual=actual)
     
     return dict(status=status, details=details)
@@ -241,6 +275,7 @@ def validate_nationalid(data):
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extracted = extract(s3Path)
         extracted_form = extracted["form"]
+        logger.info(extracted_form)
         extracted_prose = " ".join(extracted["phrases"]).lower()
         checks = []
 
@@ -255,9 +290,9 @@ def validate_nationalid(data):
         fullNamesMatchResult = process(event_name='fullNames', textract_name='FULL_NAMES', event=data,
                                        form=extracted_form)
         dateOfBirthMatchResult = process(event_name='dateOfBirth', textract_name='DATE_OF_BIRTH', event=data,
-                                         form=extracted_form)
+                                         form=extracted_form,is_date_field=True)
         dateOfIssueMatchResult = process(event_name='dateOfIssue', textract_name='DATE_OF_ISSUE', event=data,
-                                         form=extracted_form)
+                                         form=extracted_form,is_date_field=True)
         genderMatchResult = process(event_name='gender', textract_name='SEX', event=data, form=extracted_form)
         districtOfBirthMatchResult = process(event_name='districtOfBirth', textract_name='DISTRICT_OF_BIRTH',
                                              event=data, form=extracted_form)
@@ -317,6 +352,7 @@ def validate_passport(data):
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extracted = extract(s3Path)
         extracted_form = extracted["form"]
+        logger.info(extracted_form)
         extracted_prose = " ".join(extracted["phrases"]).lower()
         checks = []
         checks.append(
@@ -344,15 +380,15 @@ def validate_passport(data):
                                     form=extracted_form)
         dateOfBirthMatchResult = process(event_name='dateOfBirth',
                                          textract_name='DATE_OF_BIRTH/TAREHE_YA_KUZALIWA_DATE_DE_NAISSANCE',
-                                         event=data, form=extracted_form)
+                                         event=data, form=extracted_form,is_date_field=True)
         placeOfBirthMatchResult = process(event_name='placeOfBirth',
                                           textract_name='PLACE_OF_BIRTH_MAHAH_PA_KUZALIWALIEU_DE_NAISSANCE',
                                           event=data, form=extracted_form)
         dateOfIssueMatchResult = process(event_name='dateOfIssue', textract_name='DATE_OF_ISSUE_TAREHE_VA_KUTOLENA',
-                                         event=data, form=extracted_form)
+                                         event=data, form=extracted_form,is_date_field=True)
         dateOfExpiryMatchResult = process(event_name='dateOfExpiry', textract_name='DATE_OF_EXPIRY', event=data,
-                                          form=extracted_form)
-        nationalityMatchResult = process(event_name='nationality', textract_name='NATIONALITY/UTAIFA/NATIONALIT�',
+                                          form=extracted_form,is_date_field=True)
+        nationalityMatchResult = process(event_name='nationality', textract_name='NATIONALITY/UTAIFA/NATIONALITY',
                                          event=data, form=extracted_form)
         issuingAuthorityMatchResult = process(event_name='issuingAuthority',
                                               textract_name='ISSUING_AUTHORITY_MAMLAKA_YA_KUTOA_PASIAUTORITE',
@@ -406,6 +442,7 @@ def validate_krapincertificate(data):
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
         extracted = extract(s3Path)
         extracted_form = extracted["form"]
+        logger.info(extracted_form)
         extracted_prose = " ".join(extracted["phrases"]).lower()
         checks = []
 
@@ -415,7 +452,7 @@ def validate_krapincertificate(data):
             {"check": 'Contains the words "PIN Certificate"', "result": "PIN Certificate".lower() in extracted_prose})
         checks.append({"check": 'The url "www.kra.go.ke"', "result": "None".lower() in extracted_prose})
         certificateDateMatchResult = process(event_name='certificateDate', textract_name='CERTIFICATE_DATE',
-                                             event=data, form=extracted_form)
+                                             event=data, form=extracted_form,is_date_field=True)
         pinMatchResult = process(event_name='pin', textract_name='PERSONAL_IDENTIFICATION_NUMBER', event=data,
                                  form=extracted_form)
         taxPayerNameMatchResult = process(event_name='taxPayerName', textract_name='TAXPAYER_NAME', event=data,
@@ -465,7 +502,7 @@ def validate_cr12(data):
 
         extractedData = extracted["phrases"]
         extracted_form = extract_form_from_cr12_phrases(extractedData)
-        logger.info(f"Extracted form: {extracted_form}")
+        logger.info(extracted_form)
         extracted_prose = " ".join(extracted["phrases"]).lower()
         checks = []
 
@@ -477,7 +514,7 @@ def validate_cr12(data):
                                           form=extracted_form)
         dateOfIncorporationMatchResult = process(event_name='dateOfIncorporation',
                                                  textract_name='dateOfIncorporation', event=data,
-                                                 form=extracted_form)
+                                                 form=extracted_form,is_date_field=True)
         businessTypeMatchResult = process(event_name='businessType', textract_name='businessType', event=data,
                                           form=extracted_form)
 

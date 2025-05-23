@@ -102,50 +102,6 @@ The API requires AWS SigV4 authentication. You can use the `awscurl` tool which 
 pip install awscurl
 ```
 
-### Example cURL Commands
-
-#### National ID Validation
-
-```bash
-awscurl --service execute-api \
-  --region eu-west-1 \
-  --profile shinrai.devpost \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -d '{
-    "uploadedDocumentUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_NATIONAL_ID-9f0ea801f683f6c8314c9d7ad0e7a93ed01b9693.jpg",
-    "serialNumber": "242772451",
-    "idNumber": "36296352",
-    "fullNames": "JOEL MUUO",
-    "dateOfBirth": "1998-08-30",
-    "dateOfIssue": "2017-03-31",
-    "gender": "Male",
-    "districtOfBirth": "KIBWEZI",
-    "placeOfIssue": "KIBWEZI"
-  }' \
-  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/document/nationalid
-```
-
-#### National ID Verification
-
-```bash
-awscurl --service execute-api \
-  --region eu-west-1 \
-  --profile shinrai.devpost \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -d '{
-    "serialNumber": "242772451",
-    "idNumber": "36296352",
-    "fullNames": "JOEL MUUO",
-    "dateOfBirth": "1998-08-30",
-    "dateOfIssue": "2017-03-31",
-    "gender": "Male",
-    "districtOfBirth": "KIBWEZI"
-  }' \
-  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/nationalid
-```
-
 ### Creating a Shell Script for Testing
 
 You can create shell scripts to automate testing with cURL. Here's an example:
@@ -242,3 +198,313 @@ Tests that verify user-provided data against official government identity servic
   - Checks passport information against government records
 
 - `config.py`: Configuration file with API endpoints and authentication setup
+
+## Equivalent awscurl Commands for Each Test
+
+Below are the equivalent awscurl commands for each pytest test in the e2e folder. These commands can be used to test the API endpoints directly without using the Python test framework.
+
+### Validation Tests
+
+#### National ID Validation Tests
+
+##### test_idnumber_36296352
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "uploadedDocumentUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_NATIONAL_ID-9f0ea801f683f6c8314c9d7ad0e7a93ed01b9693.jpg",
+    "serialNumber": "242772451",
+    "idNumber": "36296352",
+    "fullNames": "JOEL MUUO",
+    "dateOfBirth": "1998-08-30",
+    "dateOfIssue": "2017-03-31",
+    "gender": "Male",
+    "districtOfBirth": "KIBWEZI",
+    "placeOfIssue": "KIBWEZI"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/document/nationalid
+```
+
+##### test_idnumber_23224868
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "uploadedDocumentUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/c2a5e464-30b1-70e8-eeb0-8c196da88147/23224868/KENYAN_NATIONAL_ID-fc1aa117beca19366fcc301c9aa87e50e7f4e5aa.pdf",
+    "serialNumber": "217990310",
+    "idNumber": "23224868",
+    "fullNames": "STEPHEN BIKO NYAMAI",
+    "dateOfBirth": "19-02-1984",
+    "dateOfIssue": "01-04-2003",
+    "gender": "MALE",
+    "districtOfBirth": "KIBWEZI",
+    "placeOfIssue": "MAKADARA"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/document/nationalid
+```
+
+#### CR12 Validation Test
+
+##### test_businessnumber_PVTRXUMYGVQ
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "uploadedDocumentUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/CERTIFICATE_OF_INCORPORATION-003Sample.jpg",
+    "businessNumber": "PVT-RXUMYGVQ",
+    "businessName": "DETALI INSURANCE AGENCY LIMITED",
+    "dateOfIncorporation": "2024-04-09",
+    "businessType": "Private Limited Company"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/document/cr12
+```
+
+#### KRA PIN Certificate Validation Test
+
+##### test_pin_A003388522V
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "uploadedDocumentUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KRA_PIN_CERTIFICATE-002samplekra.jpg",
+    "certificateDate": "2014-10-14",
+    "pin": "A003388522V",
+    "taxPayerName": "Jackson Gitonga Mwangi",
+    "emailAddress": "jackmwangi02@gmail.com"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/document/krapincertificate
+```
+
+#### Passport Validation Test
+
+##### test_passportnumber_DK9038
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "uploadedDocumentUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_PASSPORT-001sample.jpg",
+    "documentType": "P",
+    "countryCode": "KEN",
+    "passportNumber": "DK9038",
+    "personalNumber": "1736740",
+    "surname": "KAJIMBA",
+    "givenNames": "GEORGE HUMPHREY",
+    "gender": "M",
+    "dateOfBirth": "1987-05-18",
+    "placeOfBirth": "MIGORI, Ken",
+    "dateOfIssue": "2020-08-20",
+    "dateOfExpiry": "2030-09-03",
+    "nationality": "KENYAN",
+    "issuingAuthority": "GOVERNMENT OF KENYA"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/document/passport
+```
+
+### Verification Tests
+
+#### National ID Verification Tests
+
+##### test_idnumber_23667272
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serialNumber": "242865407",
+    "idNumber": "23667272",
+    "fullNames": "JANE WAIRIMU MAINA",
+    "dateOfBirth": "1985-01-01",
+    "dateOfIssue": "2016-10-28",
+    "gender": "Female",
+    "districtOfBirth": "THIKA WEST"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/nationalid
+```
+
+##### test_idnumber_32140017
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serialNumber": "702945559",
+    "idNumber": "32140017",
+    "fullNames": "EFFIE NJOKI NYAMBURA",
+    "dateOfBirth": "1994-19-12",
+    "dateOfIssue": "2021-09-06",
+    "gender": "Female",
+    "districtOfBirth": "KIAMBU"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/nationalid
+```
+
+##### test_idnumber_36296352
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serialNumber": "242772451",
+    "idNumber": "36296352",
+    "fullNames": "JOEL MUUO",
+    "dateOfBirth": "1998-08-30",
+    "dateOfIssue": "2017-03-31",
+    "gender": "Male",
+    "districtOfBirth": "KIBWEZI"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/nationalid
+```
+
+##### test_idnumber_23224868
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serialNumber": "217990310",
+    "idNumber": "23224868",
+    "fullNames": "STEPHEN BIKO NYAMAI",
+    "dateOfBirth": "1984-02-19",
+    "dateOfIssue": "2003-04-01",
+    "gender": "Male",
+    "districtOfBirth": "KIBWEZI"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/nationalid
+```
+
+#### KRA PIN Certificate Verification Tests
+
+##### test_pin_A003388522V
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "certificateDate": "2014-10-14",
+    "pin": "A003388522V",
+    "taxPayerName": "Jackson Gitonga Mwangi",
+    "emailAddress": "jackmwangi02@gmail.com"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/krapincertificate
+```
+
+##### test_pin_A011797599Y
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pin": "A011797599Y",
+    "taxPayerName": "JOEL MUUO"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/krapincertificate
+```
+
+##### test_pin_A008279496S
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pin": "A008279496S",
+    "taxPayerName": "EFFIE NJOKI NYAMBURA"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/krapincertificate
+```
+
+##### test_pin_A005394549Z
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pin": "A005394549Z",
+    "taxPayerName": "PATRICK OMONDI ODHIAMBO "
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/krapincertificate
+```
+
+#### Passport Verification Tests
+
+##### test_passportnumber_AK1515374
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "documentType": "P",
+    "countryCode": "KEN",
+    "passportNumber": "AK1515374",
+    "idNumber": "32140017",
+    "personalNumber": "741116",
+    "surname": "NYAMBURA",
+    "givenNames": "EFFIE NJOKI",
+    "gender": "F",
+    "dateOfBirth": "1994-12-19",
+    "placeOfBirth": "KIAMBU, KEN",
+    "dateOfIssue": "2024-05-06",
+    "dateOfExpiry": "2034-05-05",
+    "nationality": "KENYAN",
+    "issuingAuthority": "GOVERNMENT OF KENYA"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/passport
+```
+
+##### test_passportnumber_AK1370344
+```bash
+awscurl --service execute-api \
+  --region eu-west-1 \
+  --profile shinrai.devpost \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "documentType": "P",
+    "countryCode": "KEN",
+    "idNumber": "",
+    "passportNumber": "AK1370344",
+    "personalNumber": "1944445",
+    "surname": "Munyao",
+    "givenNames": "Timothy",
+    "gender": "M",
+    "dateOfBirth": "1988-01-13",
+    "placeOfBirth": "NAIROBI, KEN",
+    "dateOfIssue": "2023-07-20",
+    "dateOfExpiry": "2033-07-19",
+    "nationality": "KENYAN",
+    "issuingAuthority": "GOVERNMENT OF KENYA"
+  }' \
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/passport
+```

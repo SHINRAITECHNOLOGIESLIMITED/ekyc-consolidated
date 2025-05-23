@@ -6,7 +6,7 @@ from e2e.tests.config import *
 class TestKRAPinCertificateDocumentValidation(unittest.TestCase):
     def test_pin_A003388522V(self):
         payload ={"uploadedDocumentUrl": f"s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KRA_PIN_CERTIFICATE-002samplekra.jpg",
-            "certificateDate":"14/10/2014", 
+            "certificateDate":"2014-10-14", 
             "pin":"A003388522V", 
             "taxPayerName":"Jackson Gitonga Mwangi", 
             "emailAddress":"jackmwangi02@gmail.com",  
