@@ -130,32 +130,18 @@
             "sortKeyFieldNames": []
           }
         },
-        "KYCDocument": {
-          "name": "KYCDocument",
+        "DocumentValidation": {
+          "name": "DocumentValidation",
           "fields": {
-            "documentId": {
-              "name": "documentId",
+            "validationId": {
+              "name": "validationId",
               "isArray": false,
-              "type": "String",
-              "isRequired": true,
-              "attributes": []
-            },
-            "customerId": {
-              "name": "customerId",
-              "isArray": false,
-              "type": "String",
+              "type": "ID",
               "isRequired": true,
               "attributes": []
             },
             "documentType": {
               "name": "documentType",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true,
-              "attributes": []
-            },
-            "documentStatus": {
-              "name": "documentStatus",
               "isArray": false,
               "type": "String",
               "isRequired": true,
@@ -168,22 +154,22 @@
               "isRequired": true,
               "attributes": []
             },
-            "identifier": {
-              "name": "identifier",
+            "documentIdentifier": {
+              "name": "documentIdentifier",
               "isArray": false,
               "type": "String",
               "isRequired": false,
               "attributes": []
             },
-            "extractedData": {
-              "name": "extractedData",
+            "matchResults": {
+              "name": "matchResults",
               "isArray": false,
               "type": "AWSJSON",
               "isRequired": false,
               "attributes": []
             },
-            "verifiedData": {
-              "name": "verifiedData",
+            "keywords_checks": {
+              "name": "keywords_checks",
               "isArray": false,
               "type": "AWSJSON",
               "isRequired": false,
@@ -207,7 +193,7 @@
             }
           },
           "syncable": true,
-          "pluralName": "KYCDocuments",
+          "pluralName": "DocumentValidations",
           "attributes": [
             {
               "type": "model",
@@ -217,7 +203,7 @@
               "type": "key",
               "properties": {
                 "fields": [
-                  "documentId"
+                  "validationId"
                 ]
               }
             },
@@ -247,7 +233,100 @@
           ],
           "primaryKeyInfo": {
             "isCustomPrimaryKey": true,
-            "primaryKeyFieldName": "documentId",
+            "primaryKeyFieldName": "validationId",
+            "sortKeyFieldNames": []
+          }
+        },
+        "DocumentVerification": {
+          "name": "DocumentVerification",
+          "fields": {
+            "verificationId": {
+              "name": "verificationId",
+              "isArray": false,
+              "type": "ID",
+              "isRequired": true,
+              "attributes": []
+            },
+            "documentType": {
+              "name": "documentType",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "documentIdentifier": {
+              "name": "documentIdentifier",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "matchResults": {
+              "name": "matchResults",
+              "isArray": false,
+              "type": "AWSJSON",
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "DocumentVerifications",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "fields": [
+                  "verificationId"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "allow": "private",
+                    "operations": [
+                      "read"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "create",
+                      "read",
+                      "update",
+                      "delete"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": true,
+            "primaryKeyFieldName": "verificationId",
             "sortKeyFieldNames": []
           }
         },
@@ -414,17 +493,18 @@
         "bucket_name": "amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq",
         "aws_region": "eu-west-1",
         "paths": {
-          "protected/${cognito-identity.amazonaws.com:sub}/*": {
+          "uploaded_kyc_docs/${cognito:sub}/*": {
             "authenticated": [
               "get",
               "list",
               "write"
             ]
           },
-          "protected/*": {
+          "uploaded_kyc_docs/*": {
             "authenticated": [
               "get",
-              "list"
+              "list",
+              "write"
             ]
           }
         }

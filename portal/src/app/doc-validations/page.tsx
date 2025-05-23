@@ -36,7 +36,7 @@ const columnDefinitions =
 
 
 const listingProps: ListingProps<DocumentValidation> = {
-    title: "Validated Documents",
+    title: "Documents Validations",
     getAll: fetchDocumentValidations,
     pageSize: 100,
     columnDefinitions,

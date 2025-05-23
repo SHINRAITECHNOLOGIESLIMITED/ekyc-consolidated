@@ -14,7 +14,7 @@ const columnDefinitions =
         },
         {
             id: "documentType",
-            header: "Document Type",
+            header: "Verification Type",
             cell: (item: DocumentVerification) => item.documentType
         },
         {
@@ -31,7 +31,7 @@ const columnDefinitions =
 
 
 const listingProps: ListingProps<DocumentVerification> = {
-    title: "Validated Documents",
+    title: "Verifications",
     getAll: fetchDocumentVerifications,
     pageSize: 100,
     columnDefinitions,

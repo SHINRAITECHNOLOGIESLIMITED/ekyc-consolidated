@@ -1,88 +1,65 @@
 "use client";
 
 import { Details, DetailsProps } from "@/components/Details";
+import KYCKeyWordsChecks, { KeyWordChecks } from "@/components/KYCKeyWordsChecks";
+import KYCValidationResults, {
+  ValidationResults,
+} from "@/components/KYCValidationResults";
 import { fetchDocumentValidation } from "@/services/DataService";
 import { DocumentValidation } from "@/types/models";
-import { CodeView } from "@cloudscape-design/code-view";
 import {
   Alert,
   Box,
   ColumnLayout,
-  Container,
   Header,
   SpaceBetween,
-  Tabs,
 } from "@cloudscape-design/components";
 import { useParams } from "next/navigation";
 import React from "react";
 
 const itemDetails = (documentValidation: DocumentValidation) => (
-  <Container>
-    <SpaceBetween size="l">
-      <Header variant="h1">Document Details</Header>
+  <SpaceBetween size="l">
+    <Header variant="h1" >{documentValidation.documentType} Document Validation</Header>
 
-      <ColumnLayout columns={2} variant="text-grid">
-        <SpaceBetween size="l">
-          <div>
-            <Box variant="awsui-key-label">Validation ID</Box>
-            <div>{documentValidation.validationId}</div>
-          </div>
+    <ColumnLayout columns={3} variant="text-grid">
+      
+        <div>
+          <Box variant="awsui-key-label">{documentValidation.documentType} Identifier</Box>
+          <div>{documentValidation.documentIdentifier}</div>
+        </div>
+        <div>
+          <Box variant="awsui-key-label">Validation Id</Box>
+          <div>{documentValidation.validationId}</div>
+        </div>
+        
+        <div>
+          <Box variant="awsui-key-label">S3 Path</Box>
+          <div>{documentValidation.s3Path}</div>
+        </div>
+      
+    </ColumnLayout>
+    {documentValidation.keywords_checks && (
+      <div>
+        <KYCKeyWordsChecks
+          results={
+            typeof documentValidation.keywords_checks === "string"
+              ? JSON.parse(documentValidation.keywords_checks)
+              : (documentValidation.keywords_checks as KeyWordChecks)
+          }
+        />
+      </div>
+    )}
 
-          <div>
-            <Box variant="awsui-key-label">Document Type</Box>
-            <div>{documentValidation.documentType}</div>
-          </div>
-
-          <div>
-            <Box variant="awsui-key-label">Identifier</Box>
-            <div>{documentValidation.documentIdentifier}</div>
-          </div>
-          <div>
-            <Box variant="awsui-key-label">S3 Path</Box>
-            <div>{documentValidation.s3Path}</div>
-          </div>
-        </SpaceBetween>
-      </ColumnLayout>
-
-      {(documentValidation.keywords_checks ||
-        documentValidation.matchResults) && (
-        <Container header={<Header variant="h2">Keyword Checks</Header>}>
-          <Tabs
-            tabs={[
-              {
-                label: "Keywords Checks",
-                id: "keywordchecks",
-                content: documentValidation.keywords_checks ? (
-                  <CodeView
-                    content={documentValidation.keywords_checks.toString()}
-                    lineNumbers={true}
-                    wrapLines={true}
-                  />
-                ) : (
-                  <Box>No extracted data available</Box>
-                ),
-                disabled: !documentValidation.keywords_checks,
-              },
-              {
-                label: "MatchResults",
-                id: "searchedData",
-                content: documentValidation.matchResults ? (
-                  <CodeView
-                    content={documentValidation.matchResults.toString()}
-                    lineNumbers={true}
-                    wrapLines={true}
-                  />
-                ) : (
-                  <Box>No searched data available</Box>
-                ),
-                disabled: !documentValidation.matchResults,
-              },
-            ]}
-          />
-        </Container>
-      )}
-    </SpaceBetween>
-  </Container>
+    {documentValidation.matchResults && (
+      <KYCValidationResults
+        results={
+          typeof documentValidation.matchResults === "string"
+            ? JSON.parse(documentValidation.matchResults)
+            : (documentValidation.matchResults as ValidationResults)
+        }
+      />
+    )}
+  </SpaceBetween>
 );
 
 const DocumentDetailsPageValidation: React.FC = () => {
@@ -99,7 +76,7 @@ const DocumentDetailsPageValidation: React.FC = () => {
     );
   }
   const detailsParams: DetailsProps<DocumentValidation> = {
-    title: "Contract",
+    title: "Validation",
     primaryKey: validationId,
     fetcher: (validationId: string) => fetchDocumentValidation(validationId),
     itemDetails: itemDetails,
