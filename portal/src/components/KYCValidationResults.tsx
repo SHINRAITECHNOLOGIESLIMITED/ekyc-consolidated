@@ -57,9 +57,9 @@ const KYCValidationResults: React.FC<KYCValidationResultsProps> = ({
               <StatusIndicator
                 type={
                   item.status.toLowerCase() === "not matched"
-                    ? "error"
+                    ? "warning"
                     : item.status.toLowerCase() === "not found"
-                      ? "warning"
+                      ? "error"
                       : item.status.toLowerCase() === "not provided"
                         ? "info"
                         : "success"
