@@ -54,7 +54,7 @@ const KYCKeyWordsChecks: React.FC<KYCKeyWordsChecksProps> = ({
               >
                 {item.result
                     ? "Present"
-                    : "Abscent"}
+                    : "Absent"}
               </StatusIndicator>
             ),
           },
