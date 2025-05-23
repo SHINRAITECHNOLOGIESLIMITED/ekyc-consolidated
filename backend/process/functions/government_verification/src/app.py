@@ -154,6 +154,16 @@ def verify_nationalid(event_data):
         validate(schema=schema, event=event_data)
 
         api_result = serviceValidator.iprs.search_generic(dict(identifier="ID_NUMBER", value=event_data['idNumber']))
+        
+        #construscting fullNames fields         
+        firstName = api_result['data']['firstName'] if 'firstName' in api_result['data'] else ''
+        otherName = api_result['data']['otherName'] if 'otherName' in api_result['data'] else ''
+        surname = api_result['data']['surname'] if 'surname' in api_result['data'] else ''
+        
+        fullNames = f"{firstName} {otherName} {surname}".replace("  ", " ").strip()
+        api_result['data']['fullNames'] = fullNames
+
+
         logger.info(api_result)
 
         serialNumberMatchResult = process(event_name='serialNumber', api_field_name='serialNumber', event=event_data,
