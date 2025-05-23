@@ -260,14 +260,19 @@ def rate(matchResults):
         passed = 0
         failed = 0
         confidence_scores = []
-        for matchResult in matchResults:
-            if "details" in matchResults:
-                confidence_scores.append(matchResults["key_confidence"])
-                confidence_scores.append(matchResults["value_confidence"])
-            if matchResult['status'] == 'Matched':
-                passed += 1
-            elif matchResult['status'] in ["Not Matched","Not Found"]:
-                failed += 1
+        for field,result in matchResults.items():
+            logger.info(result)
+            if "details" in result:
+                if result["details"]:
+                    if "key_confidence" in result["details"]:
+                        confidence_scores.append(result["details"]["key_confidence"])
+                    if "value_confidence" in result["details"]:
+                        confidence_scores.append(result["details"]["value_confidence"])
+            if 'status' in result:
+                if result['status'] == 'Matched':
+                    passed += 1
+                elif result['status'] in ["Not Matched","Not Found"]:
+                    failed += 1
         if confidence_scores:
             confidence = sum(confidence_scores)/len(confidence_scores)
         if failed + passed == 0:
@@ -598,3 +603,60 @@ def make_response(status_code, body):
         },
         'body': json.dumps(body)
     }
+
+if __name__ == "__main__":
+    
+    results = {
+            "serialNumber": {
+            "status": "Not provided",
+            "details": null
+            },
+            "idNumber": {
+            "status": "Matched",
+            "details": {
+                "editdistance": 0,
+                "expected": "36296352",
+                "actual": "36296352",
+                "key_confidence": 95.16634368896484,
+                "value_confidence": 95.16634368896484
+            }
+            },
+            "fullNames": {
+            "status": "Matched",
+            "details": {
+                "editdistance": 0,
+                "expected": "JOEL MUUO",
+                "actual": "JOEL MUUO",
+                "key_confidence": 94.73348236083984,
+                "value_confidence": 94.73348236083984
+            }
+            },
+            "dateOfBirth": {
+            "status": "Matched",
+            "details": {
+                "editdistance": 0,
+                "expected": "30-08-1998",
+                "actual": "1998-08-30",
+                "key_confidence": 95.38103485107422,
+                "value_confidence": 95.38103485107422
+            }
+            },
+            "dateOfIssue": {
+            "status": "Not provided",
+            "details": null
+            },
+            "gender": {
+            "status": "Not provided",
+            "details": null
+            },
+            "districtOfBirth": {
+            "status": "Not provided",
+            "details": null
+            },
+            "placeOfIssue": {
+            "status": "Not provided",
+            "details": null
+            }
+        }
+    
+    print(rate(results))
