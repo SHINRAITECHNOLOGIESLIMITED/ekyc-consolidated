@@ -1,9 +1,11 @@
 "use client";
 
 import Listing, { ListingProps } from "@/components/Listing";
+import NotImplemented from "@/components/NotImplemented";
 import { fetchDocumentValidations } from "@/services/DataService";
 import type { DocumentValidation } from "@/types/models";
-import ValidationDetails from "./[validationId]/ValidationDetails";
+import { SpaceBetween } from "@cloudscape-design/components";
+import ValidationDetails from "./ValidationDetails";
 
 const columnDefinitions = [
   {
@@ -37,6 +39,42 @@ const listingProps: ListingProps<DocumentValidation> = {
   itemDetailsLink: (item: DocumentValidation) =>
     `doc-validations/${item.validationId}`,
   renderItemDetails: (item: DocumentValidation) => ValidationDetails(item),
+  actions: [
+    {
+      label: "New NationalId Validation",
+      render: () => (
+        <SpaceBetween size={"s"}>
+          <NotImplemented title={"NationalID Validation"} />
+        </SpaceBetween>
+      ),
+    },
+    {
+      label: "New Passport Validation",
+      render: () => (
+        <SpaceBetween size={"s"}>
+          <NotImplemented title={"Passport Validation"} />
+        </SpaceBetween>
+      ),
+    },
+    {
+      label: "New KRAPinCertificate Validation",
+      render: () => (
+        <SpaceBetween size={"s"}>
+          <NotImplemented title={"KRAPinCertificate Validation"} />
+        </SpaceBetween>
+      ),
+    },
+    {
+      label: "Certification of Incoporation (CR12) Validation",
+      render: () => (
+        <SpaceBetween size={"s"}>
+          <NotImplemented
+            title={"New Certification of Incoporation (CR12) Validation"}
+          />
+        </SpaceBetween>
+      ),
+    },
+  ],
 };
 
 const DocumentsListing: React.FC = () => {

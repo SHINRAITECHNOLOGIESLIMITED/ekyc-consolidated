@@ -52,7 +52,7 @@ const KYCKeyWordsChecks: React.FC<KYCKeyWordsChecksProps> = ({
                 type={
                   item.result
                     ? "success"
-                    : "error"
+                    : "warning"
                 }
               >
                 {item.result
