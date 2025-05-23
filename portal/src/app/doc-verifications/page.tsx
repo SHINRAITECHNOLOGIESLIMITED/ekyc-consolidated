@@ -58,17 +58,7 @@ const listingProps: ListingProps<DocumentVerification> = {
             <NotImplemented title={"KRAPinCertificate Verification"} />
           </SpaceBetween>
         ),
-      },
-      {
-        label: "Certification of Incoporation (CR12) Verification",
-        render: () => (
-          <SpaceBetween size={"s"}>
-            <NotImplemented
-              title={"New Certification of Incoporation (CR12) Verification"}
-            />
-          </SpaceBetween>
-        ),
-      },
+      }      
     ],
 };
 

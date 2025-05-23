@@ -73,9 +73,16 @@ def _get_kv_relationship(key_map, value_map, block_map):
     for block_id, key_block in key_map.items():
         value_block = _find_value_block(key_block, value_map)
         key = _get_text(key_block, block_map)
-        val = _get_text(value_block, block_map)
-        kvs[key].append(val)
+        val = _get_text(value_block, block_map) if value_block else ""
+        key_confidence = key_block.get('Confidence', 0)
+        value_confidence = value_block.get('Confidence', 0) if value_block else 0
+        kvs[key].append({
+            'value': val, 
+            'key_confidence': key_confidence,
+            'value_confidence': value_confidence
+        })
     return kvs
+
 
 
 def _find_value_block(key_block, value_map):
@@ -98,7 +105,11 @@ def _extract_text_phrases(blocks):
     for block in blocks:
         if block['BlockType'] in ['LINE', 'PARAGRAPH']:
             if 'Text' in block:
-                phrases.append(block['Text'])
+                confidence = block.get('Confidence', 0)
+                phrases.append({
+                    'text': block['Text'],
+                    'confidence': confidence
+                })
     return phrases
     
 
@@ -112,6 +123,7 @@ def extract(s3Path: str):
 
         # append extracted key value pairs to event and pass all parameters along
         extractedForm = _get_kv_relationship(key_map, value_map, block_map)
+        
         #cleaning up
         extractedForm = {_clean_up_label(k):v[0] for k,v in extractedForm.items()}
         
