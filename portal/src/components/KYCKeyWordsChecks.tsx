@@ -23,14 +23,11 @@ interface KYCKeyWordsChecksProps {
 const KYCKeyWordsChecks: React.FC<KYCKeyWordsChecksProps> = ({
   results,
 }) => {
-  console.log(results);
-  const items = Object.entries(results || {}).map(([index, result]) => {
-    console.log(index, result);
+  const items = Object.entries(results || {}).map(([, result]) => {
     const item = {
       check: result.check.replace(/([A-Z])/g, " $1").trim(),
       result: result.result
     };
-    console.log(item);
     return item;
   });
 

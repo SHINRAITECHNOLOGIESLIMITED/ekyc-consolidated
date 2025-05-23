@@ -1,19 +1,16 @@
-import React from "react";
 import {
-  Table,
   Box,
-  StatusIndicator,
-  Header,
   Container,
+  Header,
+  StatusIndicator,
+  Table,
 } from "@cloudscape-design/components";
-import { formatPercentage } from "@/utils/formatters";
+import React from "react";
 
 export interface ValidationDetail {
   editdistance: number;
   actual: string;
   expected: string;
-  keyConfidence: number;
-  valueConfidence: number;
 }
 
 export interface ValidationResult {
@@ -40,8 +37,6 @@ const KYCValidationResults: React.FC<KYCValidationResultsProps> = ({
       actual: validation.details?.actual ?? "-",
       expected: validation.details?.expected ?? "-",
       difference: validation.details?.editdistance?.toString() ?? "-",
-      keyConfidence: validation.details?.keyConfidence ?? 0,
-      valueConfidence: validation.details?.valueConfidence ?? 0
     };
     return item;
   });
@@ -78,13 +73,7 @@ const KYCValidationResults: React.FC<KYCValidationResultsProps> = ({
           {
             id: "actual",
             header: "Actual Value",
-            cell: (item) =>  item.actual,
-          },
-          
-          {
-            id: "valueConfidence",
-            header: "Confidence",
-            cell: (item) =>  formatPercentage(item.valueConfidence),
+            cell: (item) => item.actual,
           },
           {
             id: "expected",

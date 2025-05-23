@@ -41,6 +41,10 @@ export const formatUUID = (uuid: string) => {
 };
 
 export const formatPercentage = (value: number) => {
-    //return rounded of to 1 decimal place
-    return (Math.round(value * 100) / 100).toFixed(1);
+    try {
+        return value.toFixed(1);
+    }catch {
+        return "?"
+    }
+   
 };
