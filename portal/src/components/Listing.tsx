@@ -6,6 +6,7 @@ import {
     Box,
     Button,
     Header,
+    Modal,
     Pagination,
     SpaceBetween,
     Table,
@@ -29,6 +30,7 @@ export interface ListingProps<T> {
     columnDefinitions: readonly TableProps.ColumnDefinition<T>[];
     itemKey: (item: T) => string;
     itemDetailsLink?: (item: T) => string;
+    renderItemDetails?: (item: T) => React.ReactNode;
 }
 
 export function getMatchesCountText(count: number | undefined) {
@@ -59,7 +61,7 @@ function EmptyState({ title, subtitle, action }: EmptyStateProps) {
 // Create a type-safe cache outside the component to persist across re-renders
 const dataCache = new Map<string, ReadonlyArray<unknown>>();
 
-export const Listing = <T,>({ title, getAll, pageSize, columnDefinitions, itemKey, itemDetailsLink }: ListingProps<T>) => {
+export const Listing = <T,>({ title, getAll, pageSize, columnDefinitions, itemKey, itemDetailsLink, renderItemDetails }: ListingProps<T>) => {
     const router = useRouter();
     const cacheKey = title; // Using title as cache key, you might want to use a more unique identifier
 
@@ -69,6 +71,8 @@ export const Listing = <T,>({ title, getAll, pageSize, columnDefinitions, itemKe
     });
     const [loading, setLoading] = useState(!dataCache.has(cacheKey));
     const [error, setError] = useState<string | null>(null);
+    const [selectedItem, setSelectedItem] = useState<T | null>(null);
+    const [isModalVisible, setIsModalVisible] = useState(false);
 
     const fetchItems = useCallback(async (forceRefresh: boolean = false) => {
         // If data is cached and not forcing refresh, use cached data
@@ -118,13 +122,15 @@ export const Listing = <T,>({ title, getAll, pageSize, columnDefinitions, itemKe
             },
             pagination: { pageSize },
             sorting: {},
-            selection: {},
+            selection: {
+                trackBy: itemKey
+            },
         }
     );
 
     const { selectedItems = [] } = collectionProps;
     
-    if (itemDetailsLink) {
+    if (itemDetailsLink && !renderItemDetails) {
         const actionColumn: TableProps.ColumnDefinition<T> = {
             id: 'actions',
             header: 'Details',
@@ -160,43 +166,63 @@ export const Listing = <T,>({ title, getAll, pageSize, columnDefinitions, itemKe
     );
 
     return (
-        <Table
-            {...collectionProps}
-            variant='full-page'
-            header={
-                <Header
-                    counter={selectedItems.length ? `(${selectedItems.length}/${allItems.length})` : `(${allItems.length})`}
-                    actions={
-                        <SpaceBetween direction="horizontal" size="xs">
-                            <Button
-                                iconName="refresh"
-                                loading={loading}
-                                onClick={handleRefresh}
-                            >
-                                Refresh
-                            </Button>
-                        </SpaceBetween>
+        <>
+            <Table
+                {...collectionProps}
+                variant='full-page'
+
+                header={
+                    <Header
+                        counter={selectedItems.length ? `(${selectedItems.length}/${allItems.length})` : `(${allItems.length})`}
+                        actions={
+                            <SpaceBetween direction="horizontal" size="xs">
+                                <Button
+                                    iconName="refresh"
+                                    loading={loading}
+                                    onClick={handleRefresh}
+                                >
+                                    Refresh
+                                </Button>
+                            </SpaceBetween>
+                        }
+                    >
+                        {title}
+                    </Header>
+                }
+                columnDefinitions={columnDefinitions}
+                items={items}
+                pagination={<Pagination {...paginationProps} ariaLabels={paginationLabels} />}
+                stripedRows
+                stickyHeader
+                loading={loading}
+                trackBy={itemKey}
+                loadingText={`Loading ${title}...`}
+                filter={
+                    <TextFilter
+                        {...filterProps}
+                        countText={getMatchesCountText(filteredItemsCount)}
+                        filteringAriaLabel="Filter instances"
+                    />
+                }
+                onRowClick={renderItemDetails ? ({ detail }) => {
+                    if (detail.item) {
+                        setSelectedItem(detail.item as T);
+                        setIsModalVisible(true);
                     }
+                } : undefined}
+            />
+            
+            {renderItemDetails && selectedItem && (
+                <Modal
+                    visible={isModalVisible}
+                    onDismiss={() => setIsModalVisible(false)}
+                    header={`${title}`}
+                    size="large"
                 >
-                    {title}
-                </Header>
-            }
-            columnDefinitions={columnDefinitions}
-            items={items}
-            pagination={<Pagination {...paginationProps} ariaLabels={paginationLabels} />}
-            stripedRows
-            stickyHeader
-            loading={loading}
-            trackBy={itemKey}
-            loadingText={`Loading ${title}...`}
-            filter={
-                <TextFilter
-                    {...filterProps}
-                    countText={getMatchesCountText(filteredItemsCount)}
-                    filteringAriaLabel="Filter instances"
-                />
-            }
-        />
+                    {renderItemDetails(selectedItem)}
+                </Modal>
+            )}
+        </>
     );
 };
 

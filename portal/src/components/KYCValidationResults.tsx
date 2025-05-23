@@ -81,7 +81,7 @@ const KYCValidationResults: React.FC<KYCValidationResultsProps> = ({
           },
           {
             id: "difference",
-            header: "Difference",
+            header: "Edit Distance",
             cell: (item) => item.difference,
           },
         ]}
