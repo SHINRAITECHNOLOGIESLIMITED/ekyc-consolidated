@@ -89,7 +89,16 @@ const Navigation = () => {
               text: "Document Verifications",
               href: "/doc-verifications",
             },
-            
+            {
+              type: "link",
+              text: "Background Checks",
+              href: "/background-checks",
+              info: (
+                <Badge color="red" size="small">
+                  WIP
+                </Badge>
+              )
+            },
           ],
         },
         { type: "divider" },
