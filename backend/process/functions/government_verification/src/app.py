@@ -95,7 +95,12 @@ def process(event_name, api_field_name, event, api_result,is_date_field = False)
             actual = actual.replace(".","-")
             #convert expected and actual in date objects and check for equality
             # Try different date formats
-            date_formats = ['%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d']
+            date_formats = [
+                '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d',  # Standard formats
+                '%d %b %Y', '%d %B %Y',  # 18 May 1987, 18 MAY 1987
+                '%Y-%b-%d', '%Y-%B-%d',  # 1987-May-18
+                '%Y-%b-%d', '%Y-%B-%d'  # 2030-AUG-03
+            ]
             
             expected_date = None
             actual_date = None
@@ -159,8 +164,8 @@ def verify_nationalid(event_data):
             "serialNumber": {"type": "string"},
             "idNumber": {"type": "string"},
             "fullNames": {"type": "string"},
-            "dateOfBirth": {"type": "string", "format": "date"},
-            "dateOfIssue": {"type": "string", "format": "date"},
+            "dateOfBirth": {"type": "string"},
+            "dateOfIssue": {"type": "string"},
             "gender": {"type": "string", "enum": ["Male", "Female"]},
             "districtOfBirth": {"type": "string"},
         },
@@ -232,10 +237,10 @@ def verify_passport(event_data):
             "surname": {"type": "string"},
             "givenNames": {"type": "string"},
             "gender": {"type": "string"},
-            "dateOfBirth": {"type": "string", "format": "date"},
+            "dateOfBirth": {"type": "string"},
             "placeOfBirth": {"type": "string"},
-            "dateOfIssue": {"type": "string", "format": "date"},
-            "dateOfExpiry": {"type": "string", "format": "date"},
+            "dateOfIssue": {"type": "string"},
+            "dateOfExpiry": {"type": "string"},
             "nationality": {"type": "string"},
             "issuingAuthority": {"type": "string"},
         },
