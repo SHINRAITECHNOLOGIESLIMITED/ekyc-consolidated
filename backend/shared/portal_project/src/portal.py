@@ -3,7 +3,7 @@ import os
 import time
 import uuid
 from http import HTTPStatus
-
+from enum import Enum
 import boto3
 import requests
 from aws_lambda_powertools import Logger, Tracer
@@ -16,6 +16,16 @@ assert PORTAL_GRAPHQL_SECRET_ARN, "PORTAL_GRAPHQL_SECRET_ARN environment variabl
 logger = Logger()
 tracer = Tracer()
 
+#enum document types
+
+class DOCUMENT_TYPE(Enum):
+    PASSPORT = "Passport"
+    NATIONAL_ID = "NationalID"
+    KRA_PIN_CERTIFICATE ="KRAPinCertificate"
+    CERTIFICATE_OF_INCORPORATION = "CR12"
+
+SUPPORTED_DOCUMENT_TYPES = [e.value for e in DOCUMENT_TYPE]    
+    
 
 class Portal:
     def __init__(self):
@@ -41,7 +51,8 @@ class Portal:
         }
         logger.info(f"Loaded portal graphql credentials. GraphQL URL: {self.PORTAL_GRAPHQL_URL}")
 
-    def capture_doc_validation(self, documentType, s3Path, documentIdentifier, matchResults, keywords_checks,overall_accuracy,overall_confidence):
+    def capture_doc_validation(self, documentType, s3Path, documentIdentifier, matchResults, keywords_checks,
+                               validation_accuracy,processing_accuracy,overall_confidence):
         """
         Create a new document validation record in the portal using Amplify GraphQL API.
         
@@ -55,6 +66,8 @@ class Portal:
         Returns:
             The created document validation record or None if there was an error
         """
+        assert documentType.value in SUPPORTED_DOCUMENT_TYPES, f"Invalid document type: {documentType} expected one of {SUPPORTED_DOCUMENT_TYPES}"
+        documentType = documentType.value
         try:
             # Create a new document validation
             create_mutation = """
@@ -74,7 +87,8 @@ class Portal:
                 "documentType": documentType,
                 "s3Path": s3Path,
                 "documentIdentifier": documentIdentifier,
-                "overall_accuracy": overall_accuracy,
+                "validation_accuracy": validation_accuracy,
+                "processing_accuracy": processing_accuracy,
                 "overall_confidence": overall_confidence,
                 "matchResults": json.dumps(matchResults) if matchResults else None,
                 "keywords_checks": json.dumps(keywords_checks) if keywords_checks else None
@@ -112,7 +126,7 @@ class Portal:
         except Exception as e:
             logger.error(f"Error creating document validation: {str(e)}")
             return None
-    def capture_doc_verification(self, documentType,documentIdentifier, matchResults,overall_accuracy):
+    def capture_doc_verification(self, documentType,documentIdentifier, matchResults,validation_accuracy,processing_accuracy):
         """
         Create a new document verification record in the portal using Amplify GraphQL API.
 
@@ -124,6 +138,9 @@ class Portal:
         Returns:
             The created document verification record or None if there was an error
         """
+        assert documentType.value in SUPPORTED_DOCUMENT_TYPES, f"Invalid document type: {documentType} expected one of {SUPPORTED_DOCUMENT_TYPES}"
+        documentType = documentType.value
+        
         try:
             # Create a new document verification
             create_mutation = """
@@ -141,7 +158,8 @@ class Portal:
                 "verificationId": verification_id,
                 "documentType": documentType,
                 "documentIdentifier": documentIdentifier,
-                "overall_accuracy": overall_accuracy,
+                "validation_accuracy": validation_accuracy,
+                "processing_accuracy": processing_accuracy,
                 "matchResults": json.dumps(matchResults) if matchResults else None
             }
 

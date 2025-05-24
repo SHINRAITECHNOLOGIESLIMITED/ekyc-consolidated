@@ -2,7 +2,9 @@
 import boto3
 from botocore.exceptions import ClientError
 from tqdm import tqdm
-
+MAGIC_CHOICE = 1984
+MAGIC_CHOICE_NAME = "*ALL*"
+            
 session = boto3.Session(profile_name='shinrai.devpost')
 dynamodb_client = session.client('dynamodb')
 
@@ -14,10 +16,10 @@ def getDynamoDBTables():
 
 def getUserTruncateConfirmation(tablename):
     while True:
-        response = input(f"Do you want to truncate all items in {tablename}? (y/n): ").lower().strip()
-        if response == 'yes' or response == 'y':
+        response = input(f"Do you want to truncate all items in {tablename} default=yes? (yes/no)/(y/n): ").lower().strip()
+        if response == 'yes' or response == 'y' or response == '':
             return 1
-        elif response == 'no' or response == 'n' or '':
+        elif response == 'no' or response == 'n':
             return None
         else:
             print("Please answer with 'yes' or 'no'.")
@@ -35,6 +37,8 @@ def getUserDeleteTableChoise(table_names):
                 return None
             if 1 <= choice <= len(table_names):
                 return table_names[choice - 1]
+            elif choice == MAGIC_CHOICE:
+                return MAGIC_CHOICE_NAME
             else:
                 print("Invalid choice. Please enter a valid number.")
         except ValueError:
@@ -115,6 +119,9 @@ if __name__ == '__main__':
         choice = getUserTruncateConfirmation(tablename=table_name)
         if choice is None:
             print("Operation cancelled.")
+        elif choice  and table_name == MAGIC_CHOICE_NAME:
+            for table_name2 in table_names:
+                truncateDynamoDBTable(table_name2)    
         else:  # truncate
             print(f"Deleting all items from {table_name}...")
             truncateDynamoDBTable(table_name)

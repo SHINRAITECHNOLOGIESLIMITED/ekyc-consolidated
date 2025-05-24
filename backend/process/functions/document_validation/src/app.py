@@ -14,7 +14,7 @@ from reportlab.pdfgen import canvas
 from textract_utils import extract
 from datetime import datetime
 
-from portal import Portal
+from portal import Portal,DOCUMENT_TYPE
 
 KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
 assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
@@ -179,10 +179,10 @@ def levenshtein_distance(s1, s2):
     """Calculate the Levenshtein distance between two strings."""
     if len(s1) < len(s2):
         return levenshtein_distance(s2, s1)
-    
+
     if len(s2) == 0:
         return len(s1)
-    
+
     previous_row = range(len(s2) + 1)
     for i, c1 in enumerate(s1):
         current_row = [i + 1]
@@ -192,7 +192,7 @@ def levenshtein_distance(s1, s2):
             substitutions = previous_row[j] + (c1 != c2)
             current_row.append(min(insertions, deletions, substitutions))
         previous_row = current_row
-    
+
     return previous_row[-1]
 
 def process(event_name, textract_name, event, form,is_date_field = False):
@@ -206,34 +206,43 @@ def process(event_name, textract_name, event, form,is_date_field = False):
         expected = form[textract_name]['value']
         key_confidence= form[textract_name]['key_confidence']
         value_confidence= form[textract_name]['value_confidence']
-        
+
         actual = event[event_name]
         if is_date_field:
             expected = expected.replace(".","-")
             actual = actual.replace(".","-")
             #convert expected and actual in date objects and check for equality
-            # Try different date formats
-            date_formats = ['%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d']
-            
+            # Try different date formats including textual month formats
+            date_formats = [
+                '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d',  # Standard formats
+                '%d %b %Y', '%d %B %Y',  # 18 May 1987, 18 MAY 1987
+                '%Y-%b-%d', '%Y-%B-%d',  # 1987-May-18
+                '%Y-%b-%d', '%Y-%B-%d'  # 2030-AUG-03
+            ]
+
             expected_date = None
             actual_date = None
-            
+
             # Try to parse expected date
             for fmt in date_formats:
                 try:
-                    expected_date = datetime.strptime(expected.strip(), fmt).date()
+                    # Convert month names to uppercase to match format like "18 MAY 1987"
+                    expected_upper = expected.strip().upper()
+                    expected_date = datetime.strptime(expected_upper, fmt).date()
                     break
                 except ValueError:
                     continue
-            
+
             # Try to parse actual date
             for fmt in date_formats:
                 try:
-                    actual_date = datetime.strptime(actual.strip(), fmt).date()
+                    # Convert month names to uppercase to match format like "18 MAY 1987"
+                    actual_upper = actual.strip().upper()
+                    actual_date = datetime.strptime(actual_upper, fmt).date()
                     break
                 except ValueError:
                     continue
-            
+
             if expected_date and actual_date and expected_date == actual_date:
                 status = "Matched"
                 editdistance = 0
@@ -252,13 +261,14 @@ def process(event_name, textract_name, event, form,is_date_field = False):
 
     return dict(status=status, details=details)
 def rate(matchResults):
-    accuracy=0.0
+    validation_accuracy=0.0
     confidence=0.0
     if len(matchResults) == 0:
         pass
     else:
         passed = 0
         failed = 0
+        mapping_issue = 0
         confidence_scores = []
         for field,result in matchResults.items():
             if "details" in result:
@@ -270,15 +280,22 @@ def rate(matchResults):
             if 'status' in result:
                 if result['status'] == 'Matched':
                     passed += 1
-                elif result['status'] in ["Not Matched","Not Found"]:
+                elif result['status'] == "Not Matched":
                     failed += 1
+                elif result['status'] == "Not Found":
+                    mapping_issue +=1
         if confidence_scores:
             confidence = sum(confidence_scores)/len(confidence_scores)
         if failed + passed == 0:
-            accuracy = 0.0
+            validation_accuracy = 0.0
         else:
-            accuracy = passed / (passed + failed) * 100
-    return confidence,accuracy
+            validation_accuracy = passed / (passed + failed) * 100
+        
+        if failed + passed + mapping_issue == 0:
+            processing_accuracy = 0.0
+        else:
+            processing_accuracy = (passed + failed)/(failed + passed + mapping_issue) * 100
+    return confidence,validation_accuracy,processing_accuracy
 def validate_nationalid(data):
     schema = {
         "type": "object",
@@ -287,9 +304,9 @@ def validate_nationalid(data):
             "serialNumber": {"type": "string"},
             "idNumber": {"type": "string"},
             "fullNames": {"type": "string"},
-            "dateOfBirth": {"type": "string", "format": "date"},
-            "dateOfIssue": {"type": "string", "format": "date"},
-            "gender": {"type": "string", "enum": ["Male", "Female"]},
+            "dateOfBirth": {"type": "string"},
+            "dateOfIssue": {"type": "string"},
+            "gender": {"type": "string"},
             "districtOfBirth": {"type": "string"},
             "placeOfIssue": {"type": "string"},
         },
@@ -337,9 +354,18 @@ def validate_nationalid(data):
                             districtOfBirth=districtOfBirthMatchResult,
                             placeOfIssue=placeOfIssueMatchResult,
                             )
-        overall_confidence,overall_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType="NationalID", s3Path=s3Path,
-                                      documentIdentifier=data['idNumber'], matchResults=matchResults,keywords_checks=checks,overall_accuracy=overall_accuracy,overall_confidence=overall_confidence)
+        _documentType=DOCUMENT_TYPE.NATIONAL_ID
+        _documentIdentifier=data['idNumber']
+        
+        confidence,validation_accuracy,processing_accuracy = rate(matchResults)
+        portal.capture_doc_validation(documentType=_documentType, 
+                                      s3Path=s3Path,
+                                      documentIdentifier=_documentIdentifier, 
+                                      matchResults=matchResults,
+                                      keywords_checks=checks,
+                                      validation_accuracy=validation_accuracy,
+                                      processing_accuracy=processing_accuracy,
+                                      overall_confidence=confidence)
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
@@ -363,10 +389,10 @@ def validate_passport(data):
             "surname": {"type": "string"},
             "givenNames": {"type": "string"},
             "gender": {"type": "string"},
-            "dateOfBirth": {"type": "string", "format": "date"},
+            "dateOfBirth": {"type": "string"},
             "placeOfBirth": {"type": "string"},
-            "dateOfIssue": {"type": "string", "format": "date"},
-            "dateOfExpiry": {"type": "string", "format": "date"},
+            "dateOfIssue": {"type": "string"},
+            "dateOfExpiry": {"type": "string"},
             "nationality": {"type": "string"},
             "issuingAuthority": {"type": "string"},
         },
@@ -396,7 +422,7 @@ def validate_passport(data):
                                          textract_name='COUNTRY_CODE_NAMBARI_YA_NCHICODE_DU_PAYS', event=data,
                                          form=extracted_form)
         passportNumberMatchResult = process(event_name='passportNumber',
-                                            textract_name='PASSPORT_NO_NAMBARI_YA_PAST_N�_DE_PASSEPORT',
+                                            textract_name='PASSPORT_NO_NAMBARI_YA_PAST_N°_DE_PASSEPORT',
                                             event=data, form=extracted_form)
         personalNumberMatchResult = process(event_name='personalNumber',
                                             textract_name='PERSONAL_NO_NAMBARI_YA_KIBINAFSI/NO_PERSONNEL',
@@ -405,19 +431,19 @@ def validate_passport(data):
                                      form=extracted_form)
         givenNamesMatchResult = process(event_name='givenNames', textract_name='GIVEN_NAMES/MAJINA_ALIYOPEWA,_PRENOMS',
                                         event=data, form=extracted_form)
-        genderMatchResult = process(event_name='gender', textract_name='SEXUINSIASEXE', event=data,
-                                    form=extracted_form)
         dateOfBirthMatchResult = process(event_name='dateOfBirth',
                                          textract_name='DATE_OF_BIRTH/TAREHE_YA_KUZALIWA_DATE_DE_NAISSANCE',
                                          event=data, form=extracted_form,is_date_field=True)
         placeOfBirthMatchResult = process(event_name='placeOfBirth',
-                                          textract_name='PLACE_OF_BIRTH_MAHAH_PA_KUZALIWALIEU_DE_NAISSANCE',
+                                          textract_name='SEXUINSIASEXE_PLACE_OF_BIRTH_MAHAH_PA_KUZALIWALIEU_DE_NAISSANCE',
                                           event=data, form=extracted_form)
+        genderMatchResult = process(event_name='gender', textract_name='SEXUINSIASEXE', event=data,
+                                    form=extracted_form)
         dateOfIssueMatchResult = process(event_name='dateOfIssue', textract_name='DATE_OF_ISSUE_TAREHE_VA_KUTOLENA',
                                          event=data, form=extracted_form,is_date_field=True)
         dateOfExpiryMatchResult = process(event_name='dateOfExpiry', textract_name='DATE_OF_EXPIRY', event=data,
                                           form=extracted_form,is_date_field=True)
-        nationalityMatchResult = process(event_name='nationality', textract_name='NATIONALITY/UTAIFA/NATIONALITY',
+        nationalityMatchResult = process(event_name='nationality', textract_name='NATIONALITY/UTAIFA/NATIONALITÉ',
                                          event=data, form=extracted_form)
         issuingAuthorityMatchResult = process(event_name='issuingAuthority',
                                               textract_name='ISSUING_AUTHORITY_MAMLAKA_YA_KUTOA_PASIAUTORITE',
@@ -428,8 +454,8 @@ def validate_passport(data):
                             passportNumber=passportNumberMatchResult,
                             personalNumber=personalNumberMatchResult,
                             surname=surnameMatchResult,
-                            givenNames=givenNamesMatchResult,
                             gender=genderMatchResult,
+                            givenNames=givenNamesMatchResult,
                             dateOfBirth=dateOfBirthMatchResult,
                             placeOfBirth=placeOfBirthMatchResult,
                             dateOfIssue=dateOfIssueMatchResult,
@@ -437,9 +463,20 @@ def validate_passport(data):
                             nationality=nationalityMatchResult,
                             issuingAuthority=issuingAuthorityMatchResult,
                             )
-        overall_confidence,overall_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType="Passport", s3Path=s3Path,
-                                      documentIdentifier=data['passportNumber'], matchResults=matchResults,keywords_checks=checks,overall_accuracy=overall_accuracy,overall_confidence=overall_confidence)
+        
+        _documentType=DOCUMENT_TYPE.PASSPORT
+        _documentIdentifier=data['passportNumber']
+        
+        confidence,validation_accuracy,processing_accuracy = rate(matchResults)
+        portal.capture_doc_validation(documentType=_documentType, 
+                                      s3Path=s3Path,
+                                      documentIdentifier=_documentIdentifier, 
+                                      matchResults=matchResults,
+                                      keywords_checks=checks,
+                                      validation_accuracy=validation_accuracy,
+                                      processing_accuracy=processing_accuracy,
+                                      overall_confidence=confidence)
+        
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
@@ -494,10 +531,19 @@ def validate_krapincertificate(data):
                             taxPayerName=taxPayerNameMatchResult,
                             emailAddress=emailAddressMatchResult,
                             )
-        overall_confidence,overall_accuracy = rate(matchResults)
+        _documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE
+        _documentIdentifier=data['pin']
         
-        portal.capture_doc_validation(documentType="KRAPinCertificate", s3Path=s3Path,
-                                      documentIdentifier=data['pin'], matchResults=matchResults,keywords_checks=checks,overall_accuracy=overall_accuracy,overall_confidence=overall_confidence)
+        confidence,validation_accuracy,processing_accuracy = rate(matchResults)
+        portal.capture_doc_validation(documentType=_documentType, 
+                                      s3Path=s3Path,
+                                      documentIdentifier=_documentIdentifier, 
+                                      matchResults=matchResults,
+                                      keywords_checks=checks,
+                                      validation_accuracy=validation_accuracy,
+                                      processing_accuracy=processing_accuracy,
+                                      overall_confidence=confidence)
+        
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
@@ -516,7 +562,7 @@ def validate_cr12(data):
             "uploadedDocumentUrl": {"type": "string", "format": "uri"},
             "businessNumber": {"type": "string"},
             "businessName": {"type": "string"},
-            "dateOfIncorporation": {"type": "string", "format": "date"},
+            "dateOfIncorporation": {"type": "string"},
             "businessType": {"type": "string"},
         },
         "required": ["uploadedDocumentUrl", "businessNumber"],
@@ -553,9 +599,20 @@ def validate_cr12(data):
                             dateOfIncorporation=dateOfIncorporationMatchResult,
                             businessType=businessTypeMatchResult,
                             )
-        overall_confidence,overall_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType="CertificateOfIncorporation ", s3Path=s3Path,
-                                      documentIdentifier=data['businessNumber'], matchResults=matchResults,keywords_checks=checks,overall_accuracy=overall_accuracy,overall_confidence=overall_confidence)
+        
+        _documentType=DOCUMENT_TYPE.CERTIFICATE_OF_INCORPORATION
+        _documentIdentifier=data['businessNumber']
+        
+        confidence,validation_accuracy,processing_accuracy = rate(matchResults)
+        portal.capture_doc_validation(documentType=_documentType, 
+                                      s3Path=s3Path,
+                                      documentIdentifier=_documentIdentifier, 
+                                      matchResults=matchResults,
+                                      keywords_checks=checks,
+                                      validation_accuracy=validation_accuracy,
+                                      processing_accuracy=processing_accuracy,
+                                      overall_confidence=confidence)
+        
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
@@ -580,10 +637,10 @@ def extract_form_from_cr12_phrases(extractedData):
     else:
         businessName = extractedData[4].strip()
         businessName_confidence = 0
-        
+
     dateOfIncorporation = ""
     businessType = ""
-            
+
     extracted_form = dict(businessNumber=dict(value = bsNumber,key_confidence=100,value_confidence=bsNumber_confidence),
                           businessName=dict(value = businessName,key_confidence=100,value_confidence=businessName_confidence),
                           dateOfIncorporation=dict(value = dateOfIncorporation,key_confidence=100,value_confidence=0),
@@ -602,60 +659,3 @@ def make_response(status_code, body):
         },
         'body': json.dumps(body)
     }
-
-if __name__ == "__main__":
-    
-    results = {
-            "serialNumber": {
-            "status": "Not provided",
-            "details": null
-            },
-            "idNumber": {
-            "status": "Matched",
-            "details": {
-                "editdistance": 0,
-                "expected": "36296352",
-                "actual": "36296352",
-                "key_confidence": 95.16634368896484,
-                "value_confidence": 95.16634368896484
-            }
-            },
-            "fullNames": {
-            "status": "Matched",
-            "details": {
-                "editdistance": 0,
-                "expected": "JOEL MUUO",
-                "actual": "JOEL MUUO",
-                "key_confidence": 94.73348236083984,
-                "value_confidence": 94.73348236083984
-            }
-            },
-            "dateOfBirth": {
-            "status": "Matched",
-            "details": {
-                "editdistance": 0,
-                "expected": "30-08-1998",
-                "actual": "1998-08-30",
-                "key_confidence": 95.38103485107422,
-                "value_confidence": 95.38103485107422
-            }
-            },
-            "dateOfIssue": {
-            "status": "Not provided",
-            "details": null
-            },
-            "gender": {
-            "status": "Not provided",
-            "details": null
-            },
-            "districtOfBirth": {
-            "status": "Not provided",
-            "details": null
-            },
-            "placeOfIssue": {
-            "status": "Not provided",
-            "details": null
-            }
-        }
-    
-    print(rate(results))

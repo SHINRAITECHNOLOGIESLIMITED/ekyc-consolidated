@@ -154,6 +154,20 @@
               "isRequired": true,
               "attributes": []
             },
+            "overall_confidence": {
+              "name": "overall_confidence",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": true,
+              "attributes": []
+            },
+            "overall_accuracy": {
+              "name": "overall_accuracy",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": true,
+              "attributes": []
+            },
             "documentIdentifier": {
               "name": "documentIdentifier",
               "isArray": false,
@@ -254,11 +268,18 @@
               "isRequired": true,
               "attributes": []
             },
+            "overall_accuracy": {
+              "name": "overall_accuracy",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": true,
+              "attributes": []
+            },
             "documentIdentifier": {
               "name": "documentIdentifier",
               "isArray": false,
               "type": "String",
-              "isRequired": false,
+              "isRequired": true,
               "attributes": []
             },
             "matchResults": {
