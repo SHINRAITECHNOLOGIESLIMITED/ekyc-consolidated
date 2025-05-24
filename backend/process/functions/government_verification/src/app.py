@@ -5,9 +5,10 @@ from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.validation import validate
 from aws_lambda_powertools.utilities.validation.exceptions import SchemaValidationError
 from fastjsonschema import JsonSchemaException as SchemaValidationError
+
 from jubilee_esb_api import JubileeESBAPI
 
-from portal import Portal
+from portal import Portal,DOCUMENT_TYPE
 
 logger = Logger()
 tracer = Tracer()
@@ -207,7 +208,7 @@ def verify_nationalid(event_data):
                             districtOfBirth=districtOfBirthMatchResult,
                             )
         overall_accuracy = rate(matchResults=matchResults)
-        portal.capture_doc_verification(documentType="NationalID", documentIdentifier=event_data['idNumber'],
+        portal.capture_doc_verification(documentType=DOCUMENT_TYPE.NATIONAL_ID, documentIdentifier=event_data['idNumber'],
                                         matchResults=matchResults,overall_accuracy=overall_accuracy)
         logger.info(f"Match results: {matchResults}")
         return make_response(200, dict(results=matchResults))
@@ -297,7 +298,7 @@ def verify_passport(event_data):
                             issuingAuthority=issuingAuthorityMatchResult,
                             )
         overall_accuracy = rate(matchResults=matchResults)
-        portal.capture_doc_verification(documentType="Passport", documentIdentifier=event_data['passportNumber'],
+        portal.capture_doc_verification(documentType=DOCUMENT_TYPE.PASSPORT, documentIdentifier=event_data['passportNumber'],
                                         matchResults=matchResults,overall_accuracy=overall_accuracy)
         logger.info(f"Match results: {matchResults}")
         return make_response(200, dict(results=matchResults))
@@ -337,7 +338,7 @@ def verify_krapincertificate(event_data):
                             taxPayerName=taxPayerNameMatchResult,
                             )
         overall_accuracy = rate(matchResults=matchResults)
-        portal.capture_doc_verification(documentType="KRAPinCertificate", documentIdentifier=event_data['pin'],
+        portal.capture_doc_verification(documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE, documentIdentifier=event_data['pin'],
                                         matchResults=matchResults,overall_accuracy=overall_accuracy)
         logger.info(f"Match results: {matchResults}")
         return make_response(200, dict(results=matchResults))

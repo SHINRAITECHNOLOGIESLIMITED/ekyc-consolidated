@@ -14,7 +14,7 @@ from reportlab.pdfgen import canvas
 from textract_utils import extract
 from datetime import datetime
 
-from portal import Portal
+from portal import Portal,DOCUMENT_TYPE
 
 KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
 assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
@@ -347,7 +347,7 @@ def validate_nationalid(data):
                             placeOfIssue=placeOfIssueMatchResult,
                             )
         overall_confidence,overall_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType="NationalID", s3Path=s3Path,
+        portal.capture_doc_validation(documentType=DOCUMENT_TYPE.NATIONAL_ID, s3Path=s3Path,
                                       documentIdentifier=data['idNumber'], matchResults=matchResults,keywords_checks=checks,overall_accuracy=overall_accuracy,overall_confidence=overall_confidence)
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
@@ -447,7 +447,7 @@ def validate_passport(data):
                             issuingAuthority=issuingAuthorityMatchResult,
                             )
         overall_confidence,overall_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType="P", s3Path=s3Path,
+        portal.capture_doc_validation(documentType=DOCUMENT_TYPE.PASSPORT, s3Path=s3Path,
                                       documentIdentifier=data['passportNumber'], matchResults=matchResults,keywords_checks=checks,overall_accuracy=overall_accuracy,overall_confidence=overall_confidence)
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
@@ -505,7 +505,7 @@ def validate_krapincertificate(data):
                             )
         overall_confidence,overall_accuracy = rate(matchResults)
 
-        portal.capture_doc_validation(documentType="KRAPinCertificate", s3Path=s3Path,
+        portal.capture_doc_validation(documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE, s3Path=s3Path,
                                       documentIdentifier=data['pin'], matchResults=matchResults,keywords_checks=checks,overall_accuracy=overall_accuracy,overall_confidence=overall_confidence)
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
@@ -563,7 +563,7 @@ def validate_cr12(data):
                             businessType=businessTypeMatchResult,
                             )
         overall_confidence,overall_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType="CertificateOfIncorporation ", s3Path=s3Path,
+        portal.capture_doc_validation(documentType=DOCUMENT_TYPE.CERTIFICATE_OF_INCORPORATION, s3Path=s3Path,
                                       documentIdentifier=data['businessNumber'], matchResults=matchResults,keywords_checks=checks,overall_accuracy=overall_accuracy,overall_confidence=overall_confidence)
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")

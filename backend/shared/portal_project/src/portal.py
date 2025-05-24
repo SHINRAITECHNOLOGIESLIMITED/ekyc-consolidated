@@ -3,7 +3,7 @@ import os
 import time
 import uuid
 from http import HTTPStatus
-
+from enum import Enum
 import boto3
 import requests
 from aws_lambda_powertools import Logger, Tracer
@@ -16,6 +16,16 @@ assert PORTAL_GRAPHQL_SECRET_ARN, "PORTAL_GRAPHQL_SECRET_ARN environment variabl
 logger = Logger()
 tracer = Tracer()
 
+#enum document types
+
+class DOCUMENT_TYPE(Enum):
+    PASSPORT = "Passport"
+    NATIONAL_ID = "NationalID"
+    KRA_PIN_CERTIFICATE ="KRAPinCertificate"
+    CERTIFICATE_OF_INCORPORATION = "CR12"
+
+SUPPORTED_DOCUMENT_TYPES = [e.value for e in DOCUMENT_TYPE]    
+    
 
 class Portal:
     def __init__(self):
@@ -55,6 +65,7 @@ class Portal:
         Returns:
             The created document validation record or None if there was an error
         """
+        assert documentType in SUPPORTED_DOCUMENT_TYPES, f"Invalid document type: {documentType} expected one of {SUPPORTED_DOCUMENT_TYPES}"
         try:
             # Create a new document validation
             create_mutation = """
@@ -124,6 +135,7 @@ class Portal:
         Returns:
             The created document verification record or None if there was an error
         """
+        assert documentType in SUPPORTED_DOCUMENT_TYPES, f"Invalid document type: {documentType} expected one of {SUPPORTED_DOCUMENT_TYPES}"
         try:
             # Create a new document verification
             create_mutation = """
