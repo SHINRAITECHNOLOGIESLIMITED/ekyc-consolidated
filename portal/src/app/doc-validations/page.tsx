@@ -27,7 +27,12 @@ const columnDefinitions = [
   {
     id: "accuracy",
     header: "Accuracy",
-    cell: (item: DocumentValidation) => formatPercentage(item.overall_accuracy),
+    cell: (item: DocumentValidation) => formatPercentage(item.processing_accuracy),
+  },
+  {
+    id: "accuracy",
+    header: "Validity",
+    cell: (item: DocumentValidation) => formatPercentage(item.validation_accuracy),
   },
   {
     id: "confidence",

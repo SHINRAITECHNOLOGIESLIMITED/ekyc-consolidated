@@ -138,24 +138,34 @@ def process(event_name, api_field_name, event, api_result,is_date_field = False)
         details = dict(editdistance=editdistance, expected=expected, actual=actual)
     
     return dict(status=status, details=details)
+
 def rate(matchResults):
-    accuracy=0.0
+    validation_accuracy=0.0
     if len(matchResults) == 0:
         pass
     else:
         passed = 0
         failed = 0
+        mapping_issue = 0
         for field,result in matchResults.items():
             if 'status' in result:
                 if result['status'] == 'Matched':
                     passed += 1
-                elif result['status'] in ["Not Matched","Not Found"]:
+                elif result['status'] == "Not Matched":
                     failed += 1
+                elif result['status'] == "Not Found":
+                    mapping_issue +=1
         if failed + passed == 0:
-            accuracy = 0.0
+            validation_accuracy = 0.0
         else:
-            accuracy = passed / (passed + failed) * 100
-    return accuracy
+            validation_accuracy = passed / (passed + failed) * 100
+        
+        if failed + passed + mapping_issue == 0:
+            processing_accuracy = 0.0
+        else:
+            processing_accuracy = (passed + failed)/(failed + passed + mapping_issue) * 100
+    return validation_accuracy,processing_accuracy
+
 
 def verify_nationalid(event_data):
     schema = {
@@ -166,7 +176,7 @@ def verify_nationalid(event_data):
             "fullNames": {"type": "string"},
             "dateOfBirth": {"type": "string"},
             "dateOfIssue": {"type": "string"},
-            "gender": {"type": "string", "enum": ["Male", "Female"]},
+            "gender": {"type": "string"},
             "districtOfBirth": {"type": "string"},
         },
         "required": ["idNumber"],
@@ -212,10 +222,17 @@ def verify_nationalid(event_data):
                             gender=genderMatchResult,
                             districtOfBirth=districtOfBirthMatchResult,
                             )
-        overall_accuracy = rate(matchResults=matchResults)
-        portal.capture_doc_verification(documentType=DOCUMENT_TYPE.NATIONAL_ID, documentIdentifier=event_data['idNumber'],
-                                        matchResults=matchResults,overall_accuracy=overall_accuracy)
-        logger.info(f"Match results: {matchResults}")
+        _documentType=DOCUMENT_TYPE.NATIONAL_ID
+        _documentIdentifier=event_data['idNumber']
+        
+        validation_accuracy,processing_accuracy = rate(matchResults)
+        
+        portal.capture_doc_verification(documentType=_documentType, 
+                                        documentIdentifier=_documentIdentifier,
+                                        matchResults=matchResults,
+                                        validation_accuracy=validation_accuracy,
+                                        processing_accuracy=processing_accuracy)
+        
         return make_response(200, dict(results=matchResults))
     except SchemaValidationError as e:
         logger.error(f"Schema validation failed for NationalID document validation: {e}")
@@ -302,9 +319,18 @@ def verify_passport(event_data):
                             nationality=nationalityMatchResult,
                             issuingAuthority=issuingAuthorityMatchResult,
                             )
-        overall_accuracy = rate(matchResults=matchResults)
-        portal.capture_doc_verification(documentType=DOCUMENT_TYPE.PASSPORT, documentIdentifier=event_data['passportNumber'],
-                                        matchResults=matchResults,overall_accuracy=overall_accuracy)
+        
+        _documentType=DOCUMENT_TYPE.PASSPORT
+        _documentIdentifier=event_data['passportNumber']
+        
+        validation_accuracy,processing_accuracy = rate(matchResults)
+        
+        portal.capture_doc_verification(documentType=_documentType, 
+                                        documentIdentifier=_documentIdentifier,
+                                        matchResults=matchResults,
+                                        validation_accuracy=validation_accuracy,
+                                        processing_accuracy=processing_accuracy)
+        
         logger.info(f"Match results: {matchResults}")
         return make_response(200, dict(results=matchResults))
     except SchemaValidationError as e:
@@ -342,9 +368,18 @@ def verify_krapincertificate(event_data):
         matchResults = dict(pin=pinMatchResult,
                             taxPayerName=taxPayerNameMatchResult,
                             )
-        overall_accuracy = rate(matchResults=matchResults)
-        portal.capture_doc_verification(documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE, documentIdentifier=event_data['pin'],
-                                        matchResults=matchResults,overall_accuracy=overall_accuracy)
+        
+        _documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE
+        _documentIdentifier=event_data['pin']
+        
+        validation_accuracy,processing_accuracy = rate(matchResults)
+        
+        portal.capture_doc_verification(documentType=_documentType, 
+                                        documentIdentifier=_documentIdentifier,
+                                        matchResults=matchResults,
+                                        validation_accuracy=validation_accuracy,
+                                        processing_accuracy=processing_accuracy)
+        
         logger.info(f"Match results: {matchResults}")
         return make_response(200, dict(results=matchResults))
     except SchemaValidationError as e:

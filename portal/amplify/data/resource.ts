@@ -16,7 +16,8 @@ const schema = a.schema({
         documentType: a.string().required(),
         s3Path: a.string().required(),
         overall_confidence: a.float().required(),
-        overall_accuracy: a.float().required(),
+        validation_accuracy: a.float().required(),
+        processing_accuracy: a.float().required(),
         documentIdentifier: a.string(),
         matchResults: a.json(),
         keywords_checks: a.json()
@@ -27,7 +28,8 @@ const schema = a.schema({
     DocumentVerification: a.model({
         verificationId: a.id().required(),
         documentType: a.string().required(),
-        overall_accuracy: a.float().required(),
+        validation_accuracy: a.float().required(),
+        processing_accuracy: a.float().required(),
         documentIdentifier: a.string().required(),
         matchResults: a.json()
     }).authorization(authorize => [

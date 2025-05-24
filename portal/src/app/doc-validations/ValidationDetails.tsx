@@ -32,9 +32,15 @@ const ValidationDetails = (documentValidation: DocumentValidation) => (
       </div>
       <div>
         <Box variant="awsui-key-label">
-          Accuracy (%)
+          Processing Accuracy (%)
         </Box>
-        <div>{formatPercentage(documentValidation.overall_accuracy)}</div>
+        <div>{formatPercentage(documentValidation.processing_accuracy)}</div>
+      </div>
+      <div>
+        <Box variant="awsui-key-label">
+          Validation Accuracy (%)
+        </Box>
+        <div>{formatPercentage(documentValidation.validation_accuracy)}</div>
       </div>
       <div>
         <Box variant="awsui-key-label">

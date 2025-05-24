@@ -261,13 +261,14 @@ def process(event_name, textract_name, event, form,is_date_field = False):
 
     return dict(status=status, details=details)
 def rate(matchResults):
-    accuracy=0.0
+    validation_accuracy=0.0
     confidence=0.0
     if len(matchResults) == 0:
         pass
     else:
         passed = 0
         failed = 0
+        mapping_issue = 0
         confidence_scores = []
         for field,result in matchResults.items():
             if "details" in result:
@@ -279,15 +280,22 @@ def rate(matchResults):
             if 'status' in result:
                 if result['status'] == 'Matched':
                     passed += 1
-                elif result['status'] in ["Not Matched","Not Found"]:
+                elif result['status'] == "Not Matched":
                     failed += 1
+                elif result['status'] == "Not Found":
+                    mapping_issue +=1
         if confidence_scores:
             confidence = sum(confidence_scores)/len(confidence_scores)
         if failed + passed == 0:
-            accuracy = 0.0
+            validation_accuracy = 0.0
         else:
-            accuracy = passed / (passed + failed) * 100
-    return confidence,accuracy
+            validation_accuracy = passed / (passed + failed) * 100
+        
+        if failed + passed + mapping_issue == 0:
+            processing_accuracy = 0.0
+        else:
+            processing_accuracy = (passed + failed)/(failed + passed + mapping_issue) * 100
+    return confidence,validation_accuracy,processing_accuracy
 def validate_nationalid(data):
     schema = {
         "type": "object",
@@ -298,7 +306,7 @@ def validate_nationalid(data):
             "fullNames": {"type": "string"},
             "dateOfBirth": {"type": "string"},
             "dateOfIssue": {"type": "string"},
-            "gender": {"type": "string", "enum": ["Male", "Female"]},
+            "gender": {"type": "string"},
             "districtOfBirth": {"type": "string"},
             "placeOfIssue": {"type": "string"},
         },
@@ -346,9 +354,18 @@ def validate_nationalid(data):
                             districtOfBirth=districtOfBirthMatchResult,
                             placeOfIssue=placeOfIssueMatchResult,
                             )
-        overall_confidence,overall_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType=DOCUMENT_TYPE.NATIONAL_ID, s3Path=s3Path,
-                                      documentIdentifier=data['idNumber'], matchResults=matchResults,keywords_checks=checks,overall_accuracy=overall_accuracy,overall_confidence=overall_confidence)
+        _documentType=DOCUMENT_TYPE.NATIONAL_ID
+        _documentIdentifier=data['idNumber']
+        
+        confidence,validation_accuracy,processing_accuracy = rate(matchResults)
+        portal.capture_doc_validation(documentType=_documentType, 
+                                      s3Path=s3Path,
+                                      documentIdentifier=_documentIdentifier, 
+                                      matchResults=matchResults,
+                                      keywords_checks=checks,
+                                      validation_accuracy=validation_accuracy,
+                                      processing_accuracy=processing_accuracy,
+                                      overall_confidence=confidence)
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
@@ -446,9 +463,20 @@ def validate_passport(data):
                             nationality=nationalityMatchResult,
                             issuingAuthority=issuingAuthorityMatchResult,
                             )
-        overall_confidence,overall_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType=DOCUMENT_TYPE.PASSPORT, s3Path=s3Path,
-                                      documentIdentifier=data['passportNumber'], matchResults=matchResults,keywords_checks=checks,overall_accuracy=overall_accuracy,overall_confidence=overall_confidence)
+        
+        _documentType=DOCUMENT_TYPE.PASSPORT
+        _documentIdentifier=data['passportNumber']
+        
+        confidence,validation_accuracy,processing_accuracy = rate(matchResults)
+        portal.capture_doc_validation(documentType=_documentType, 
+                                      s3Path=s3Path,
+                                      documentIdentifier=_documentIdentifier, 
+                                      matchResults=matchResults,
+                                      keywords_checks=checks,
+                                      validation_accuracy=validation_accuracy,
+                                      processing_accuracy=processing_accuracy,
+                                      overall_confidence=confidence)
+        
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
@@ -503,10 +531,19 @@ def validate_krapincertificate(data):
                             taxPayerName=taxPayerNameMatchResult,
                             emailAddress=emailAddressMatchResult,
                             )
-        overall_confidence,overall_accuracy = rate(matchResults)
-
-        portal.capture_doc_validation(documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE, s3Path=s3Path,
-                                      documentIdentifier=data['pin'], matchResults=matchResults,keywords_checks=checks,overall_accuracy=overall_accuracy,overall_confidence=overall_confidence)
+        _documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE
+        _documentIdentifier=data['pin']
+        
+        confidence,validation_accuracy,processing_accuracy = rate(matchResults)
+        portal.capture_doc_validation(documentType=_documentType, 
+                                      s3Path=s3Path,
+                                      documentIdentifier=_documentIdentifier, 
+                                      matchResults=matchResults,
+                                      keywords_checks=checks,
+                                      validation_accuracy=validation_accuracy,
+                                      processing_accuracy=processing_accuracy,
+                                      overall_confidence=confidence)
+        
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
@@ -562,9 +599,20 @@ def validate_cr12(data):
                             dateOfIncorporation=dateOfIncorporationMatchResult,
                             businessType=businessTypeMatchResult,
                             )
-        overall_confidence,overall_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType=DOCUMENT_TYPE.CERTIFICATE_OF_INCORPORATION, s3Path=s3Path,
-                                      documentIdentifier=data['businessNumber'], matchResults=matchResults,keywords_checks=checks,overall_accuracy=overall_accuracy,overall_confidence=overall_confidence)
+        
+        _documentType=DOCUMENT_TYPE.CERTIFICATE_OF_INCORPORATION
+        _documentIdentifier=data['businessNumber']
+        
+        confidence,validation_accuracy,processing_accuracy = rate(matchResults)
+        portal.capture_doc_validation(documentType=_documentType, 
+                                      s3Path=s3Path,
+                                      documentIdentifier=_documentIdentifier, 
+                                      matchResults=matchResults,
+                                      keywords_checks=checks,
+                                      validation_accuracy=validation_accuracy,
+                                      processing_accuracy=processing_accuracy,
+                                      overall_confidence=confidence)
+        
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))

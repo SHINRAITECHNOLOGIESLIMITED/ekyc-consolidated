@@ -24,8 +24,12 @@ const VerificationDetails = (documentVerification: DocumentVerification) => (
         <div>{documentVerification.documentIdentifier ?? ""}</div>
       </div>
       <div>
-        <Box variant="awsui-key-label">Accuracy (%)</Box>
-        <div>{formatPercentage(documentVerification.overall_accuracy)}</div>
+        <Box variant="awsui-key-label">Processing Accuracy (%)</Box>
+        <div>{formatPercentage(documentVerification.processing_accuracy)}</div>
+      </div>
+      <div>
+        <Box variant="awsui-key-label">Validation Accuracy (%)</Box>
+        <div>{formatPercentage(documentVerification.validation_accuracy)}</div>
       </div>
       <div>
         <Box variant="awsui-key-label">Updated</Box>
