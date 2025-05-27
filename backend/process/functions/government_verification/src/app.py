@@ -32,7 +32,7 @@ def handler(event, context):
     if http_method == 'POST':
         try:
             data = event.get('body', {})
-            
+
             while isinstance(data, str):
                 data = json.loads(data)
             logger.info(f"Request Data (body): {data}")
@@ -61,10 +61,10 @@ def levenshtein_distance(s1, s2):
     """Calculate the Levenshtein distance between two strings."""
     if len(s1) < len(s2):
         return levenshtein_distance(s2, s1)
-    
+
     if len(s2) == 0:
         return len(s1)
-    
+
     previous_row = range(len(s2) + 1)
     for i, c1 in enumerate(s1):
         current_row = [i + 1]
@@ -74,7 +74,7 @@ def levenshtein_distance(s1, s2):
             substitutions = previous_row[j] + (c1 != c2)
             current_row.append(min(insertions, deletions, substitutions))
         previous_row = current_row
-    
+
     return previous_row[-1]
 
 def process(event_name, api_field_name, event, api_result,is_date_field = False):
@@ -93,18 +93,25 @@ def process(event_name, api_field_name, event, api_result,is_date_field = False)
         if is_date_field:
             expected = expected.replace(".","-")
             actual = actual.replace(".","-")
-            #convert expected and actual in date objects and check for equality
+
+            # Normalize dates by removing midnight time component
+            if " 12:00:00 AM" in expected:
+                expected = expected.replace(" 12:00:00 AM", "")
+            if " 12:00:00 AM" in actual:
+                actual = actual.replace(" 12:00:00 AM", "")
+
             # Try different date formats
             date_formats = [
                 '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d',  # Standard formats
                 '%d %b %Y', '%d %B %Y',  # 18 May 1987, 18 MAY 1987
                 '%Y-%b-%d', '%Y-%B-%d',  # 1987-May-18
-                '%Y-%b-%d', '%Y-%B-%d'  # 2030-AUG-03
+                '%Y-%b-%d', '%Y-%B-%d',  # 2030-AUG-03
+                '%m/%d/%Y'  # 6/9/2021 format
             ]
-            
+
             expected_date = None
             actual_date = None
-            
+
             # Try to parse expected date
             for fmt in date_formats:
                 try:
@@ -112,7 +119,7 @@ def process(event_name, api_field_name, event, api_result,is_date_field = False)
                     break
                 except ValueError:
                     continue
-            
+
             # Try to parse actual date
             for fmt in date_formats:
                 try:
@@ -120,7 +127,7 @@ def process(event_name, api_field_name, event, api_result,is_date_field = False)
                     break
                 except ValueError:
                     continue
-            
+
             if expected_date and actual_date and expected_date == actual_date:
                 status = "Matched"
                 editdistance = 0
@@ -136,7 +143,7 @@ def process(event_name, api_field_name, event, api_result,is_date_field = False)
                 # calculate edit distance
                 editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
         details = dict(editdistance=editdistance, expected=expected, actual=actual)
-    
+
     return dict(status=status, details=details)
 
 def rate(matchResults):
@@ -159,7 +166,7 @@ def rate(matchResults):
             validation_accuracy = 0.0
         else:
             validation_accuracy = passed / (passed + failed) * 100
-        
+
         if failed + passed + mapping_issue == 0:
             processing_accuracy = 0.0
         else:
@@ -187,13 +194,13 @@ def verify_nationalid(event_data):
         validate(schema=schema, event=event_data)
 
         api_result = serviceValidator.iprs.search_generic(dict(identifier="ID_NUMBER", value=event_data['idNumber']))
-        
-        #construscting fullNames fields         
+
+        # Constructing fullNames field with uppercase letters
         firstName = api_result['data']['firstName'] if 'firstName' in api_result['data'] else ''
         otherName = api_result['data']['otherName'] if 'otherName' in api_result['data'] else ''
         surname = api_result['data']['surname'] if 'surname' in api_result['data'] else ''
-        
-        fullNames = f"{firstName} {otherName} {surname}".replace("  ", " ").strip()
+
+        fullNames = f"{firstName} {otherName} {surname}".replace("  ", " ").strip().upper()
         api_result['data']['fullNames'] = fullNames
 
 
@@ -203,7 +210,7 @@ def verify_nationalid(event_data):
                                           api_result=api_result)
         idNumberMatchResult = process(event_name='idNumber', api_field_name='idNumber', event=event_data,
                                       api_result=api_result)
-        fullNamesMatchResult = process(event_name='fullNames', api_field_name='firstName, otherName, surname',
+        fullNamesMatchResult = process(event_name='fullNames', api_field_name='fullNames',
                                        event=event_data, api_result=api_result)
         dateOfBirthMatchResult = process(event_name='dateOfBirth', api_field_name='dateOfBirth', event=event_data,
                                          api_result=api_result,is_date_field=True)
@@ -224,15 +231,15 @@ def verify_nationalid(event_data):
                             )
         _documentType=DOCUMENT_TYPE.NATIONAL_ID
         _documentIdentifier=event_data['idNumber']
-        
+
         validation_accuracy,processing_accuracy = rate(matchResults)
-        
-        portal.capture_doc_verification(documentType=_documentType, 
+
+        portal.capture_doc_verification(documentType=_documentType,
                                         documentIdentifier=_documentIdentifier,
                                         matchResults=matchResults,
                                         validation_accuracy=validation_accuracy,
                                         processing_accuracy=processing_accuracy)
-        
+
         return make_response(200, dict(results=matchResults))
     except SchemaValidationError as e:
         logger.error(f"Schema validation failed for NationalID document validation: {e}")
@@ -269,17 +276,16 @@ def verify_passport(event_data):
         validate(schema=schema, event=event_data)
 
         api_result = serviceValidator.iprs.search_passport_number(dict(
-            identifier="PASSPORT",
-            value=event_data["passportNumber"]
-            ,idNumber=event_data["idNumber"]),
-                                                                  )
+                identifier="PASSPORT",
+                value=event_data["passportNumber"],
+                idNumber=event_data["idNumber"]),
+            )
         logger.info(api_result)
-
         documentTypeMatchResult = process(event_name='documentType', api_field_name='documentType', event=event_data,
                                           api_result=api_result)
         countryCodeMatchResult = process(event_name='countryCode', api_field_name='countryCode', event=event_data,
                                          api_result=api_result)
-        passportNumberMatchResult = process(event_name='idNumber', api_field_name='idNumber',
+        idNumberMatchResult = process(event_name='idNumber', api_field_name='idNumber',
                                             event=event_data, api_result=api_result)
         passportNumberMatchResult = process(event_name='passportNumber', api_field_name='passportNumber',
                                             event=event_data, api_result=api_result)
@@ -309,6 +315,7 @@ def verify_passport(event_data):
                             countryCode=countryCodeMatchResult,
                             passportNumber=passportNumberMatchResult,
                             personalNumber=personalNumberMatchResult,
+                            idNumber=idNumberMatchResult,
                             surname=surnameMatchResult,
                             givenNames=givenNamesMatchResult,
                             gender=genderMatchResult,
@@ -319,18 +326,18 @@ def verify_passport(event_data):
                             nationality=nationalityMatchResult,
                             issuingAuthority=issuingAuthorityMatchResult,
                             )
-        
+
         _documentType=DOCUMENT_TYPE.PASSPORT
         _documentIdentifier=event_data['passportNumber']
-        
+
         validation_accuracy,processing_accuracy = rate(matchResults)
-        
-        portal.capture_doc_verification(documentType=_documentType, 
+
+        portal.capture_doc_verification(documentType=_documentType,
                                         documentIdentifier=_documentIdentifier,
                                         matchResults=matchResults,
                                         validation_accuracy=validation_accuracy,
                                         processing_accuracy=processing_accuracy)
-        
+
         logger.info(f"Match results: {matchResults}")
         return make_response(200, dict(results=matchResults))
     except SchemaValidationError as e:
@@ -346,7 +353,9 @@ def verify_krapincertificate(event_data):
         "type": "object",
         "properties": {
             "pin": {"type": "string"},
-            "taxPayerName": {"type": "string"},
+            "taxpayerName": {"type": "string"},
+            "idNo" : {"type": "string"},
+            "country": {"type": "string"}
         },
         "required": ["pin"],
         "additionalProperties": False
@@ -361,25 +370,27 @@ def verify_krapincertificate(event_data):
         ))
         logger.info(api_result)
 
+
+
         pinMatchResult = process(event_name='pin', api_field_name='pin', event=event_data, api_result=api_result)
-        taxPayerNameMatchResult = process(event_name='taxPayerName', api_field_name='taxPayerName', event=event_data,
+        taxPayerNameMatchResult = process(event_name='taxpayerName', api_field_name='taxpayerName', event=event_data,
                                           api_result=api_result)
 
         matchResults = dict(pin=pinMatchResult,
                             taxPayerName=taxPayerNameMatchResult,
                             )
-        
+
         _documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE
         _documentIdentifier=event_data['pin']
-        
+
         validation_accuracy,processing_accuracy = rate(matchResults)
-        
-        portal.capture_doc_verification(documentType=_documentType, 
+
+        portal.capture_doc_verification(documentType=_documentType,
                                         documentIdentifier=_documentIdentifier,
                                         matchResults=matchResults,
                                         validation_accuracy=validation_accuracy,
                                         processing_accuracy=processing_accuracy)
-        
+
         logger.info(f"Match results: {matchResults}")
         return make_response(200, dict(results=matchResults))
     except SchemaValidationError as e:
