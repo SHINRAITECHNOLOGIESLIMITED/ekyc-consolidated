@@ -43,7 +43,7 @@ def handler(event, context):
                 case '/government/passport':
                     return verify_passport(data)
                 case '/government/krapincertificate':
-                    return verify_krapincertificate(data)
+                    return verify_taxpayerinfo(data)
                 case _:
                     return make_response(404, {'message': 'Path Not Found'})
 
@@ -348,51 +348,81 @@ def verify_passport(event_data):
         return make_response(500, {'message': 'Internal Server Error'})
 
 
-def verify_krapincertificate(event_data):
+def verify_taxpayerinfo(event_data):
     schema = {
         "type": "object",
         "properties": {
             "pin": {"type": "string"},
             "taxpayerName": {"type": "string"},
-            "idNo" : {"type": "string"},
-            "country": {"type": "string"}
+            "idNumber" : {"type": "string"}
         },
-        "required": ["pin"],
+        "required": ["idNumber"],
         "additionalProperties": False
     }
 
     try:
         validate(schema=schema, event=event_data)
 
-        api_result = serviceValidator.kra.validate_id(dict(
-            idNo=event_data['idNo'],
-            country=event_data['country']
-        ))
-        logger.info(api_result)
+        """
+        Following are the options for the typeOfTaxpayer parameter:
+         COMP: Non-Individual – Company
+         KE: Individual - Kenyan Citizen
+         NKE: Individual – Non-Kenyan Resident
+         NKENR: Individual – Non-Kenyan Non-Resident
+        """
+        try:
+            api_result = serviceValidator.kra.validate_id(dict(
+                idNo=event_data['idNo'],
+                country='KE' #Individual - Kenyan Citizen
+            ))
+            logger.info(api_result)
 
+            if "error" in api_result:
+                if api_result["error"]:
+                    return make_response(400, {'message': api_result['error'], 'details': api_result})
+            if "success" in api_result:
+                if api_result["success"] == False:
+                    return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
+            if "data" in api_result:
+                if "responseCode" in api_result["data"]:
+                    match api_result["data"]["responseCode"]:
+                        case 30000:
+                            #Valid ID
+                            pinMatchResult = process(event_name='pin', api_field_name='pin', event=event_data, api_result=api_result)
+                            taxPayerNameMatchResult = process(event_name='taxpayerName', api_field_name='taxpayerName', event=event_data,
+                                                            api_result=api_result)
 
+                            matchResults = dict(pin=pinMatchResult,
+                                                taxPayerName=taxPayerNameMatchResult,
+                                                )
 
-        pinMatchResult = process(event_name='pin', api_field_name='pin', event=event_data, api_result=api_result)
-        taxPayerNameMatchResult = process(event_name='taxpayerName', api_field_name='taxpayerName', event=event_data,
-                                          api_result=api_result)
+                            _documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE
+                            _documentIdentifier=event_data['pin']
 
-        matchResults = dict(pin=pinMatchResult,
-                            taxPayerName=taxPayerNameMatchResult,
-                            )
+                            validation_accuracy,processing_accuracy = rate(matchResults)
 
-        _documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE
-        _documentIdentifier=event_data['pin']
+                            portal.capture_doc_verification(documentType=_documentType,
+                                                            documentIdentifier=_documentIdentifier,
+                                                            matchResults=matchResults,
+                                                            validation_accuracy=validation_accuracy,
+                                                            processing_accuracy=processing_accuracy)
 
-        validation_accuracy,processing_accuracy = rate(matchResults)
-
-        portal.capture_doc_verification(documentType=_documentType,
-                                        documentIdentifier=_documentIdentifier,
-                                        matchResults=matchResults,
-                                        validation_accuracy=validation_accuracy,
-                                        processing_accuracy=processing_accuracy)
-
-        logger.info(f"Match results: {matchResults}")
-        return make_response(200, dict(results=matchResults))
+                            logger.info(f"Match results: {matchResults}")
+                            return make_response(200, dict(results=matchResults))
+                        case 30001:
+                            #NOK Invalid User ID or Password
+                            return make_response(400, {'message': 'Invalid User ID or Password', 'details': api_result})
+                        case 30002:
+                            #NOK Invalid ID
+                            return make_response(400, {'message': 'Invalid ID', 'details': api_result})
+                        case 30003:
+                            #NOK iPage not Done
+                            return make_response(400, {'message': 'iPage not Done', 'details': api_result})
+                else:
+                    return make_response(400, {'message': 'Missing response code in returned data', 'details': api_result['data']})
+        except Exception as e:
+            logger.error(f"KRA ID validation failed: {str(e)}")
+            return make_response(500, {'message': 'Error: KRA ID validation failed', 'details': str(e)})
     except SchemaValidationError as e:
         logger.error(f"Schema validation failed for KRAPinCertificate document validation: {e}")
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
