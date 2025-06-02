@@ -89,6 +89,8 @@ def handle_background_check(data):
                 if api_result["success"] == False:
                     return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
             if 'data' in api_result:
+                lexis_nexis_input['result'] = api_result['data']
+                portal.capture_background_check(lexis_nexis_input)
                 return make_response(200, api_result['data'])
             else:
                 return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
