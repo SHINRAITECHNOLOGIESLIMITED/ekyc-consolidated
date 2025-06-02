@@ -206,6 +206,9 @@ def process(event_name, textract_name, event, form,is_date_field = False):
         expected = form[textract_name]['value']
         key_confidence= form[textract_name]['key_confidence']
         value_confidence= form[textract_name]['value_confidence']
+        # with adapter
+        # expected = form[textract_name]['text']
+        # confidence = form[textract_name]['confidence']
 
         actual = event[event_name]
         if is_date_field:
@@ -258,8 +261,12 @@ def process(event_name, textract_name, event, form,is_date_field = False):
                 # calculate edit distance
                 editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
         details = dict(editdistance=editdistance, expected=expected, actual=actual, keyConfidence = key_confidence, valueConfidence = value_confidence)
+        # with adapter
+        #         editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
+        # details = dict(editdistance=editdistance, expected=expected, actual=actual, confidence=confidence)
 
     return dict(status=status, details=details)
+
 def rate(matchResults):
     validation_accuracy=0.0
     confidence=0.0
@@ -277,6 +284,9 @@ def rate(matchResults):
                         confidence_scores.append(result["details"]["keyConfidence"])
                     if "valueConfidence" in result["details"]:
                         confidence_scores.append(result["details"]["valueConfidence"])
+                    # with adapter
+                    # if "confidence" in result["details"]:
+                    #     confidence_scores.append(result["details"]["confidence"])
             if 'status' in result:
                 if result['status'] == 'Matched':
                     passed += 1
@@ -290,12 +300,14 @@ def rate(matchResults):
             validation_accuracy = 0.0
         else:
             validation_accuracy = passed / (passed + failed) * 100
-        
+
         if failed + passed + mapping_issue == 0:
             processing_accuracy = 0.0
         else:
             processing_accuracy = (passed + failed)/(failed + passed + mapping_issue) * 100
     return confidence,validation_accuracy,processing_accuracy
+
+
 def validate_nationalid(data):
     schema = {
         "type": "object",
@@ -356,11 +368,11 @@ def validate_nationalid(data):
                             )
         _documentType=DOCUMENT_TYPE.NATIONAL_ID
         _documentIdentifier=data['idNumber']
-        
+
         confidence,validation_accuracy,processing_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType=_documentType, 
+        portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
-                                      documentIdentifier=_documentIdentifier, 
+                                      documentIdentifier=_documentIdentifier,
                                       matchResults=matchResults,
                                       keywords_checks=checks,
                                       validation_accuracy=validation_accuracy,
@@ -463,20 +475,20 @@ def validate_passport(data):
                             nationality=nationalityMatchResult,
                             issuingAuthority=issuingAuthorityMatchResult,
                             )
-        
+
         _documentType=DOCUMENT_TYPE.PASSPORT
         _documentIdentifier=data['passportNumber']
-        
+
         confidence,validation_accuracy,processing_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType=_documentType, 
+        portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
-                                      documentIdentifier=_documentIdentifier, 
+                                      documentIdentifier=_documentIdentifier,
                                       matchResults=matchResults,
                                       keywords_checks=checks,
                                       validation_accuracy=validation_accuracy,
                                       processing_accuracy=processing_accuracy,
                                       overall_confidence=confidence)
-        
+
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
@@ -533,17 +545,17 @@ def validate_krapincertificate(data):
                             )
         _documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE
         _documentIdentifier=data['pin']
-        
+
         confidence,validation_accuracy,processing_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType=_documentType, 
+        portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
-                                      documentIdentifier=_documentIdentifier, 
+                                      documentIdentifier=_documentIdentifier,
                                       matchResults=matchResults,
                                       keywords_checks=checks,
                                       validation_accuracy=validation_accuracy,
                                       processing_accuracy=processing_accuracy,
                                       overall_confidence=confidence)
-        
+
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
@@ -599,20 +611,20 @@ def validate_cr12(data):
                             dateOfIncorporation=dateOfIncorporationMatchResult,
                             businessType=businessTypeMatchResult,
                             )
-        
+
         _documentType=DOCUMENT_TYPE.CERTIFICATE_OF_INCORPORATION
         _documentIdentifier=data['businessNumber']
-        
+
         confidence,validation_accuracy,processing_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType=_documentType, 
+        portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
-                                      documentIdentifier=_documentIdentifier, 
+                                      documentIdentifier=_documentIdentifier,
                                       matchResults=matchResults,
                                       keywords_checks=checks,
                                       validation_accuracy=validation_accuracy,
                                       processing_accuracy=processing_accuracy,
                                       overall_confidence=confidence)
-        
+
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
