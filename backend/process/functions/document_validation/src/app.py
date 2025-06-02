@@ -11,13 +11,15 @@ from aws_lambda_powertools.utilities.validation import validate
 from aws_lambda_powertools.utilities.validation.exceptions import SchemaValidationError
 from botocore.exceptions import ClientError
 from reportlab.pdfgen import canvas
-from textract_utils import extract
+from textract_utils import extract,query
 from datetime import datetime
 
 from portal import Portal,DOCUMENT_TYPE
 
 KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
 assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
+
+SETTING_NATIONAL_ID_USE_ADAPTER = True
 
 logger = Logger()
 tracer = Tracer()
@@ -204,9 +206,8 @@ def process(event_name, textract_name, event, form,is_date_field = False):
         details = None
     else:
         expected = form[textract_name]['value']
-        key_confidence= form[textract_name]['key_confidence']
-        value_confidence= form[textract_name]['value_confidence']
-
+        confidence= form[textract_name]['confidence']
+        
         actual = event[event_name]
         if is_date_field:
             expected = expected.replace(".","-")
@@ -257,9 +258,11 @@ def process(event_name, textract_name, event, form,is_date_field = False):
                 status = "Not Matched"
                 # calculate edit distance
                 editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
-        details = dict(editdistance=editdistance, expected=expected, actual=actual, keyConfidence = key_confidence, valueConfidence = value_confidence)
+        details = dict(editdistance=editdistance, expected=expected, actual=actual, confidence = confidence)
+        
 
     return dict(status=status, details=details)
+
 def rate(matchResults):
     validation_accuracy=0.0
     confidence=0.0
@@ -273,10 +276,8 @@ def rate(matchResults):
         for field,result in matchResults.items():
             if "details" in result:
                 if result["details"]:
-                    if "keyConfidence" in result["details"]:
-                        confidence_scores.append(result["details"]["keyConfidence"])
-                    if "valueConfidence" in result["details"]:
-                        confidence_scores.append(result["details"]["valueConfidence"])
+                    if "confidence" in result["details"]:
+                        confidence_scores.append(result["details"]["confidence"])
             if 'status' in result:
                 if result['status'] == 'Matched':
                     passed += 1
@@ -290,12 +291,14 @@ def rate(matchResults):
             validation_accuracy = 0.0
         else:
             validation_accuracy = passed / (passed + failed) * 100
-        
+
         if failed + passed + mapping_issue == 0:
             processing_accuracy = 0.0
         else:
             processing_accuracy = (passed + failed)/(failed + passed + mapping_issue) * 100
     return confidence,validation_accuracy,processing_accuracy
+
+
 def validate_nationalid(data):
     schema = {
         "type": "object",
@@ -319,16 +322,40 @@ def validate_nationalid(data):
         object_key = f"NationalID/{data['idNumber']}.pdf"
         url, s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
-        extracted = extract(s3Path)
-        extracted_form = extracted["form"]
-        logger.info(extracted_form)
-        extracted_prose = " ".join(item['text'] for item in extracted["phrases"]).lower()
         checks = []
-
-        checks.append({"check": 'Contains the words "Jamhuri ya Kenya"',
-                       "result": "Jamhuri ya Kenya".lower() in extracted_prose})
-        checks.append({"check": 'Contains the words "Republic of Kenya"',
-                       "result": "Republic of Kenya".lower() in extracted_prose})
+        if SETTING_NATIONAL_ID_USE_ADAPTER:
+            queriesConfig={
+                'Queries': [
+                    {'Text': 'What is the full name?', 'Alias': 'FULL_NAMES'},
+                    {'Text': 'What is the date of birth?', 'Alias': 'DATE_OF_BIRTH'},
+                    {'Text': 'what is the district of birth?', 'Alias': 'DISTRICT_OF_BIRTH'},
+                    {'Text': 'what is the place of issue?', 'Alias': 'PLACE_OF_ISSUE'},
+                    {'Text': 'what is the serial number?', 'Alias': 'SERIAL_NUMBER'},
+                    {'Text': 'what is the gender?', 'Alias': 'SEX'},
+                    {'Text': 'what is the id number?', 'Alias': 'ID_NUMBER'},
+                    {'Text': 'what is the date of issue?', 'Alias': 'DATE_OF_ISSUE'},
+                ]
+            }
+            adaptersConfig = {
+                    'Adapters': [
+                        {
+                            'AdapterId': 'be60c92fc84a',
+                            'Version': '1'
+                        }
+                    ]
+                }
+            extracted_form = query(s3Path,queriesConfig=queriesConfig,adaptersConfig=adaptersConfig)
+        else:
+            extracted = extract(s3Path)
+            extracted_form = extracted["form"]
+            logger.info(extracted_form)
+            extracted_prose = " ".join(item['text'] for item in extracted["phrases"]).lower()
+            checks.append({"check": 'Contains the words "Jamhuri ya Kenya"',
+                        "result": "Jamhuri ya Kenya".lower() in extracted_prose})
+            checks.append({"check": 'Contains the words "Republic of Kenya"',
+                        "result": "Republic of Kenya".lower() in extracted_prose})
+            
+        
         serialNumberMatchResult = process(event_name='serialNumber', textract_name='SERIAL_NUMBER', event=data,
                                           form=extracted_form)
         idNumberMatchResult = process(event_name='idNumber', textract_name='ID_NUMBER', event=data,
@@ -356,11 +383,11 @@ def validate_nationalid(data):
                             )
         _documentType=DOCUMENT_TYPE.NATIONAL_ID
         _documentIdentifier=data['idNumber']
-        
+
         confidence,validation_accuracy,processing_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType=_documentType, 
+        portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
-                                      documentIdentifier=_documentIdentifier, 
+                                      documentIdentifier=_documentIdentifier,
                                       matchResults=matchResults,
                                       keywords_checks=checks,
                                       validation_accuracy=validation_accuracy,
@@ -463,20 +490,20 @@ def validate_passport(data):
                             nationality=nationalityMatchResult,
                             issuingAuthority=issuingAuthorityMatchResult,
                             )
-        
+
         _documentType=DOCUMENT_TYPE.PASSPORT
         _documentIdentifier=data['passportNumber']
-        
+
         confidence,validation_accuracy,processing_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType=_documentType, 
+        portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
-                                      documentIdentifier=_documentIdentifier, 
+                                      documentIdentifier=_documentIdentifier,
                                       matchResults=matchResults,
                                       keywords_checks=checks,
                                       validation_accuracy=validation_accuracy,
                                       processing_accuracy=processing_accuracy,
                                       overall_confidence=confidence)
-        
+
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
@@ -533,17 +560,17 @@ def validate_krapincertificate(data):
                             )
         _documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE
         _documentIdentifier=data['pin']
-        
+
         confidence,validation_accuracy,processing_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType=_documentType, 
+        portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
-                                      documentIdentifier=_documentIdentifier, 
+                                      documentIdentifier=_documentIdentifier,
                                       matchResults=matchResults,
                                       keywords_checks=checks,
                                       validation_accuracy=validation_accuracy,
                                       processing_accuracy=processing_accuracy,
                                       overall_confidence=confidence)
-        
+
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
@@ -599,20 +626,20 @@ def validate_cr12(data):
                             dateOfIncorporation=dateOfIncorporationMatchResult,
                             businessType=businessTypeMatchResult,
                             )
-        
+
         _documentType=DOCUMENT_TYPE.CERTIFICATE_OF_INCORPORATION
         _documentIdentifier=data['businessNumber']
-        
+
         confidence,validation_accuracy,processing_accuracy = rate(matchResults)
-        portal.capture_doc_validation(documentType=_documentType, 
+        portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
-                                      documentIdentifier=_documentIdentifier, 
+                                      documentIdentifier=_documentIdentifier,
                                       matchResults=matchResults,
                                       keywords_checks=checks,
                                       validation_accuracy=validation_accuracy,
                                       processing_accuracy=processing_accuracy,
                                       overall_confidence=confidence)
-        
+
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
@@ -641,10 +668,10 @@ def extract_form_from_cr12_phrases(extractedData):
     dateOfIncorporation = ""
     businessType = ""
 
-    extracted_form = dict(businessNumber=dict(value = bsNumber,key_confidence=100,value_confidence=bsNumber_confidence),
-                          businessName=dict(value = businessName,key_confidence=100,value_confidence=businessName_confidence),
-                          dateOfIncorporation=dict(value = dateOfIncorporation,key_confidence=100,value_confidence=0),
-                          businessType=dict(value = businessType,key_confidence=100,value_confidence=0))
+    extracted_form = dict(businessNumber=dict(value = bsNumber,confidence=bsNumber_confidence),
+                          businessName=dict(value = businessName,confidence=businessName_confidence),
+                          dateOfIncorporation=dict(value = dateOfIncorporation,confidence=0),
+                          businessType=dict(value = businessType,confidence=0))
     return extracted_form
 
 

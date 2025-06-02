@@ -12,8 +12,7 @@ export interface ValidationDetail {
   editdistance: number;
   actual: string;
   expected: string;
-  keyConfidence: number;
-  valueConfidence: number;
+  confidence: number;
 }
 
 export interface ValidationResult {
@@ -40,8 +39,7 @@ const KYCValidationResults: React.FC<KYCValidationResultsProps> = ({
       actual: validation.details?.actual ?? "-",
       expected: validation.details?.expected ?? "-",
       difference: validation.details?.editdistance?.toString() ?? "-",
-      keyConfidence: validation.details?.keyConfidence ?? 0,
-      valueConfidence: validation.details?.valueConfidence ?? 0
+      confidence: validation.details?.confidence ?? 0
     };
     return item;
   });
@@ -82,9 +80,9 @@ const KYCValidationResults: React.FC<KYCValidationResultsProps> = ({
           },
           
           {
-            id: "valueConfidence",
+            id: "confidence",
             header: "Confidence",
-            cell: (item) =>  formatPercentage(item.valueConfidence),
+            cell: (item) =>  formatPercentage(item.confidence),
           },
           {
             id: "expected",

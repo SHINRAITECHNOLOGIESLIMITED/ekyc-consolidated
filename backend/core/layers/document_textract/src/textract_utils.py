@@ -50,6 +50,8 @@ def _get_kv_map(s3Path):
                 value_map[block_id] = block
 
     return key_map, value_map, block_map, blocks
+    # with adapter
+    # return key_map, value_map, block_map, blocks, response
 
 
 def _get_text(result, blocks_map):
@@ -77,12 +79,26 @@ def _get_kv_relationship(key_map, value_map, block_map):
         key_confidence = key_block.get('Confidence', 0)
         value_confidence = value_block.get('Confidence', 0) if value_block else 0
         kvs[key].append({
-            'value': val, 
-            'key_confidence': key_confidence,
-            'value_confidence': value_confidence
+            'value': val,
+            'confidence': (value_confidence + key_confidence)/2
         })
     return kvs
 
+def _extract_query_answers(response):
+    answers = {}
+    for block in response.get('Blocks', []):
+        if block['BlockType'] == 'QUERY':
+            alias = block.get('Query', {}).get('Alias')
+            answer_block = None
+            for rel in block.get('Relationships', []):
+                if rel['Type'] == 'ANSWER':
+                    answer_block = next((b for b in response['Blocks'] if b['Id'] in rel['Ids']), None)
+            if alias and answer_block:
+                answers[alias] = {
+                    'value': answer_block.get('Text'),
+                    'confidence': answer_block.get('Confidence', 0)
+                }
+    return answers
 
 
 def _find_value_block(key_block, value_map):
@@ -111,27 +127,38 @@ def _extract_text_phrases(blocks):
                     'confidence': confidence
                 })
     return phrases
-    
+
 
 def extract(s3Path: str):
-    
     try:
-        
-        
         #textract
         key_map, value_map, block_map, blocks = _get_kv_map(s3Path)
-
+        
         # append extracted key value pairs to event and pass all parameters along
         extractedForm = _get_kv_relationship(key_map, value_map, block_map)
-        
+
         #cleaning up
         extractedForm = {_clean_up_label(k):v[0] for k,v in extractedForm.items()}
-        
+
         # Extract text phrases
         text_phrases = _extract_text_phrases(blocks)
         extractedData = dict(form = extractedForm, phrases = text_phrases)
         
         return extractedData
+    except Exception as e:
+        logger.error(f"Error: {str(e)}")
+        raise Exception(e)
+
+def query(s3Path: str,queriesConfig,adaptersConfig):
+    try:
+        response = textract_client.analyze_document(
+            Document={'S3Object': {'Bucket': KYCDOCUMENTSBUCKET_NAME, 'Name': s3Path}},
+            FeatureTypes=["QUERIES"], 
+            QueriesConfig=queriesConfig,
+            AdaptersConfig=adaptersConfig
+        )
+        query_answers = _extract_query_answers(response)
+        return query_answers
     except Exception as e:
         logger.error(f"Error: {str(e)}")
         raise Exception(e)
