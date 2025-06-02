@@ -372,7 +372,7 @@ def verify_taxpayerinfo(event_data):
         """
         try:
             api_result = serviceValidator.kra.validate_id(dict(
-                idNo=event_data['idNo'],
+                idNo=event_data['idNumber'],
                 country='KE' #Individual - Kenyan Citizen
             ))
             logger.info(api_result)
