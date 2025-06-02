@@ -19,7 +19,7 @@ from portal import Portal,DOCUMENT_TYPE
 KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
 assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
 
-SETTING_NATIONAL_ID_USE_ADAPTER = True
+SETTING_NATIONAL_ID_USE_ADAPTER = False
 
 logger = Logger()
 tracer = Tracer()
