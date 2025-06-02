@@ -1,5 +1,5 @@
 import type {Schema} from "@/../amplify/data/resource";
-import type {APICall, DocumentValidation, DocumentVerification, LivenessSession} from '@/types/models';
+import type {APICall, BackGroundCheck, DocumentValidation, DocumentVerification, LivenessSession} from '@/types/models';
 import {generateClient} from 'aws-amplify/api';
 import {CognitoUser, DashboardMetrics} from "@/types/interfaces";
 import {CognitoIdentityProviderClient, ListUsersCommand} from '@aws-sdk/client-cognito-identity-provider';
@@ -169,4 +169,21 @@ export const fetchUsers = async (): Promise<CognitoUser[]> => {
         console.log(error);
         return []
     }
+};
+
+export const fetchBackGroundChecks = async (): Promise<BackGroundCheck[]> => {
+    const response = await client.models.BackGroundCheck.list({
+        limit: 5000
+    });
+    const sortedData = response.data.sort((a, b) => {
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+    return sortedData;
+};
+export const fetchBackGroundCheck = async (backGroundCheckId: string): Promise<BackGroundCheck | null> => {
+    const response = await client.models.BackGroundCheck.get({
+        backGroundCheckId: backGroundCheckId
+    });
+
+    return response.data;
 };

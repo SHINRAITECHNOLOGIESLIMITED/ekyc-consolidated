@@ -64,6 +64,33 @@ const Navigation = () => {
           href: "/",
         },
         { type: "divider" },
+        // Processes Section
+        {
+          type: "section-group",
+          title: "Processes",
+          items: [
+            {
+              type: "link",
+              text: "Agent Registration",
+              href: "/agents-registration",
+              info: (
+                <Badge color="red" size="small">
+                  WIP
+                </Badge>
+              )
+            },
+            {
+              type: "link",
+              text: "Customer Registration",
+              href: "/customers-registration",
+              info: (
+                <Badge color="red" size="small">
+                  WIP
+                </Badge>
+              )
+            },
+          ],
+        },
         // Docuements Section
         {
           type: "section-group",
@@ -92,12 +119,7 @@ const Navigation = () => {
             {
               type: "link",
               text: "Background Checks",
-              href: "/background-checks",
-              info: (
-                <Badge color="red" size="small">
-                  WIP
-                </Badge>
-              )
+              href: "/background-checks"
             },
           ],
         },

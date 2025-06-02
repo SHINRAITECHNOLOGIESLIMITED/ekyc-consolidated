@@ -36,6 +36,22 @@ const schema = a.schema({
         authorize.authenticated().to(['read']),
         authorize.publicApiKey().to(['create', 'read', 'update', 'delete'])
     ]).identifier(['verificationId']),
+    BackGroundCheck: a.model({
+        backGroundCheckId: a.id().required(),
+        firstName: a.string().required(),
+        middleName: a.string(),
+        lastName: a.string().required(),
+        gender: a.string().required(),
+        dob: a.string().required(),
+        nationalIdentificationNumber: a.string().required(),
+        countryCode: a.string().required(),
+        entityType: a.string().required(),
+        sourceName: a.string().required(),
+        results: a.json()
+    }).authorization(authorize => [
+        authorize.authenticated().to(['read']),
+        authorize.publicApiKey().to(['create', 'read', 'update', 'delete'])
+    ]).identifier(['backGroundCheckId']),
     APICall: a.model({
         apiCallId: a.id().required(),
         traceId: a.string().required(),
