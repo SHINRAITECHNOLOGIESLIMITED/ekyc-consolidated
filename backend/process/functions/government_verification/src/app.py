@@ -25,7 +25,7 @@ def handler(event, context):
     Handles POST requests to various /government/* paths.
     Routes requests to specific handlers which perform schema validation.
     """
-    # logger.info(f"Received event: {json.dumps(event)}")
+    logger.info(f"Received event: {json.dumps(event)}")
 
     http_method = event.get('httpMethod')
     path = event.get('path')
@@ -52,7 +52,7 @@ def handler(event, context):
             return make_response(400, {'message': 'Invalid JSON body'})
         except Exception as e:
             logger.error(f"An unexpected error occurred in lambda_handler: {e}")
-            return make_response(500, {'message': 'Internal Server Error'})
+            return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
     else:
         logger.error(f'Method Not Allowed - received {http_method}')
         return make_response(405, {'message': 'Method Not Allowed'})
@@ -257,7 +257,7 @@ def verify_nationalid(event_data):
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_nationalid: {e}")
-        return make_response(500, {'message': 'Internal Server Error'})
+        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
 
 def verify_passport(event_data):
@@ -368,7 +368,7 @@ def verify_passport(event_data):
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_passport: {e}")
-        return make_response(500, {'message': 'Internal Server Error'})
+        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
 
 def verify_taxpayerinfo(event_data):
@@ -376,7 +376,7 @@ def verify_taxpayerinfo(event_data):
         "type": "object",
         "properties": {
             "pin": {"type": "string"},
-            "taxpayerName": {"type": "string"},
+            "taxPayerName": {"type": "string"},
             "idNumber" : {"type": "string"}
         },
         "required": ["idNumber"],
@@ -412,7 +412,7 @@ def verify_taxpayerinfo(event_data):
                         case 30000:
                             #Valid ID
                             pinMatchResult = process(event_name='pin', api_field_name='pin', event=event_data, api_result=api_result)
-                            taxPayerNameMatchResult = process(event_name='taxpayerName', api_field_name='taxpayerName', event=event_data,
+                            taxPayerNameMatchResult = process(event_name='taxPayerName', api_field_name='taxPayerName', event=event_data,
                                                             api_result=api_result)
 
                             matchResults = dict(pin=pinMatchResult,
@@ -453,7 +453,7 @@ def verify_taxpayerinfo(event_data):
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_krapincertificate: {e}")
-        return make_response(500, {'message': 'Internal Server Error'})
+        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
 
 def make_response(status_code, body):

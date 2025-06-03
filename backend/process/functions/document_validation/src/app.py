@@ -171,7 +171,7 @@ def handler(event, context):
 
         except Exception as e:
             logger.error(f"An unexpected error occurred in lambda_handler: {e}")
-            return make_response(500, {'message': 'Internal Server Error'})
+            return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
     else:
         logger.error('Method Not Allowed - received {http_method}')
@@ -401,7 +401,7 @@ def validate_nationalid(data):
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_nationalid: {e}")
-        return make_response(500, {'message': 'Internal Server Error'})
+        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
 
 def validate_passport(data):
@@ -512,7 +512,7 @@ def validate_passport(data):
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_passport: {e}")
-        return make_response(500, {'message': 'Internal Server Error'})
+        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
 
 def validate_krapincertificate(data):
@@ -579,7 +579,7 @@ def validate_krapincertificate(data):
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_krapincertificate: {e}")
-        return make_response(500, {'message': 'Internal Server Error'})
+        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
 
 def validate_cr12(data):
@@ -648,7 +648,7 @@ def validate_cr12(data):
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_cr12: {e}")
-        return make_response(500, {'message': 'Internal Server Error'})
+        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
 
 def extract_form_from_cr12_phrases(extractedData):

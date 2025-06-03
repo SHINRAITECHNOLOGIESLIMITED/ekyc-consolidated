@@ -607,9 +607,6 @@ components:
         gender:
           type: string
           description: Gender of the beneficiary
-          enum:
-            - Male
-            - Female
         dateOfBirth:
           type: string
           description: Date of birth of the beneficiary
@@ -635,10 +632,6 @@ components:
         gender:
           type: string
           description: Whether person is Male of Female
-          enum:
-            - Male
-            - Female
-          example: Male
         dateOfBirth:
           type: string
           description: Date of birth
@@ -675,18 +668,18 @@ components:
     KRAVerificationRequest:
       type: object
       properties:
-        pin:
-          type: string
-          description: KRA PIN Number
-          example: A000000000B
-        taxpayerName:
-          type: string
-          description: Names as per KRA records
-          example: Jane Doe
         idNumber:
           type: string
           description: National ID Card number or Passport number linked to KRA PIN
           example: 12345678
+        pin:
+          type: string
+          description: KRA PIN Number
+          example: A000000000B
+        taxPayerName:
+          type: string
+          description: Names as per KRA records
+          example: Jane Doe
       required:
         - idNumber
       additionalProperties: false

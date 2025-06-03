@@ -42,6 +42,13 @@ Resources:
       Name: !Sub ${AWS::StackName}-portal-graphql-credentials
       Description: Portal GraphQL API Credentials
       SecretString: !Ref PortalGraphQLCredentials
+  ApiGatewayAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/apigateway/${AWS::StackName}-api-gateway-access-logs
+      RetentionInDays: 30
   ApiGateway:
     Type: AWS::Serverless::Api
     Properties:
@@ -55,12 +62,30 @@ Resources:
           Location: openapi.yaml
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","path":"$context.path","status":"$context.status","responseLength":"$context.responseLength","integrationLatency":"$context.integrationLatency"}'
       Cors:
         AllowOrigin: '''https://main.d2896e60a8d7f8.amplifyapp.com'''
         AllowHeaders: '''Content-Type, Authorization, X-Api-Key, X-Amz-Date,
           X-Amz-Security-Token'''
         AllowMethods: '''POST, OPTIONS'''
         MaxAge: 60
+      GatewayResponses:
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'https://main.d2896e60a8d7f8.amplifyapp.com'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Api-Key,X-Amz-Date,X-Amz-Security-Token'"
+          ResponseTemplates:
+            application/json: '{"message":"Internal server error", "requestId":"$context.requestId"}'
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'https://main.d2896e60a8d7f8.amplifyapp.com'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Api-Key,X-Amz-Date,X-Amz-Security-Token'"
+          ResponseTemplates:
+            application/json: '{"message":"Client error", "requestId":"$context.requestId"}'
   AuthorizerFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -228,7 +253,7 @@ Resources:
         ApiGatewayPOSTKRA:
           Type: Api
           Properties:
-            Path: /government/krapincertificate
+            Path: /government/kra
             Method: POST
             RestApiId: !Ref ApiGateway
         ApiGatewayPOSTID:
