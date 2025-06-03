@@ -9,6 +9,7 @@ export const API_CONFIG = {
     REGION: process.env.NEXT_PUBLIC_AWS_REGION || 'eu-west-1',
     API_HEADERS: API_HEADERS,
     VALIDATED_DOCS_BASE_S3_PATH:VALIDATED_DOCS_BASE_S3_PATH,
+    SWAGGER_UI_URL: `${API_BASE_URL}/swagger-ui/`,
     API_ENDPOINTS: {
         CREATE_SESSION: `${API_BASE_URL}/faceliveness`,
         GET_RESULTS: `${API_BASE_URL}/faceliveness`,

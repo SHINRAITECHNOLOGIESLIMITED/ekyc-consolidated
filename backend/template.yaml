@@ -71,6 +71,9 @@ Resources:
           X-Amz-Security-Token'''
         AllowMethods: '''POST, OPTIONS'''
         MaxAge: 60
+      OpenApiVersion: 3.0.1
+      StageVariables:
+        basePath: /Prod
   AuthorizerFn:
     Type: AWS::Serverless::Function
     Properties:
