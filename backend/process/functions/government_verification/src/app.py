@@ -42,7 +42,7 @@ def handler(event, context):
                     return verify_nationalid(data)
                 case '/government/passport':
                     return verify_passport(data)
-                case '/government/krapincertificate':
+                case '/government/kra':
                     return verify_taxpayerinfo(data)
                 case _:
                     return make_response(404, {'message': 'Path Not Found'})
