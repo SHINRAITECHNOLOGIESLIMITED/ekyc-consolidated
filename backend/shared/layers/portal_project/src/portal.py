@@ -51,6 +51,152 @@ class Portal:
         }
         logger.info(f"Loaded portal graphql credentials. GraphQL URL: {self.PORTAL_GRAPHQL_URL}")
 
+    def capture_agent_registration(self, agent):
+        """
+        Create a new agent registration record in the portal using Amplify GraphQL API.
+        
+        Args:
+            agent: Dictionary containing agent registration data
+            
+        Returns:
+            The created agent record or None if there was an error
+        """
+        try:
+            # Create a new agent registration
+            create_mutation = """
+                mutation CreateAgent($input: CreateAgentInput!) {
+                    createAgent(input: $input) {
+                        agentId
+                        name
+                        agentType
+                    }
+                }
+            """
+            
+            # Prepare input with required fields from Amplify schema
+            agent_id = str(uuid.uuid4())
+            
+            # Map the input data to the schema fields
+            document = {
+                "agentId": agent_id,
+                "agentType": agent.get("agentType"),
+                "name": agent.get("name"),
+                "pinNumber": agent.get("pinNumber"),
+                "idNumber": agent.get("idNumber"),
+                "passportPhotoUrl": agent.get("passportPhotoUrl"),
+                "nationalIdCardUrl": agent.get("nationalIdCardUrl"),
+                "companyCertificateUrl": agent.get("companyCertificateUrl"),
+                "dateOfBirth": agent.get("dateOfBirth"),
+                "businessNumber": agent.get("businessNumber"),
+                "kycStatus": agent.get("kycStatus")
+            }
+            
+            create_variables = {
+                "input": document
+            }
+            
+            # Prepare the create request body
+            create_payload = {
+                'query': create_mutation,
+                'variables': create_variables
+            }
+            
+            # Make the create request to AppSync
+            create_response = requests.post(
+                self.PORTAL_GRAPHQL_URL,
+                headers=self.headers,
+                json=create_payload
+            )
+            
+            # Check if create was successful
+            if create_response.status_code == 200:
+                create_result = create_response.json()
+                if 'errors' in create_result:
+                    logger.error(f"GraphQL Errors during create: {create_result['errors']}")
+                    return None
+                logger.info(f"Agent registration created successfully: {agent_id}")
+                return create_result['data']['createAgent']
+            else:
+                logger.error(f"HTTP Error during create: {create_response.status_code}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error creating agent registration: {str(e)}")
+            return None
+    
+    def capture_customer_registration(self, customer):
+        """
+        Create a new customer registration record in the portal using Amplify GraphQL API.
+        
+        Args:
+            customer: Dictionary containing customer registration data
+            
+        Returns:
+            The created customer record or None if there was an error
+        """
+        try:
+            # Create a new customer registration
+            create_mutation = """
+                mutation CreateCustomer($input: CreateCustomerInput!) {
+                    createCustomer(input: $input) {
+                        customerId
+                        name
+                        idNumber
+                    }
+                }
+            """
+            
+            # Prepare input with required fields from Amplify schema
+            customer_id = str(uuid.uuid4())
+            
+            # Map the input data to the schema fields
+            document = {
+                "customerId": customer_id,
+                "name": customer.get("name"),
+                "pinNumber": customer.get("pinNumber"),
+                "idNumber": customer.get("idNumber"),
+                "gender": customer.get("gender"),
+                "dateOfBirth": customer.get("dateOfBirth"),
+                "passportPhotoUrl": customer.get("passportPhotoUrl"),
+                "nationalIdOrPassportUrl": customer.get("nationalIdOrPassportUrl"),
+                "kraPinCardUrl": customer.get("kraPinCardUrl"),
+                "kycStatus": customer.get("kycStatus")
+            }
+            
+            create_variables = {
+                "input": document
+            }
+            
+            # Prepare the create request body
+            create_payload = {
+                'query': create_mutation,
+                'variables': create_variables
+            }
+            
+            # Make the create request to AppSync
+            create_response = requests.post(
+                self.PORTAL_GRAPHQL_URL,
+                headers=self.headers,
+                json=create_payload
+            )
+            
+            # Check if create was successful
+            if create_response.status_code == 200:
+                create_result = create_response.json()
+                if 'errors' in create_result:
+                    logger.error(f"GraphQL Errors during create: {create_result['errors']}")
+                    return None
+                logger.info(f"Customer registration created successfully: {customer_id}")
+                return create_result['data']['createCustomer']
+            else:
+                logger.error(f"HTTP Error during create: {create_response.status_code}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error creating customer registration: {str(e)}")
+            return None
+        
+        
     def capture_background_check(self, backgroud_check):
         """
         Create a new background check record in the portal using Amplify GraphQL API.

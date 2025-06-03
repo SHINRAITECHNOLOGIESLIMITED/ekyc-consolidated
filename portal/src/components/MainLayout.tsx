@@ -158,7 +158,7 @@ const Navigation = () => {
           items: [
             {
               type: "link",
-              text: "API Documentation (swagger)",
+              text: "API (swagger)",
               href: API_CONFIG.SWAGGER_UI_URL,
               external: true,
             },

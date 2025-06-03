@@ -72,13 +72,11 @@ Resources:
         AllowMethods: '''POST, OPTIONS'''
         MaxAge: 60
       OpenApiVersion: 3.0.1
-      StageVariables:
-        basePath: /Prod
   AuthorizerFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: Lambda Authorizer Function
-      CodeUri: process/functions/authorizer/src
+      CodeUri: shared/functions/authorizer/src
       Handler: app.handler
   AuthorizerFnLogGroup:
     Type: AWS::Logs::LogGroup
@@ -96,6 +94,10 @@ Resources:
       Environment:
         Variables:
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+          CUSTOMERREGISTRATIONSM_NAME: !GetAtt CustomerRegistrationSM.Name
+          CUSTOMERREGISTRATIONSM_ARN: !Ref CustomerRegistrationSM
+          AGENTREGISTRATIONSM_NAME: !GetAtt AgentRegistrationSM.Name
+          AGENTREGISTRATIONSM_ARN: !Ref AgentRegistrationSM
       Events:
         ApiGatewayPOSTAgentRegistration:
           Type: Api
@@ -117,6 +119,10 @@ Resources:
                 - secretsmanager:GetSecretValue
               Resource:
                 - !Ref PortalGraphQLSecret
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt CustomerRegistrationSM.Name
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt AgentRegistrationSM.Name
       Layers:
         - !Ref PortalProjectionLayer
 
@@ -127,11 +133,37 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${RegistrationFn}
       RetentionInDays: 30
+  CertificationFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Create KYC Certificates
+      CodeUri: process/functions/certification/src
+      Handler: app.handler
+      Environment:
+        Variables:
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref PortalGraphQLSecret
+      Layers:
+        - !Ref PortalProjectionLayer
+  CertificationFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${CertificationFn}
+      RetentionInDays: 30
   DocumentValidationFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: Validating that uploaded documents match the provided data
-      CodeUri: process/functions/document_validation/src
+      CodeUri: core/functions/document_validation/src
       Handler: app.handler
       Environment:
         Variables:
@@ -231,7 +263,7 @@ Resources:
     Properties:
       Description: Calls to external identity services to validate supplied data
         verification
-      CodeUri: process/functions/government_verification/src
+      CodeUri: core/functions/government_verification/src
       Handler: app.handler
       Environment:
         Variables:
@@ -279,7 +311,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: Handles background checking against Lexis Nexis API
-      CodeUri: process/functions/background_check/src
+      CodeUri: core/functions/background_check/src
       Handler: app.lambda_handler
       Environment:
         Variables:
@@ -314,7 +346,7 @@ Resources:
   FaceLivenessFn:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: process/functions/face_liveness/src
+      CodeUri: core/functions/face_liveness/src
       Handler: app.handler
       Environment:
         Variables:
@@ -384,7 +416,7 @@ Resources:
     Type: AWS::Serverless::LayerVersion
     Properties:
       Description: Projecting backend events into portal using graphql
-      ContentUri: shared/portal_project/src
+      ContentUri: shared/layers/portal_project/src
       RetentionPolicy: Retain
     Metadata:
       BuildMethod: python3.11
@@ -417,6 +449,234 @@ Resources:
             Condition:
               Bool:
                 aws:SecureTransport: 'false'
+  CustomerRegistrationSM:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Definition:
+        StartAt: Parallel
+        States:
+          Parallel:
+            Type: Parallel
+            Branches:
+              - StartAt: ID or Passport Provided
+                States:
+                  ID or Passport Provided:
+                    Type: Choice
+                    Choices:
+                      - Variable: $.idNumber
+                        IsPresent: true
+                        Next: National ID Document Validation
+                    Default: Passport Document Validation
+                  National ID Document Validation:
+                    Type: Task
+                    Resource: arn:aws:states:::lambda:invoke
+                    OutputPath: $.Payload
+                    Parameters:
+                      Payload.$: $
+                      FunctionName: ${DocumentValidation}
+                    Retry:
+                      - ErrorEquals:
+                          - Lambda.ServiceException
+                          - Lambda.AWSLambdaException
+                          - Lambda.SdkClientException
+                          - Lambda.TooManyRequestsException
+                        IntervalSeconds: 1
+                        MaxAttempts: 3
+                        BackoffRate: 2
+                    Next: ID Verification
+                  ID Verification:
+                    Type: Task
+                    Resource: arn:aws:states:::lambda:invoke
+                    OutputPath: $.Payload
+                    Parameters:
+                      Payload.$: $
+                      FunctionName: ${GovernmentVerification}
+                    Retry:
+                      - ErrorEquals:
+                          - Lambda.ServiceException
+                          - Lambda.AWSLambdaException
+                          - Lambda.SdkClientException
+                          - Lambda.TooManyRequestsException
+                        IntervalSeconds: 1
+                        MaxAttempts: 3
+                        BackoffRate: 2
+                    End: true
+                  Passport Document Validation:
+                    Type: Task
+                    Resource: arn:aws:states:::lambda:invoke
+                    Parameters:
+                      Payload.$: $
+                      FunctionName: ${DocumentValidation}
+                    Next: Passport Verification
+                  Passport Verification:
+                    Type: Task
+                    Resource: arn:aws:states:::lambda:invoke
+                    OutputPath: $.Payload
+                    Parameters:
+                      Payload.$: $
+                      FunctionName: ${GovernmentVerification}
+                    Retry:
+                      - ErrorEquals:
+                          - Lambda.ServiceException
+                          - Lambda.AWSLambdaException
+                          - Lambda.SdkClientException
+                          - Lambda.TooManyRequestsException
+                        IntervalSeconds: 1
+                        MaxAttempts: 3
+                        BackoffRate: 2
+                    End: true
+              - StartAt: KRA Pin Certificate Validation
+                States:
+                  KRA Pin Certificate Validation:
+                    Type: Task
+                    Resource: arn:aws:states:::lambda:invoke
+                    OutputPath: $.Payload
+                    Parameters:
+                      Payload.$: $
+                      FunctionName: ${DocumentValidation}
+                    Retry:
+                      - ErrorEquals:
+                          - Lambda.ServiceException
+                          - Lambda.AWSLambdaException
+                          - Lambda.SdkClientException
+                          - Lambda.TooManyRequestsException
+                        IntervalSeconds: 1
+                        MaxAttempts: 3
+                        BackoffRate: 2
+                    Next: TaxPayer Verification
+                  TaxPayer Verification:
+                    Type: Task
+                    Resource: arn:aws:states:::lambda:invoke
+                    OutputPath: $.Payload
+                    Parameters:
+                      Payload.$: $
+                      FunctionName: ${GovernmentVerification}
+                    Retry:
+                      - ErrorEquals:
+                          - Lambda.ServiceException
+                          - Lambda.AWSLambdaException
+                          - Lambda.SdkClientException
+                          - Lambda.TooManyRequestsException
+                        IntervalSeconds: 1
+                        MaxAttempts: 3
+                        BackoffRate: 2
+                    End: true
+            Next: Background Check
+          Background Check:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            OutputPath: $.Payload
+            Parameters:
+              Payload.$: $
+              FunctionName: ${BackgroundChecks}
+            Retry:
+              - ErrorEquals:
+                  - Lambda.ServiceException
+                  - Lambda.AWSLambdaException
+                  - Lambda.SdkClientException
+                  - Lambda.TooManyRequestsException
+                IntervalSeconds: 1
+                MaxAttempts: 3
+                BackoffRate: 2
+            Next: Certify and Persist
+          Certify and Persist:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            OutputPath: $.Payload
+            Parameters:
+              Payload.$: $
+              FunctionName: ${Certification}
+            Retry:
+              - ErrorEquals:
+                  - Lambda.ServiceException
+                  - Lambda.AWSLambdaException
+                  - Lambda.SdkClientException
+                  - Lambda.TooManyRequestsException
+                IntervalSeconds: 1
+                MaxAttempts: 3
+                BackoffRate: 2
+            End: true
+      Logging:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt CustomerRegistrationSMLogGroup.Arn
+      Policies:
+        - AWSXrayWriteOnlyAccess
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogDelivery
+                - logs:GetLogDelivery
+                - logs:UpdateLogDelivery
+                - logs:DeleteLogDelivery
+                - logs:ListLogDeliveries
+                - logs:PutResourcePolicy
+                - logs:DescribeResourcePolicies
+                - logs:DescribeLogGroups
+              Resource: '*'
+      Tracing:
+        Enabled: true
+      Type: STANDARD
+      DefinitionSubstitutions:
+        DocumentValidation: !Ref DocumentValidationFn
+        GovernmentVerification: !Ref GovernmentVerificationFn
+        BackgroundChecks: !Ref BackgroundChecksFn
+        Certification: !Ref CertificationFn
+  CustomerRegistrationSMLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
+        - ResourceId: CustomerRegistrationSM
+  AgentRegistrationSM:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Definition:
+        StartAt: LambdaTask
+        States:
+          LambdaTask:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              Payload.$: $
+              FunctionName: ${DocumentValidation}
+            End: true
+      Logging:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt AgentRegistrationSMLogGroup.Arn
+      Policies:
+        - AWSXrayWriteOnlyAccess
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogDelivery
+                - logs:GetLogDelivery
+                - logs:UpdateLogDelivery
+                - logs:DeleteLogDelivery
+                - logs:ListLogDeliveries
+                - logs:PutResourcePolicy
+                - logs:DescribeResourcePolicies
+                - logs:DescribeLogGroups
+              Resource: '*'
+      Tracing:
+        Enabled: true
+      Type: STANDARD
+      DefinitionSubstitutions:
+        DocumentValidation: !Ref DocumentValidationFn
+        GovernmentVerification: !Ref GovernmentVerificationFn
+        BackgroundChecks: !Ref BackgroundChecksFn
+        Certification: !Ref CertificationFn
+  AgentRegistrationSMLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
+        - ResourceId: AgentRegistrationSM
 Metadata:
   AWS::Composer::Groups:
     Group2:
@@ -428,6 +688,8 @@ Metadata:
         - FaceLivenessResults
         - KYCDocumentsBucket
         - RegistrationFn
+        - CustomerRegistrationSM
+        - AgentRegistrationSM
 Outputs:
   ApiGatewayUrl:
     Description: API Gateway Production URL
