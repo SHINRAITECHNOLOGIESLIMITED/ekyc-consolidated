@@ -405,10 +405,10 @@ def verify_taxpayerinfo(event_data):
         if "data" in api_result:
             if "responseCode" in api_result["data"]:
                 match api_result["data"]["responseCode"]:
-                    case 30000:
+                    case "30000":
                         #Valid ID
                         pinMatchResult = process(event_name='pin', api_field_name='pin', event=event_data, api_result=api_result)
-                        taxPayerNameMatchResult = process(event_name='taxPayerName', api_field_name='taxPayerName', event=event_data,
+                        taxPayerNameMatchResult = process(event_name='taxPayerName', api_field_name='taxpayerName', event=event_data,
                                                         api_result=api_result)
 
                         matchResults = dict(pin=pinMatchResult,
@@ -428,15 +428,17 @@ def verify_taxpayerinfo(event_data):
 
                         logger.info(f"Match results: {matchResults}")
                         return make_response(200, dict(results=matchResults))
-                    case 30001:
+                    case "30001":
                         #NOK Invalid User ID or Password
                         return make_response(400, {'message': 'Invalid User ID or Password', 'details': api_result})
-                    case 30002:
+                    case "30002":
                         #NOK Invalid ID
                         return make_response(400, {'message': 'Invalid ID', 'details': api_result})
-                    case 30003:
+                    case "30003":
                         #NOK iPage not Done
                         return make_response(400, {'message': 'iPage not Done', 'details': api_result})
+                    case _:
+                        return make_response(400, {'message': f'Unknown respsonse code {api_result["data"]["responseCode"]}', 'details': api_result})
             else:
                 return make_response(400, {'message': 'Missing response code in returned data', 'details': api_result['data']})
         else:
