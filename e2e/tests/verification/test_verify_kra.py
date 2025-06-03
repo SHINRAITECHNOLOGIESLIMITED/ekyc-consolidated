@@ -6,11 +6,12 @@ from e2e.tests.config import *
 class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
     def test_pin_A003388522V(self):
         payload ={"certificateDate":"2014-10-14", 
+            "idNumber":"32140017",
             "pin":"A003388522V", 
             "taxPayerName":"Jackson Gitonga Mwangi", 
             "emailAddress":"jackmwangi02@gmail.com",  
         }
-        response = post_with_auth(f"{APIGW_URL}/government/krapincertificate", json= json.dumps(payload))
+        response = post_with_auth(f"{APIGW_URL}/government/kra", json= json.dumps(payload))
         
         # Check if the response status code is 200 (OK)
         if response.status_code != 200:
@@ -26,7 +27,7 @@ class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
         payload ={"pin":"A011797599Y", 
             "taxPayerName":"JOEL MUUO",   
         }
-        response = post_with_auth(f"{APIGW_URL}/government/krapincertificate", json= json.dumps(payload))
+        response = post_with_auth(f"{APIGW_URL}/government/kra", json= json.dumps(payload))
         
         # Check if the response status code is 200 (OK)
         if response.status_code != 200:
@@ -41,7 +42,7 @@ class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
         payload ={"pin":"A008279496S", 
             "taxPayerName":"EFFIE NJOKI NYAMBURA",   
         }
-        response = post_with_auth(f"{APIGW_URL}/government/krapincertificate", json= json.dumps(payload))
+        response = post_with_auth(f"{APIGW_URL}/government/kra", json= json.dumps(payload))
         
         # Check if the response status code is 200 (OK)
         if response.status_code != 200:
@@ -56,7 +57,7 @@ class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
         payload ={"pin":"A005394549Z", 
             "taxPayerName":"PATRICK OMONDI ODHIAMBO ",   
         }
-        response = post_with_auth(f"{APIGW_URL}/government/krapincertificate", json= json.dumps(payload))
+        response = post_with_auth(f"{APIGW_URL}/government/kra", json= json.dumps(payload))
         
         # Check if the response status code is 200 (OK)
         if response.status_code != 200:

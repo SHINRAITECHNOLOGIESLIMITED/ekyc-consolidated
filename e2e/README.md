@@ -410,7 +410,7 @@ awscurl --service execute-api \
     "taxPayerName": "Jackson Gitonga Mwangi",
     "emailAddress": "jackmwangi02@gmail.com"
   }' \
-  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/krapincertificate
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/kra
 ```
 
 ##### test_pin_A011797599Y
@@ -424,7 +424,7 @@ awscurl --service execute-api \
     "pin": "A011797599Y",
     "taxPayerName": "JOEL MUUO"
   }' \
-  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/krapincertificate
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/kra
 ```
 
 ##### test_pin_A008279496S
@@ -435,10 +435,11 @@ awscurl --service execute-api \
   -X POST \
   -H "Content-Type: application/json" \
   -d '{
+    "idNumber":"32140017", 
     "pin": "A008279496S",
     "taxPayerName": "EFFIE NJOKI NYAMBURA"
   }' \
-  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/krapincertificate
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/kra
 ```
 
 ##### test_pin_A005394549Z
@@ -452,7 +453,7 @@ awscurl --service execute-api \
     "pin": "A005394549Z",
     "taxPayerName": "PATRICK OMONDI ODHIAMBO "
   }' \
-  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/krapincertificate
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/kra
 ```
 
 #### Passport Verification Tests

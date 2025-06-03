@@ -167,7 +167,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /government/kra-verification:
+  /government/kra:
     post:
       summary: Verify KRA PIN details against KRA database
       operationId: krapincertificate
@@ -607,9 +607,6 @@ components:
         gender:
           type: string
           description: Gender of the beneficiary
-          enum:
-            - Male
-            - Female
         dateOfBirth:
           type: string
           description: Date of birth of the beneficiary
@@ -635,10 +632,6 @@ components:
         gender:
           type: string
           description: Whether person is Male of Female
-          enum:
-            - Male
-            - Female
-          example: Male
         dateOfBirth:
           type: string
           description: Date of birth
@@ -646,13 +639,15 @@ components:
           example: 1990-01-31
       required:
         - idNumber
-        - fullNames
-        - dateOfBirth
       additionalProperties: false
 
     PassportVerificationRequest:
       type: object
       properties:
+        idNumber:
+          type: string
+          description: National ID Card number
+          example: '12345678'
         passportNumber:
           type: string
           description: Passport number
@@ -668,28 +663,24 @@ components:
           example: 1985-05-15
       required:
         - passportNumber
-        - fullNames
-        - dateOfBirth
+        - idNumber
       additionalProperties: false
-
     KRAVerificationRequest:
       type: object
       properties:
-        kraPin:
-          type: string
-          description: KRA PIN Number
-          example: A000000000B
-        fullNames:
-          type: string
-          description: Full names as per KRA records
-          example: Jane Doe
         idNumber:
           type: string
           description: National ID Card number or Passport number linked to KRA PIN
           example: 12345678
+        pin:
+          type: string
+          description: KRA PIN Number
+          example: A000000000B
+        taxPayerName:
+          type: string
+          description: Names as per KRA records
+          example: Jane Doe
       required:
-        - kraPin
-        - fullNames
         - idNumber
       additionalProperties: false
 
@@ -752,10 +743,10 @@ components:
           type: string
           description: URL of the uploaded document file
           format: url
-        idNumber:
-          type: string
-          description: National ID Card number provided by user
-          example: '12345678'
+          idNumber:
+            type: string
+            description: National ID Card number provided by user
+            example: '12345678'
         fullNames:
           type: string
           description: Full names provided by user

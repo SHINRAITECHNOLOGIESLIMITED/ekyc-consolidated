@@ -71,30 +71,21 @@ const Navigation = () => {
           items: [
             {
               type: "link",
-              text: "Agent Registration",
-              href: "/agents-registration",
-              info: (
-                <Badge color="red" size="small">
-                  WIP
-                </Badge>
-              )
+              text: "Agents Regisration",
+              href: "/agents",
             },
             {
               type: "link",
               text: "Customer Registration",
-              href: "/customers-registration",
-              info: (
-                <Badge color="red" size="small">
-                  WIP
-                </Badge>
-              )
+              href: "/customers",
             },
           ],
         },
+        { type: "divider" },
         // Docuements Section
         {
           type: "section-group",
-          title: "Documents",
+          title: "Core",
           items: [
             {
               type: "link",

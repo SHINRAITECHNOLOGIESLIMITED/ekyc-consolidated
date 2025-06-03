@@ -51,6 +51,80 @@ class Portal:
         }
         logger.info(f"Loaded portal graphql credentials. GraphQL URL: {self.PORTAL_GRAPHQL_URL}")
 
+    def capture_background_check(self, backgroud_check):
+        """
+        Create a new background check record in the portal using Amplify GraphQL API.
+        
+        Args:
+            backgroud_check: Dictionary containing background check data
+            
+        Returns:
+            The created background check record or None if there was an error
+        """
+        try:
+            # Create a new background check
+            create_mutation = """
+                mutation CreateBackGroundCheck($input: CreateBackGroundCheckInput!) {
+                    createBackGroundCheck(input: $input) {
+                        backGroundCheckId
+                        firstName
+                        lastName
+                    }
+                }
+            """
+            
+            # Prepare input with required fields from Amplify schema
+            background_check_id = str(uuid.uuid4())
+            
+            # Map the input data to the schema fields
+            document = {
+                "backGroundCheckId": background_check_id,
+                "firstName": backgroud_check.get("firstName"),
+                "middleName": backgroud_check.get("middleName", ""),
+                "lastName": backgroud_check.get("lastName"),
+                "gender": backgroud_check.get("gender"),
+                "dob": backgroud_check.get("dob"),
+                "nationalIdentificationNumber": backgroud_check.get("nationalIdentificationNumber"),
+                "countryCode": backgroud_check.get("countryCode"),
+                "entityType": backgroud_check.get("entityType"),
+                "sourceName": backgroud_check.get("sourceName"),
+                "results": json.dumps(backgroud_check.get("result")) if backgroud_check.get("result") else None
+            }
+            
+            create_variables = {
+                "input": document
+            }
+            
+            # Prepare the create request body
+            create_payload = {
+                'query': create_mutation,
+                'variables': create_variables
+            }
+            
+            # Make the create request to AppSync
+            create_response = requests.post(
+                self.PORTAL_GRAPHQL_URL,
+                headers=self.headers,
+                json=create_payload
+            )
+            
+            # Check if create was successful
+            if create_response.status_code == 200:
+                create_result = create_response.json()
+                if 'errors' in create_result:
+                    logger.error(f"GraphQL Errors during create: {create_result['errors']}")
+                    return None
+                logger.info(f"Background check created successfully: {background_check_id}")
+                return create_result['data']['createBackGroundCheck']
+            else:
+                logger.error(f"HTTP Error during create: {create_response.status_code}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error creating background check: {str(e)}")
+            return None
+
+        
     def capture_doc_validation(self, documentType, s3Path, documentIdentifier, matchResults, keywords_checks,
                                validation_accuracy,processing_accuracy,overall_confidence):
         """

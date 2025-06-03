@@ -8,7 +8,6 @@ import requests
 from PIL import Image
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.validation import validate
-from aws_lambda_powertools.utilities.validation.exceptions import SchemaValidationError
 from botocore.exceptions import ClientError
 from reportlab.pdfgen import canvas
 from textract_utils import extract,query
@@ -19,7 +18,7 @@ from portal import Portal,DOCUMENT_TYPE
 KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
 assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
 
-SETTING_NATIONAL_ID_USE_ADAPTER = True
+SETTING_NATIONAL_ID_USE_ADAPTER = False
 
 logger = Logger()
 tracer = Tracer()
@@ -171,7 +170,7 @@ def handler(event, context):
 
         except Exception as e:
             logger.error(f"An unexpected error occurred in lambda_handler: {e}")
-            return make_response(500, {'message': 'Internal Server Error'})
+            return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
     else:
         logger.error('Method Not Allowed - received {http_method}')
@@ -319,6 +318,10 @@ def validate_nationalid(data):
 
     try:
         validate(event=data, schema=schema)
+    except Exception as e:
+        logger.error(f"Schema validation failed for NationalID document: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+    try:
         object_key = f"NationalID/{data['idNumber']}.pdf"
         url, s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
@@ -396,12 +399,10 @@ def validate_nationalid(data):
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
-    except SchemaValidationError as e:
-        logger.error(f"Schema validation failed for NationalID document validation: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+    
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_nationalid: {e}")
-        return make_response(500, {'message': 'Internal Server Error'})
+        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
 
 def validate_passport(data):
@@ -429,6 +430,10 @@ def validate_passport(data):
 
     try:
         validate(event=data, schema=schema)
+    except Exception as e:
+        logger.error(f"Schema validation failed for Passport document validation: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+    try:
         object_key = f"Passport/{data['passportNumber']}.pdf"
         url, s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
@@ -507,12 +512,9 @@ def validate_passport(data):
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
-    except SchemaValidationError as e:
-        logger.error(f"Schema validation failed for Passport document validation: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_passport: {e}")
-        return make_response(500, {'message': 'Internal Server Error'})
+        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
 
 def validate_krapincertificate(data):
@@ -530,6 +532,10 @@ def validate_krapincertificate(data):
     }
     try:
         validate(event=data, schema=schema)
+    except Exception as e:
+        logger.error(f"Schema validation failed for KRAPinCertificate document validation: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+    try:
         object_key = f"KRAPinCertificate/{data['pin']}.pdf"
         url, s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
@@ -574,12 +580,10 @@ def validate_krapincertificate(data):
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
-    except SchemaValidationError as e:
-        logger.error(f"Schema validation failed for KRAPinCertificate document validation: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+    
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_krapincertificate: {e}")
-        return make_response(500, {'message': 'Internal Server Error'})
+        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
 
 def validate_cr12(data):
@@ -643,12 +647,12 @@ def validate_cr12(data):
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
-    except SchemaValidationError as e:
+    except Exception as e:
         logger.error(f"Schema validation failed for CertificateOfIncorporation  document validation: {e}")
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_cr12: {e}")
-        return make_response(500, {'message': 'Internal Server Error'})
+        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
 
 
 def extract_form_from_cr12_phrases(extractedData):
@@ -674,15 +678,16 @@ def extract_form_from_cr12_phrases(extractedData):
                           businessType=dict(value = businessType,confidence=0))
     return extracted_form
 
-
 def make_response(status_code, body):
     """
     Helper function to format responses for API Gateway.
     """
-    return {
+    response = {
         'statusCode': status_code,
         'headers': {
             'Content-Type': 'application/json'
         },
         'body': json.dumps(body)
     }
+    logger.info(f"Response: {response}")
+    return response

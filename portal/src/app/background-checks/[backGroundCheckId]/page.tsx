@@ -8,7 +8,7 @@ import { useParams } from "next/navigation";
 import React from "react";
 import BackGroundCheckDetails from "../BackGroundCheckDetails";
 
-const DocumentDetailsPageBackGroundCheck: React.FC = () => {
+const BackGroundCheckDetailsPage: React.FC = () => {
   const params = useParams();
   const backGroundCheckId = Array.isArray(params.backGroundCheckId)
     ? params.backGroundCheckId[0]
@@ -31,4 +31,4 @@ const DocumentDetailsPageBackGroundCheck: React.FC = () => {
   return <Details {...detailsParams} />;
 };
 
-export default DocumentDetailsPageBackGroundCheck;
+export default BackGroundCheckDetailsPage;
