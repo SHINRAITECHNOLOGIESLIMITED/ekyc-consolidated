@@ -71,21 +71,6 @@ Resources:
           X-Amz-Security-Token'''
         AllowMethods: '''POST, OPTIONS'''
         MaxAge: 60
-      GatewayResponses:
-        DEFAULT_5XX:
-          ResponseParameters:
-            Headers:
-              Access-Control-Allow-Origin: "'https://main.d2896e60a8d7f8.amplifyapp.com'"
-              Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Api-Key,X-Amz-Date,X-Amz-Security-Token'"
-          ResponseTemplates:
-            application/json: '{"message":"Internal server error", "requestId":"$context.requestId"}'
-        DEFAULT_4XX:
-          ResponseParameters:
-            Headers:
-              Access-Control-Allow-Origin: "'https://main.d2896e60a8d7f8.amplifyapp.com'"
-              Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Api-Key,X-Amz-Date,X-Amz-Security-Token'"
-          ResponseTemplates:
-            application/json: '{"message":"Client error", "requestId":"$context.requestId"}'
   AuthorizerFn:
     Type: AWS::Serverless::Function
     Properties:

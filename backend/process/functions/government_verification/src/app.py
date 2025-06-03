@@ -3,9 +3,6 @@ import json
 
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.validation import validate
-from aws_lambda_powertools.utilities.validation.exceptions import SchemaValidationError
-from fastjsonschema import JsonSchemaException as SchemaValidationError
-
 from jubilee_esb_api import JubileeESBAPI
 
 from portal import Portal,DOCUMENT_TYPE
@@ -192,72 +189,70 @@ def verify_nationalid(event_data):
 
     try:
         validate(schema=schema, event=event_data)
-        try:
-            api_result = serviceValidator.iprs.search_generic(dict(identifier="ID_NUMBER", value=event_data['idNumber']))
-            if "error" in api_result:
-                if api_result["error"]:
-                    return make_response(400, {'message': api_result['error'], 'details': api_result})
-            if "success" in api_result:
-                if api_result["success"] == False:
-                    return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
-            if 'data' in api_result:
-                # Constructing fullNames field with uppercase letters
-                firstName = api_result['data']['firstName'] if 'firstName' in api_result['data'] else ''
-                otherName = api_result['data']['otherName'] if 'otherName' in api_result['data'] else ''
-                surname = api_result['data']['surname'] if 'surname' in api_result['data'] else ''
-
-                fullNames = f"{firstName} {otherName} {surname}".replace("  ", " ").strip().upper()
-                api_result['data']['fullNames'] = fullNames
-
-
-                logger.info(api_result)
-
-                serialNumberMatchResult = process(event_name='serialNumber', api_field_name='serialNumber', event=event_data,
-                                                api_result=api_result)
-                idNumberMatchResult = process(event_name='idNumber', api_field_name='idNumber', event=event_data,
-                                            api_result=api_result)
-                fullNamesMatchResult = process(event_name='fullNames', api_field_name='fullNames',
-                                            event=event_data, api_result=api_result)
-                dateOfBirthMatchResult = process(event_name='dateOfBirth', api_field_name='dateOfBirth', event=event_data,
-                                                api_result=api_result,is_date_field=True)
-                dateOfIssueMatchResult = process(event_name='dateOfIssue', api_field_name='dateOfIssue', event=event_data,
-                                                api_result=api_result,is_date_field=True)
-                genderMatchResult = process(event_name='gender', api_field_name='gender', event=event_data,
-                                            api_result=api_result)
-                districtOfBirthMatchResult = process(event_name='districtOfBirth', api_field_name='placeOfBirth',
-                                                    event=event_data, api_result=api_result)
-
-                matchResults = dict(serialNumber=serialNumberMatchResult,
-                                    idNumber=idNumberMatchResult,
-                                    fullNames=fullNamesMatchResult,
-                                    dateOfBirth=dateOfBirthMatchResult,
-                                    dateOfIssue=dateOfIssueMatchResult,
-                                    gender=genderMatchResult,
-                                    districtOfBirth=districtOfBirthMatchResult,
-                                    )
-                _documentType=DOCUMENT_TYPE.NATIONAL_ID
-                _documentIdentifier=event_data['idNumber']
-
-                validation_accuracy,processing_accuracy = rate(matchResults)
-
-                portal.capture_doc_verification(documentType=_documentType,
-                                                documentIdentifier=_documentIdentifier,
-                                                matchResults=matchResults,
-                                                validation_accuracy=validation_accuracy,
-                                                processing_accuracy=processing_accuracy)
-
-                return make_response(200, dict(results=matchResults))
-            else:
-                return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
-        except Exception as e:
-            logger.error(f"National Id verfification failed: {e}")
-            return make_response(500, {'message': 'Passport verfification failed','details': str(e)})
-    except SchemaValidationError as e:
-        logger.error(f"Schema validation failed for NationalID document validation: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
-        logger.error(f"An unexpected error occurred in validate_nationalid: {e}")
-        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
+        logger.error(f"Schema validation failed for NationalID: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+    
+    try:
+        api_result = serviceValidator.iprs.search_generic(dict(identifier="ID_NUMBER", value=event_data['idNumber']))
+        if "error" in api_result:
+            if api_result["error"]:
+                return make_response(400, {'message': api_result['error'], 'details': api_result})
+        if "success" in api_result:
+            if api_result["success"] == False:
+                return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
+        if 'data' in api_result:
+            # Constructing fullNames field with uppercase letters
+            firstName = api_result['data']['firstName'] if 'firstName' in api_result['data'] else ''
+            otherName = api_result['data']['otherName'] if 'otherName' in api_result['data'] else ''
+            surname = api_result['data']['surname'] if 'surname' in api_result['data'] else ''
+
+            fullNames = f"{firstName} {otherName} {surname}".replace("  ", " ").strip().upper()
+            api_result['data']['fullNames'] = fullNames
+
+
+            logger.info(api_result)
+
+            serialNumberMatchResult = process(event_name='serialNumber', api_field_name='serialNumber', event=event_data,
+                                            api_result=api_result)
+            idNumberMatchResult = process(event_name='idNumber', api_field_name='idNumber', event=event_data,
+                                        api_result=api_result)
+            fullNamesMatchResult = process(event_name='fullNames', api_field_name='fullNames',
+                                        event=event_data, api_result=api_result)
+            dateOfBirthMatchResult = process(event_name='dateOfBirth', api_field_name='dateOfBirth', event=event_data,
+                                            api_result=api_result,is_date_field=True)
+            dateOfIssueMatchResult = process(event_name='dateOfIssue', api_field_name='dateOfIssue', event=event_data,
+                                            api_result=api_result,is_date_field=True)
+            genderMatchResult = process(event_name='gender', api_field_name='gender', event=event_data,
+                                        api_result=api_result)
+            districtOfBirthMatchResult = process(event_name='districtOfBirth', api_field_name='placeOfBirth',
+                                                event=event_data, api_result=api_result)
+
+            matchResults = dict(serialNumber=serialNumberMatchResult,
+                                idNumber=idNumberMatchResult,
+                                fullNames=fullNamesMatchResult,
+                                dateOfBirth=dateOfBirthMatchResult,
+                                dateOfIssue=dateOfIssueMatchResult,
+                                gender=genderMatchResult,
+                                districtOfBirth=districtOfBirthMatchResult,
+                                )
+            _documentType=DOCUMENT_TYPE.NATIONAL_ID
+            _documentIdentifier=event_data['idNumber']
+
+            validation_accuracy,processing_accuracy = rate(matchResults)
+
+            portal.capture_doc_verification(documentType=_documentType,
+                                            documentIdentifier=_documentIdentifier,
+                                            matchResults=matchResults,
+                                            validation_accuracy=validation_accuracy,
+                                            processing_accuracy=processing_accuracy)
+
+            return make_response(200, dict(results=matchResults))
+        else:
+            return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
+    except Exception as e:
+        logger.error(f"National Id verfification failed: {e}")
+        return make_response(500, {'message': 'Passport verfification failed','details': str(e)})
 
 
 def verify_passport(event_data):
@@ -285,90 +280,88 @@ def verify_passport(event_data):
     logger.info(event_data)
     try:
         validate(schema=schema, event=event_data)
-        try:
-            api_result = serviceValidator.iprs.search_passport_number(dict(
-                    identifier="PASSPORT",
-                    value=event_data["passportNumber"],
-                    idNumber=event_data["idNumber"]),
-                )
-            logger.info(api_result)
-            if "error" in api_result:
-                if api_result["error"]:
-                    return make_response(400, {'message': api_result['error'], 'details': api_result})
-            if "success" in api_result:
-                if api_result["success"] == False:
-                    return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
-            if "data" in api_result:
-                documentTypeMatchResult = process(event_name='documentType', api_field_name='documentType', event=event_data,
-                                                api_result=api_result)
-                countryCodeMatchResult = process(event_name='countryCode', api_field_name='countryCode', event=event_data,
-                                                api_result=api_result)
-                idNumberMatchResult = process(event_name='idNumber', api_field_name='idNumber',
-                                                    event=event_data, api_result=api_result)
-                passportNumberMatchResult = process(event_name='passportNumber', api_field_name='passportNumber',
-                                                    event=event_data, api_result=api_result)
-                personalNumberMatchResult = process(event_name='personalNumber', api_field_name='personalNumber',
-                                                    event=event_data, api_result=api_result)
-                surnameMatchResult = process(event_name='surname', api_field_name='surname', event=event_data,
-                                            api_result=api_result)
-                givenNamesMatchResult = process(event_name='givenNames', api_field_name='givenNames', event=event_data,
-                                                api_result=api_result)
-                genderMatchResult = process(event_name='gender', api_field_name='gender', event=event_data,
-                                            api_result=api_result)
-                dateOfBirthMatchResult = process(event_name='dateOfBirth', api_field_name='dateOfBirth', event=event_data,
-                                                api_result=api_result,is_date_field=True)
-                placeOfBirthMatchResult = process(event_name='placeOfBirth', api_field_name='placeOfBirth', event=event_data,
-                                                api_result=api_result)
-                dateOfIssueMatchResult = process(event_name='dateOfIssue', api_field_name='dateOfIssue', event=event_data,
-                                                api_result=api_result,is_date_field=True)
-                dateOfExpiryMatchResult = process(event_name='dateOfExpiry', api_field_name='dateOfExpiry', event=event_data,
-                                                api_result=api_result)
-                nationalityMatchResult = process(event_name='nationality', api_field_name='nationality', event=event_data,
-                                                api_result=api_result)
-                issuingAuthorityMatchResult = process(event_name='issuingAuthority', api_field_name='issuingAuthority',
-                                                    event=event_data, api_result=api_result)
-
-
-                matchResults = dict(documentType=documentTypeMatchResult,
-                                    countryCode=countryCodeMatchResult,
-                                    passportNumber=passportNumberMatchResult,
-                                    personalNumber=personalNumberMatchResult,
-                                    idNumber=idNumberMatchResult,
-                                    surname=surnameMatchResult,
-                                    givenNames=givenNamesMatchResult,
-                                    gender=genderMatchResult,
-                                    dateOfBirth=dateOfBirthMatchResult,
-                                    placeOfBirth=placeOfBirthMatchResult,
-                                    dateOfIssue=dateOfIssueMatchResult,
-                                    dateOfExpiry=dateOfExpiryMatchResult,
-                                    nationality=nationalityMatchResult,
-                                    issuingAuthority=issuingAuthorityMatchResult,
-                                    )
-
-                _documentType=DOCUMENT_TYPE.PASSPORT
-                _documentIdentifier=event_data['passportNumber']
-
-                validation_accuracy,processing_accuracy = rate(matchResults)
-
-                portal.capture_doc_verification(documentType=_documentType,
-                                                documentIdentifier=_documentIdentifier,
-                                                matchResults=matchResults,
-                                                validation_accuracy=validation_accuracy,
-                                                processing_accuracy=processing_accuracy)
-
-                logger.info(f"Match results: {matchResults}")
-                return make_response(200, dict(results=matchResults))
-            else:
-                return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
-        except Exception as e:
-            logger.error(f"Passport verfification failed: {e}")
-            return make_response(500, {'message': 'Passport verfification failed','details': str(e)})
-    except SchemaValidationError as e:
-        logger.error(f"Schema validation failed for Passport document validation: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
-        logger.error(f"An unexpected error occurred in validate_passport: {e}")
-        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
+        logger.error(f"Schema validation failed for Passport: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+    
+    try:
+        api_result = serviceValidator.iprs.search_passport_number(dict(
+                identifier="PASSPORT",
+                value=event_data["passportNumber"],
+                idNumber=event_data["idNumber"]),
+            )
+        logger.info(api_result)
+        if "error" in api_result:
+            if api_result["error"]:
+                return make_response(400, {'message': api_result['error'], 'details': api_result})
+        if "success" in api_result:
+            if api_result["success"] == False:
+                return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
+        if "data" in api_result:
+            documentTypeMatchResult = process(event_name='documentType', api_field_name='documentType', event=event_data,
+                                            api_result=api_result)
+            countryCodeMatchResult = process(event_name='countryCode', api_field_name='countryCode', event=event_data,
+                                            api_result=api_result)
+            idNumberMatchResult = process(event_name='idNumber', api_field_name='idNumber',
+                                                event=event_data, api_result=api_result)
+            passportNumberMatchResult = process(event_name='passportNumber', api_field_name='passportNumber',
+                                                event=event_data, api_result=api_result)
+            personalNumberMatchResult = process(event_name='personalNumber', api_field_name='personalNumber',
+                                                event=event_data, api_result=api_result)
+            surnameMatchResult = process(event_name='surname', api_field_name='surname', event=event_data,
+                                        api_result=api_result)
+            givenNamesMatchResult = process(event_name='givenNames', api_field_name='givenNames', event=event_data,
+                                            api_result=api_result)
+            genderMatchResult = process(event_name='gender', api_field_name='gender', event=event_data,
+                                        api_result=api_result)
+            dateOfBirthMatchResult = process(event_name='dateOfBirth', api_field_name='dateOfBirth', event=event_data,
+                                            api_result=api_result,is_date_field=True)
+            placeOfBirthMatchResult = process(event_name='placeOfBirth', api_field_name='placeOfBirth', event=event_data,
+                                            api_result=api_result)
+            dateOfIssueMatchResult = process(event_name='dateOfIssue', api_field_name='dateOfIssue', event=event_data,
+                                            api_result=api_result,is_date_field=True)
+            dateOfExpiryMatchResult = process(event_name='dateOfExpiry', api_field_name='dateOfExpiry', event=event_data,
+                                            api_result=api_result)
+            nationalityMatchResult = process(event_name='nationality', api_field_name='nationality', event=event_data,
+                                            api_result=api_result)
+            issuingAuthorityMatchResult = process(event_name='issuingAuthority', api_field_name='issuingAuthority',
+                                                event=event_data, api_result=api_result)
+
+
+            matchResults = dict(documentType=documentTypeMatchResult,
+                                countryCode=countryCodeMatchResult,
+                                passportNumber=passportNumberMatchResult,
+                                personalNumber=personalNumberMatchResult,
+                                idNumber=idNumberMatchResult,
+                                surname=surnameMatchResult,
+                                givenNames=givenNamesMatchResult,
+                                gender=genderMatchResult,
+                                dateOfBirth=dateOfBirthMatchResult,
+                                placeOfBirth=placeOfBirthMatchResult,
+                                dateOfIssue=dateOfIssueMatchResult,
+                                dateOfExpiry=dateOfExpiryMatchResult,
+                                nationality=nationalityMatchResult,
+                                issuingAuthority=issuingAuthorityMatchResult,
+                                )
+
+            _documentType=DOCUMENT_TYPE.PASSPORT
+            _documentIdentifier=event_data['passportNumber']
+
+            validation_accuracy,processing_accuracy = rate(matchResults)
+
+            portal.capture_doc_verification(documentType=_documentType,
+                                            documentIdentifier=_documentIdentifier,
+                                            matchResults=matchResults,
+                                            validation_accuracy=validation_accuracy,
+                                            processing_accuracy=processing_accuracy)
+
+            logger.info(f"Match results: {matchResults}")
+            return make_response(200, dict(results=matchResults))
+        else:
+            return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
+    except Exception as e:
+        logger.error(f"Passport verfification failed: {e}")
+        return make_response(500, {'message': 'Passport verfification failed','details': str(e)})
 
 
 def verify_taxpayerinfo(event_data):
@@ -385,85 +378,84 @@ def verify_taxpayerinfo(event_data):
 
     try:
         validate(schema=schema, event=event_data)
-
-        """
-        Following are the options for the typeOfTaxpayer parameter:
-         COMP: Non-Individual – Company
-         KE: Individual - Kenyan Citizen
-         NKE: Individual – Non-Kenyan Resident
-         NKENR: Individual – Non-Kenyan Non-Resident
-        """
-        try:
-            api_result = serviceValidator.kra.validate_id(dict(
-                idNo=event_data['idNumber'],
-                country='KE' #Individual - Kenyan Citizen
-            ))
-            logger.info(api_result)
-
-            if "error" in api_result:
-                if api_result["error"]:
-                    return make_response(400, {'message': api_result['error'], 'details': api_result})
-            if "success" in api_result:
-                if api_result["success"] == False:
-                    return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
-            if "data" in api_result:
-                if "responseCode" in api_result["data"]:
-                    match api_result["data"]["responseCode"]:
-                        case 30000:
-                            #Valid ID
-                            pinMatchResult = process(event_name='pin', api_field_name='pin', event=event_data, api_result=api_result)
-                            taxPayerNameMatchResult = process(event_name='taxPayerName', api_field_name='taxPayerName', event=event_data,
-                                                            api_result=api_result)
-
-                            matchResults = dict(pin=pinMatchResult,
-                                                taxPayerName=taxPayerNameMatchResult,
-                                                )
-
-                            _documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE
-                            _documentIdentifier=event_data['pin']
-
-                            validation_accuracy,processing_accuracy = rate(matchResults)
-
-                            portal.capture_doc_verification(documentType=_documentType,
-                                                            documentIdentifier=_documentIdentifier,
-                                                            matchResults=matchResults,
-                                                            validation_accuracy=validation_accuracy,
-                                                            processing_accuracy=processing_accuracy)
-
-                            logger.info(f"Match results: {matchResults}")
-                            return make_response(200, dict(results=matchResults))
-                        case 30001:
-                            #NOK Invalid User ID or Password
-                            return make_response(400, {'message': 'Invalid User ID or Password', 'details': api_result})
-                        case 30002:
-                            #NOK Invalid ID
-                            return make_response(400, {'message': 'Invalid ID', 'details': api_result})
-                        case 30003:
-                            #NOK iPage not Done
-                            return make_response(400, {'message': 'iPage not Done', 'details': api_result})
-                else:
-                    return make_response(400, {'message': 'Missing response code in returned data', 'details': api_result['data']})
-            else:
-                return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
-        except Exception as e:
-            logger.error(f"KRA ID validation failed: {str(e)}")
-            return make_response(500, {'message': 'Error: KRA ID validation failed', 'details': str(e)})
-    except SchemaValidationError as e:
-        logger.error(f"Schema validation failed for KRAPinCertificate document validation: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
     except Exception as e:
-        logger.error(f"An unexpected error occurred in validate_krapincertificate: {e}")
-        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
+        logger.error(f"Schema validation failed for KRA Pin: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+    
+    """
+    Following are the options for the typeOfTaxpayer parameter:
+        COMP: Non-Individual – Company
+        KE: Individual - Kenyan Citizen
+        NKE: Individual – Non-Kenyan Resident
+        NKENR: Individual – Non-Kenyan Non-Resident
+    """
+    try:
+        api_result = serviceValidator.kra.validate_id(dict(
+            idNo=event_data['idNumber'],
+            country='KE' #Individual - Kenyan Citizen
+        ))
+        logger.info(api_result)
+
+        if "error" in api_result:
+            if api_result["error"]:
+                return make_response(400, {'message': api_result['error'], 'details': api_result})
+        if "success" in api_result:
+            if api_result["success"] == False:
+                return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
+        if "data" in api_result:
+            if "responseCode" in api_result["data"]:
+                match api_result["data"]["responseCode"]:
+                    case 30000:
+                        #Valid ID
+                        pinMatchResult = process(event_name='pin', api_field_name='pin', event=event_data, api_result=api_result)
+                        taxPayerNameMatchResult = process(event_name='taxPayerName', api_field_name='taxPayerName', event=event_data,
+                                                        api_result=api_result)
+
+                        matchResults = dict(pin=pinMatchResult,
+                                            taxPayerName=taxPayerNameMatchResult,
+                                            )
+
+                        _documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE
+                        _documentIdentifier=event_data['pin']
+
+                        validation_accuracy,processing_accuracy = rate(matchResults)
+
+                        portal.capture_doc_verification(documentType=_documentType,
+                                                        documentIdentifier=_documentIdentifier,
+                                                        matchResults=matchResults,
+                                                        validation_accuracy=validation_accuracy,
+                                                        processing_accuracy=processing_accuracy)
+
+                        logger.info(f"Match results: {matchResults}")
+                        return make_response(200, dict(results=matchResults))
+                    case 30001:
+                        #NOK Invalid User ID or Password
+                        return make_response(400, {'message': 'Invalid User ID or Password', 'details': api_result})
+                    case 30002:
+                        #NOK Invalid ID
+                        return make_response(400, {'message': 'Invalid ID', 'details': api_result})
+                    case 30003:
+                        #NOK iPage not Done
+                        return make_response(400, {'message': 'iPage not Done', 'details': api_result})
+            else:
+                return make_response(400, {'message': 'Missing response code in returned data', 'details': api_result['data']})
+        else:
+            return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
+    except Exception as e:
+        logger.error(f"KRA ID validation failed: {str(e)}")
+        return make_response(500, {'message': 'Error: KRA ID validation failed', 'details': str(e)})
 
 
 def make_response(status_code, body):
     """
     Helper function to format responses for API Gateway.
     """
-    return {
+    response = {
         'statusCode': status_code,
         'headers': {
             'Content-Type': 'application/json'
         },
         'body': json.dumps(body)
     }
+    logger.info(f"Response: {response}")
+    return response
