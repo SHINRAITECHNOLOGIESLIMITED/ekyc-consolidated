@@ -17,6 +17,7 @@ import AppLayout from "@cloudscape-design/components/app-layout";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import PROJECT_VERSION from "@/constants/release";
+import { API_CONFIG } from "@/constants/api";
 
 const LoadingOverlay = () => (
   <div
@@ -62,6 +63,11 @@ const Navigation = () => {
           type: "link",
           text: "Dashboard",
           href: "/",
+          info: (
+                <Badge color="red" size="small">
+                  WIP
+                </Badge>
+              ),
         },
         { type: "divider" },
         // Processes Section
@@ -82,7 +88,7 @@ const Navigation = () => {
           ],
         },
         { type: "divider" },
-        // Docuements Section
+        // Documents Section
         {
           type: "section-group",
           title: "Core",
@@ -95,7 +101,7 @@ const Navigation = () => {
                 <Badge color="red" size="small">
                   WIP
                 </Badge>
-              )
+              ),
             },
             {
               type: "link",
@@ -110,7 +116,7 @@ const Navigation = () => {
             {
               type: "link",
               text: "Background Checks",
-              href: "/background-checks"
+              href: "/background-checks",
             },
           ],
         },
@@ -140,6 +146,21 @@ const Navigation = () => {
                   WIP
                 </Badge>
               ),
+            },
+          ],
+        },
+        { type: "divider" },
+        // Documentation Section
+        {
+          type: "section-group",
+          title: "Documentation",
+
+          items: [
+            {
+              type: "link",
+              text: "API Documentation (swagger)",
+              href: API_CONFIG.SWAGGER_UI_URL,
+              external: true,
             },
           ],
         },
