@@ -92,6 +92,13 @@ python -m e2e.tests.verification.test_verify_krapincertificate
 python -m e2e.tests.verification.test_verify_passport
 ```
 
+### Background check Tests
+
+```bash
+# Check background using lexisnexis api
+python -m e2e.tests.backgroundCheck.test_background_check
+```
+
 ## Running Tests with cURL
 
 ### Authentication
