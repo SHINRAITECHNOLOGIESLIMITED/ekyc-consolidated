@@ -728,3 +728,6 @@ Outputs:
   DocumentValidationFnLogGroup:
     Description: Document validation log group
     Value: !Ref DocumentValidationFnLogGroup
+  RegistrationFnLogGroup:
+    Description: Registration log group
+    Value: !Ref RegistrationFnLogGroup
