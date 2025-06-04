@@ -1,26 +1,18 @@
-import json
 import unittest
-from pprint import pprint
 
 from e2e.tests.config import *
+from e2e.tests.verification.verify_test_util import verifity_test
 class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
+    URL = f"{APIGW_URL}/government/kra"
     def test_pin_A003388522V(self):
         payload ={
             "idNumber":"32140017",
             "pin":"A003388522V",
             "taxPayerName":"Jackson Gitonga Mwangi",
         }
-        response = post_with_auth(f"{APIGW_URL}/government/kra", json= json.dumps(payload))
-
-        # Check if the response status code is 200 (OK)
-        if response.status_code != 200:
-            print(response.text)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
-
+        verifity_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
 
     def test_pin_A011797599Y(self):
         payload ={
@@ -28,33 +20,19 @@ class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
             "pin":"A011797599Y",
             "taxPayerName":"JOEL MUUO",
         }
-        response = post_with_auth(f"{APIGW_URL}/government/kra", json= json.dumps(payload))
-
-        # Check if the response status code is 200 (OK)
-        if response.status_code != 200:
-            print(response.text)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
-
+        verifity_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
+        
     def test_pin_A008279496S(self):
         payload ={
             "idNumber":"32140017",
             "pin":"A008279496S",
             "taxPayerName":"EFFIE NJOKI NYAMBURA",
         }
-        response = post_with_auth(f"{APIGW_URL}/government/kra", json= json.dumps(payload))
-
-        # Check if the response status code is 200 (OK)
-        if response.status_code != 200:
-            print(response.text)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
+        verifity_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
 
     def test_pin_A005394549Z(self):
         payload ={
@@ -62,16 +40,9 @@ class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
             "pin":"A005394549Z",
             "taxPayerName":"PATRICK OMONDI ODHIAMBO ",
         }
-        response = post_with_auth(f"{APIGW_URL}/government/kra", json= json.dumps(payload))
-
-        # Check if the response status code is 200 (OK)
-        if response.status_code != 200:
-            print(response.text)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
+        verifity_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
 
 
 if __name__ == '__main__':

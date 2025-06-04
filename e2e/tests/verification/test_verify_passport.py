@@ -1,9 +1,9 @@
 import unittest
-from pprint import pprint
-import json
-
 from e2e.tests.config import *
+from e2e.tests.verification.verify_test_util import verifity_test
+
 class TestPassportDocumentVerification(unittest.TestCase):
+    URL=f"{APIGW_URL}/government/passport"
     def test_passportnumber_AK1515374(self):
         payload ={"documentType":"P",
             "countryCode":"KEN",
@@ -20,15 +20,9 @@ class TestPassportDocumentVerification(unittest.TestCase):
             "nationality":"KENYAN",
             "issuingAuthority":"GOVERNMENT OF KENYA",
         }
-        response = post_with_auth(f"{APIGW_URL}/government/passport", json= json.dumps(payload))
-        # Check if the response status code is 200 (OK)
-        if response.status_code != 200:
-            print(response.text)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
+        verifity_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
 
 
     def test_passportnumber_AK1370344(self):
@@ -47,55 +41,9 @@ class TestPassportDocumentVerification(unittest.TestCase):
             "nationality":"KENYAN",
             "issuingAuthority":"GOVERNMENT OF KENYA",
         }
-        response = post_with_auth(f"{APIGW_URL}/government/passport", json= json.dumps(payload))
-        # Check if the response status code is 200 (OK)
-        if response.status_code != 200:
-            print(response.text)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
-
-
-    ## --- Test with debug --- ##
-    
-    # def test_debug_passport_api_response(self):
-    #     """
-    #     Test to debug the passport API response by printing both the request payload
-    #     and the raw API response to identify payload issues.
-    #     """
-    #     payload ={"documentType":"P",
-    #         "countryCode":"KEN",
-    #         "passportNumber":"AK1515374",
-    #         "idNumber":"32140017",
-    #         "personalNumber":"741116",
-    #         "surname":"NYAMBURA",
-    #         "gender": "F",
-    #         "givenNames":"EFFIE NJOKI",
-    #         "dateOfBirth":"1994-12-19",
-    #         "placeOfBirth":"KIAMBU, KEN",
-    #         "dateOfIssue":"2024-05-06",
-    #         "dateOfExpiry":"2034-05-05",
-    #         "nationality":"KENYAN",
-    #         "issuingAuthority":"GOVERNMENT OF KENYA",
-    #     }
-    #     response = post_with_auth(f"{APIGW_URL}/government/passport", json=payload)
-
-    #     print("\n=== RAW API RESPONSE ===")
-    #     print(f"Status Code: {response.status_code}")
-    #     print("Headers:")
-    #     pprint(dict(response.headers))
-    #     print("\nResponse Body:")
-
-    #     try:
-    #         response_json = response.json()
-    #         pprint(response_json)
-    #     except json.JSONDecodeError:
-    #         print(response.text)
-
-    #     self.assertTrue(True, "This test is for debugging purposes only")
-
+        verifity_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
 
 if __name__ == '__main__':
     unittest.main()

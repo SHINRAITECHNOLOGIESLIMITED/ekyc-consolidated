@@ -5,7 +5,9 @@ from pprint import pprint
 import requests
 
 from e2e.tests.config import *
+from e2e.tests.verification.verify_test_util import verifity_test
 class TestNationalIDDocumentVerification(unittest.TestCase):
+    URL =f"{APIGW_URL}/government/nationalid"
     def test_idnumber_23667272(self):
         payload ={"serialNumber":"242865407", 
             "idNumber":"23667272", 
@@ -15,18 +17,9 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
             "gender":"Female", 
             "districtOfBirth":"THIKA WEST"            
         }
-        response = post_with_auth(f"{APIGW_URL}/government/nationalid", json= json.dumps(payload))
-        
-        # Check if the response status code is 200 (OK)
-        if response.status_code != 200:
-            print(response.text)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
-
-    
+        verifity_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
     def test_idnumber_32140017(self):
         payload ={"serialNumber":"702945559", 
             "idNumber":"32140017", 
@@ -36,17 +29,9 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
             "gender":"Female", 
             "districtOfBirth":"KIAMBU"            
         }
-        
-        response = post_with_auth(f"{APIGW_URL}/government/nationalid", json= json.dumps(payload))
-        
-        # Check if the response status code is 200 (OK)
-        if response.status_code != 200:
-            print(response.text)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
+        verifity_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
     
     def test_idnumber_36296352(self):
         payload ={"serialNumber":"242772451", 
@@ -57,17 +42,9 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
             "gender":"Male", 
             "districtOfBirth":"KIBWEZI"            
         }
-        
-        response = post_with_auth(f"{APIGW_URL}/government/nationalid", json= json.dumps(payload))
-        
-        # Check if the response status code is 200 (OK)
-        if response.status_code != 200:
-            print(response.text)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
+        verifity_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
     
     def test_idnumber_23224868(self):
         payload ={"serialNumber":"217990310", 
@@ -78,17 +55,9 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
             "gender":"Male", 
             "districtOfBirth":"KIBWEZI"            
         }
-        response = post_with_auth(f"{APIGW_URL}/government/nationalid", json= json.dumps(payload))
-        
-        # Check if the response status code is 200 (OK)
-        if response.status_code != 200:
-            print(response.text)
-        self.assertEqual(response.status_code, 200)
-
-        #print the validation results
-        results = response.json()
-        pprint(results)
-    
+        verifity_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
 
 if __name__ == '__main__':
     unittest.main()

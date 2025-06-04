@@ -1,11 +1,10 @@
-import json
-import unittest
-from pprint import pprint
 
+import unittest
 from e2e.tests.config import *
+from e2e.tests.registration.register_test_util import register_test
 
 class TestAgentRegistration(unittest.TestCase):
-
+    URL = f"{APIGW_URL}/agent-registration"
     def test_valid_agent_registration_njoki(self):
         payload = {
             "agentType": "Individual",
@@ -18,23 +17,9 @@ class TestAgentRegistration(unittest.TestCase):
             "dateOfBirth": "1994-12-19",
             "businessNumber": "BN987654321"
         }
-
-        response = post_with_auth(f"{APIGW_URL}/agent-registration", json=payload)
-
-        print("\n=== RAW API RESPONSE ===")
-        print(f"Status Code: {response.status_code}")
-        print("Headers:")
-        pprint(dict(response.headers))
-        print("\nResponse Body:")
-
-        try:
-            response_json = response.json()
-            pprint(response_json)
-        except json.JSONDecodeError:
-            print(response.text)
-
-        # self.assertTrue(True)
-        self.assertEqual(response.status_code, 200)
+        register_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
 
     def test_valid_agent_registration_roy(self):
         payload = {
@@ -48,23 +33,9 @@ class TestAgentRegistration(unittest.TestCase):
             "dateOfBirth": "2001-09-04",
             "businessNumber": "BN987654321"
         }
-
-        response = post_with_auth(f"{APIGW_URL}/agent-registration", json=payload)
-
-        print("\n=== RAW API RESPONSE ===")
-        print(f"Status Code: {response.status_code}")
-        print("Headers:")
-        pprint(dict(response.headers))
-        print("\nResponse Body:")
-
-        try:
-            response_json = response.json()
-            pprint(response_json)
-        except json.JSONDecodeError:
-            print(response.text)
-
-        # self.assertTrue(True)
-        self.assertEqual(response.status_code, 200)
+        register_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
 
     def test_valid_agent_registration_pato(self):
         payload = {
@@ -78,23 +49,9 @@ class TestAgentRegistration(unittest.TestCase):
             "dateOfBirth": "2001-09-04",
             "businessNumber": "BN987654321"
         }
-
-        response = post_with_auth(f"{APIGW_URL}/agent-registration", json=payload)
-
-        print("\n=== RAW API RESPONSE ===")
-        print(f"Status Code: {response.status_code}")
-        print("Headers:")
-        pprint(dict(response.headers))
-        print("\nResponse Body:")
-
-        try:
-            response_json = response.json()
-            pprint(response_json)
-        except json.JSONDecodeError:
-            print(response.text)
-
-        # self.assertTrue(True)
-        self.assertEqual(response.status_code, 200)
+        register_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
 
 if __name__ == '__main__':
     unittest.main()
