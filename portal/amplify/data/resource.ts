@@ -91,7 +91,7 @@ const schema = a.schema({
       passportNumber: a.string(),
       gender: a.string().required(),
       dateOfBirth: a.string().required(),
-      passportPhotoUrl: a.string().required(),
+      passportPhotoUrl: a.string(),
       nationalIdCardUrl: a.string().required(),
       passportUrl: a.string(),
       kraPinCardUrl: a.string().required(),

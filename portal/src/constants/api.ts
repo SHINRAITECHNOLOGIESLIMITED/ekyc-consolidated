@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sfl7nouy94.execute-api.eu-west-1.amazonaws.com/Prod';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Prod';
 const VALIDATED_DOCS_BASE_S3_PATH = process.env.NEXT_PUBLIC_API_URL || 's3://jubilee-ekyc-backend-kycdocume-842206816107';
 const API_HEADERS = {
     'Content-Type': 'application/json'
