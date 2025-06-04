@@ -15,5 +15,4 @@ def background_check_test(tester,payload,url):
             print(response.text,file=sys.stderr)
         tester.fail(f"Request failed with status code {response.status_code}")
     tester.assertEqual(response.status_code, 200)
-    pprint(response.json(), stream=sys.stderr)
     
