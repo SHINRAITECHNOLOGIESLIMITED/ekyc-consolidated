@@ -99,6 +99,17 @@ python -m e2e.tests.verification.test_verify_passport
 python -m e2e.tests.backgroundCheck.test_background_check
 ```
 
+
+### Registration Tests
+
+```bash
+# Test agent registration
+python -m e2e.tests.registration.test_agent_registration
+
+# Test customer registration
+python -m e2e.tests.registration.test_customer_registration
+```
+
 ## Running Tests with cURL
 
 ### Authentication
