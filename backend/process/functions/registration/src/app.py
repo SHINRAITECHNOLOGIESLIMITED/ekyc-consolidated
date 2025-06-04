@@ -19,7 +19,6 @@ sfn_client = boto3.client('stepfunctions')
 @logger.inject_lambda_context
 @tracer.capture_lambda_handler
 def handler(event, context):
-
     logger.info(f"Received event: {json.dumps(event)}")
 
     http_method = event.get('httpMethod')
@@ -65,12 +64,40 @@ def register_agent(event_data):
             "dateOfBirth": {"type": "string"},
             "businessNumber": {"type": "string"}
         },
-        "required": ["agentType", "name", "pinNumber", "passportPhotoUrl"],
+        "required": ["agentType", "name", "pinNumber"],
         "additionalProperties": True
     }
-
     try:
         validate(schema=schema, event=event_data)
+        match event_data["agentType"]:
+            case "Individual":
+                if not("idNumber" in event_data):
+                    raise Exception("idNumber should be supplied for Individual")
+                if "businessNumber" in event_data:
+                    raise Exception("businessNumber should not be supplied for Individual")
+                if not("passportPhotoUrl" in event_data):
+                    raise Exception("passportPhotoUrl should be supplied for Individual")
+                if not("nationalIdCardUrl" in event_data):
+                    raise Exception("nationalIdCardUrl should be supplied for Individual")
+                if "companyCertificateUrl" in event_data:
+                    raise Exception("companyCertificateUrl should not be supplied for Individual")
+                if not("dateOfBirth" in event_data):
+                    raise Exception("dateOfBirth should be supplied for Individual")
+            case "Business":
+                if not("businessNumber" in event_data):
+                    raise Exception("businessNumber should be supplied for Business")
+                if "idNumber" in event_data:
+                    raise Exception("idNumber should not be supplied for Business")
+                if not("passportPhotoUrl" in event_data):
+                    raise Exception("passportPhotoUrl should be supplied for Business")
+                if not("nationalIdCardUrl" in event_data):
+                    raise Exception("nationalIdCardUrl should be supplied for Business")
+                if not("companyCertificateUrl" in event_data):
+                    raise Exception("companyCertificateUrl should be supplied for Business")
+                if "dateOfBirth" in event_data:
+                    raise Exception("dateOfBirth should not be supplied for Business")
+            case _:
+                raise Exception(f"agentType should be either Individual or Business not {event_data['agentType']}")
     except Exception as e:
         logger.error(f"Schema validation failed for Agent: {e}")
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
@@ -110,7 +137,7 @@ def register_customer(event_data):
             "kraPinCardUrl": {"type": "string"}
         },
         "required": ["name", "pinNumber", "idNumber", "gender", "dateOfBirth", "passportPhotoUrl", 
-                    "nationalIdUrl", "kraPinCardUrl"],
+                    "nationalIdCardUrl", "kraPinCardUrl"],
         "additionalProperties": True
     }
 
