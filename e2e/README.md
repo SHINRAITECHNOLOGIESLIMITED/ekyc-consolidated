@@ -159,40 +159,40 @@ chmod +x test_national_id.sh
 ### Validation Tests
 Tests that validate user-provided data against uploaded document images/PDFs (checking if the data entered matches what appears on the document):
 
-- `test_validate_cr12.py`: 
+- `test_validate_cr12.py`:
   - Tests CR12 document validation
   - Validates Certificate of Incorporation details against uploaded document
   - Tests business number PVT-RXUMYGVQ for DETALI INSURANCE AGENCY LIMITED
 
-- `test_validate_krapincertificate.py`: 
+- `test_validate_krapincertificate.py`:
   - Tests KRA PIN certificate validation
   - Validates PIN A003388522V for Jackson Gitonga Mwangi
   - Checks certificate details against uploaded document
 
-- `test_validate_nationalid.py`: 
+- `test_validate_nationalid.py`:
   - Tests National ID validation
   - Validates ID numbers 36296352 and 23224868
   - Checks ID details against uploaded document images
 
-- `test_validate_passport.py`: 
+- `test_validate_passport.py`:
   - Tests Passport validation
   - Validates passport number DK9038 for GEORGE HUMPHREY KAJIMBA
   - Checks passport details against uploaded document
-  
+
 ### Verification Tests
 Tests that verify user-provided data against official government identity services like IPRS and KRA (checking if the data is authentic according to official government records):
 
-- `test_verify_krapincertificate.py`: 
+- `test_verify_krapincertificate.py`:
   - Tests KRA PIN certificate verification
   - Verifies multiple PINs: A003388522V, A011797599Y, A008279496S, A005394549Z
   - Checks PIN information against KRA records
 
-- `test_verify_nationalid.py`: 
+- `test_verify_nationalid.py`:
   - Tests National ID verification
   - Verifies ID numbers 23667272, 32140017, 36296352, 23224868
   - Checks ID information against government records
 
-- `test_verify_passport.py`: 
+- `test_verify_passport.py`:
   - Tests Passport verification
   - Verifies passport numbers AK1515374 and AK1370344
   - Checks passport information against government records
@@ -225,7 +225,7 @@ awscurl --service execute-api \
     "districtOfBirth": "KIBWEZI",
     "placeOfIssue": "KIBWEZI"
   }' \
-  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/document/nationalid
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/document/nationalid | jq .
 ```
 
 ##### test_idnumber_23224868
@@ -304,7 +304,6 @@ awscurl --service execute-api \
     "personalNumber": "1736740",
     "surname": "KAJIMBA",
     "givenNames": "GEORGE HUMPHREY",
-    "gender": "M",
     "dateOfBirth": "1987-05-18",
     "placeOfBirth": "MIGORI, Ken",
     "dateOfIssue": "2020-08-20",
@@ -312,7 +311,7 @@ awscurl --service execute-api \
     "nationality": "KENYAN",
     "issuingAuthority": "GOVERNMENT OF KENYA"
   }' \
-  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/document/passport
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/document/passport | jq .
 ```
 
 ### Verification Tests
@@ -335,7 +334,7 @@ awscurl --service execute-api \
     "gender": "Female",
     "districtOfBirth": "THIKA WEST"
   }' \
-  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/nationalid
+  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/nationalid | jq .
 ```
 
 ##### test_idnumber_32140017
@@ -405,10 +404,9 @@ awscurl --service execute-api \
   -X POST \
   -H "Content-Type: application/json" \
   -d '{
-    "certificateDate": "2014-10-14",
     "pin": "A003388522V",
+    "idNumber": "32140017",
     "taxPayerName": "Jackson Gitonga Mwangi",
-    "emailAddress": "jackmwangi02@gmail.com"
   }' \
   https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/kra
 ```
@@ -421,6 +419,7 @@ awscurl --service execute-api \
   -X POST \
   -H "Content-Type: application/json" \
   -d '{
+    "idNumber": "36296352",
     "pin": "A011797599Y",
     "taxPayerName": "JOEL MUUO"
   }' \
@@ -435,7 +434,7 @@ awscurl --service execute-api \
   -X POST \
   -H "Content-Type: application/json" \
   -d '{
-    "idNumber":"32140017", 
+    "idNumber":"32140017",
     "pin": "A008279496S",
     "taxPayerName": "EFFIE NJOKI NYAMBURA"
   }' \
@@ -452,6 +451,7 @@ awscurl --service execute-api \
   -d '{
     "pin": "A005394549Z",
     "taxPayerName": "PATRICK OMONDI ODHIAMBO "
+    "idNumber": "24106259",
   }' \
   https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/kra
 ```
@@ -471,9 +471,9 @@ awscurl --service execute-api \
     "passportNumber": "AK1515374",
     "idNumber": "32140017",
     "personalNumber": "741116",
+     "gender": "F",
     "surname": "NYAMBURA",
     "givenNames": "EFFIE NJOKI",
-    "gender": "F",
     "dateOfBirth": "1994-12-19",
     "placeOfBirth": "KIAMBU, KEN",
     "dateOfIssue": "2024-05-06",
@@ -494,12 +494,12 @@ awscurl --service execute-api \
   -d '{
     "documentType": "P",
     "countryCode": "KEN",
-    "idNumber": "",
+    "idNumber": "26465570",
     "passportNumber": "AK1370344",
     "personalNumber": "1944445",
     "surname": "Munyao",
-    "givenNames": "Timothy",
     "gender": "M",
+    "givenNames": "Timothy",
     "dateOfBirth": "1988-01-13",
     "placeOfBirth": "NAIROBI, KEN",
     "dateOfIssue": "2023-07-20",
