@@ -71,6 +71,9 @@ def register_agent(event_data):
 
     try:
         validate(schema=schema, event=event_data)
+        if not("idNumber" in event_data or "businessNumber" in event_data):
+            logger.error(f"Schema validation failed for Agent: {e}")
+            return make_response(400, {'message': 'Request body validation failed either idNumber or businessNumber should be supplied', 'details': str(e)})    
     except Exception as e:
         logger.error(f"Schema validation failed for Agent: {e}")
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
@@ -110,7 +113,7 @@ def register_customer(event_data):
             "kraPinCardUrl": {"type": "string"}
         },
         "required": ["name", "pinNumber", "idNumber", "gender", "dateOfBirth", "passportPhotoUrl", 
-                    "nationalIdUrl", "kraPinCardUrl"],
+                    "nationalIdCardUrl", "kraPinCardUrl"],
         "additionalProperties": True
     }
 
