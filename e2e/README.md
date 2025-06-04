@@ -1,9 +1,11 @@
 # E2E Tests for Jubilee eKYC
 
-This directory contains end-to-end tests for the Jubilee eKYC system. The tests are organized into two main categories:
+This directory contains end-to-end tests for the Jubilee eKYC system. The tests are organized into four main categories:
 
 - **Validation Tests**: Tests that validate user-provided data against uploaded document images/PDFs (checking if the data entered by the user matches what's on the document)
 - **Verification Tests**: Tests that verify user-provided data against government identity services like IPRS and KRA (checking if the data is authentic according to official records)
+- **Background Check Tests**: Tests that verify background check functionality using LexisNexis API
+- **Registration Tests**: Tests for agent and customer registration processes
 
 ## Prerequisites
 
@@ -59,6 +61,18 @@ To run only verification tests:
 python -m unittest discover -s e2e/tests/verification
 ```
 
+To run only background check tests:
+
+```bash
+python -m unittest discover -s e2e/tests/background_checks
+```
+
+To run only registration tests:
+
+```bash
+python -m unittest discover -s e2e/tests/registration
+```
+
 ### Running Individual Test Files
 
 Below are commands to run each individual test file with descriptions of what each test validates:
@@ -85,22 +99,24 @@ python -m e2e.tests.validation.test_validate_passport
 # National ID verification - Tests verification of National ID information against IPRS government records
 python -m e2e.tests.verification.test_verify_nationalid
 
-# KRA PIN Certificate verification - Tests verification of KRA PIN information against official KRA government records
+# KRA PIN verification - Tests verification of KRA PIN information against official KRA government records
+python -m e2e.tests.verification.test_verify_kra
+
+# KRA PIN Certificate verification - Tests verification of KRA PIN certificate information against official KRA government records
 python -m e2e.tests.verification.test_verify_krapincertificate
 
 # Passport verification - Tests verification of passport information against IPRS government records
 python -m e2e.tests.verification.test_verify_passport
 ```
 
-### Background check Tests
+#### Background Check Tests
 
 ```bash
-# Check background using lexisnexis api
-python -m e2e.tests.backgroundCheck.test_background_check
+# Check background using LexisNexis API
+python -m e2e.tests.background_checks.test_background_check
 ```
 
-
-### Registration Tests
+#### Registration Tests
 
 ```bash
 # Test agent registration
@@ -200,6 +216,11 @@ Tests that validate user-provided data against uploaded document images/PDFs (ch
 ### Verification Tests
 Tests that verify user-provided data against official government identity services like IPRS and KRA (checking if the data is authentic according to official government records):
 
+- `test_verify_kra.py`:
+  - Tests KRA PIN verification
+  - Verifies multiple PINs: A003388522V, A011797599Y, A008279496S, A005394549Z
+  - Checks PIN information against KRA records
+
 - `test_verify_krapincertificate.py`:
   - Tests KRA PIN certificate verification
   - Verifies multiple PINs: A003388522V, A011797599Y, A008279496S, A005394549Z
@@ -214,5 +235,23 @@ Tests that verify user-provided data against official government identity servic
   - Tests Passport verification
   - Verifies passport numbers AK1515374 and AK1370344
   - Checks passport information against government records
+
+### Background Check Tests
+Tests that verify background check functionality:
+
+- `test_background_check.py`:
+  - Tests background check functionality using LexisNexis API
+  - Verifies risk assessment for individuals
+
+### Registration Tests
+Tests for agent and customer registration processes:
+
+- `test_agent_registration.py`:
+  - Tests agent registration process
+  - Validates agent data submission and account creation
+
+- `test_customer_registration.py`:
+  - Tests customer registration process
+  - Validates customer data submission and account creation
 
 - `config.py`: Configuration file with API endpoints and authentication setup
