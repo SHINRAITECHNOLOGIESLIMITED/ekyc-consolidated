@@ -88,10 +88,12 @@ const schema = a.schema({
       name: a.string().required(),
       pinNumber: a.string().required(),
       idNumber: a.string().required(),
+      passportNumber: a.string(),
       gender: a.string().required(),
       dateOfBirth: a.string().required(),
       passportPhotoUrl: a.string().required(),
-      nationalIdOrPassportUrl: a.string().required(),
+      nationalIdCardUrl: a.string().required(),
+      passportUrl: a.string(),
       kraPinCardUrl: a.string().required(),
       kycStatus: a.string().required()
     })

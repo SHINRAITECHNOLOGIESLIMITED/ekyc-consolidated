@@ -155,11 +155,13 @@ class Portal:
                 "name": customer.get("name"),
                 "pinNumber": customer.get("pinNumber"),
                 "idNumber": customer.get("idNumber"),
+                "passportNumber": customer.get("passportNumber",None),
                 "gender": customer.get("gender"),
                 "dateOfBirth": customer.get("dateOfBirth"),
                 "passportPhotoUrl": customer.get("passportPhotoUrl"),
-                "nationalIdOrPassportUrl": customer.get("nationalIdOrPassportUrl"),
+                "nationalIdCardUrl": customer.get("nationalIdCardUrl"),
                 "kraPinCardUrl": customer.get("kraPinCardUrl"),
+                "passportUrl": customer.get("passportUrl", None),
                 "kycStatus": customer.get("kycStatus")
             }
             
@@ -431,7 +433,7 @@ class Portal:
         isResponse = False
         try:
             200 == response.status_code
-            isResponse = False
+            isResponse = True
         except:
             pass
         if isResponse:

@@ -4,7 +4,6 @@ import React, {useState} from 'react';
 import {Alert, Container, FormField, Input, Select, SelectProps, SpaceBetween,} from '@cloudscape-design/components';
 import {FileUploader} from '@aws-amplify/ui-react-storage';
 import '@aws-amplify/ui-react/styles.css';
-import {documentApi} from "@/services/api";
 import {useAuthenticator} from "@aws-amplify/ui-react";
 
 interface UploadKYCDocumentProps {
@@ -59,17 +58,17 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
             setError('Please select a document type');
             return;
         }
-        const customerIdValue: string = customerId ?? "";
         const documentTypeValue: string = documentType.value ?? "";
         try {
             const s3Path = `${event.key}`
             console.log("s3Path:",s3Path);
-            await documentApi.uploadDocument({
-                documentType: documentTypeValue,
-                customerId: customerIdValue,
-                url: event.url ?? "",
-                s3Path: s3Path
-            });
+            // await documentApi.uploadDocument({
+            //     documentType: documentTypeValue,
+            //     customerId: customerIdValue,
+            //     url: event.url ?? "",
+            //     s3Path: s3Path
+            // });
+            //TODO: Call backend endpoint
             console.log(`Document uploaded successfully: ${event.url}`);
             setSuccess(`Document(${documentTypeValue}) uploaded successfully for customer ${customerId}`);
             setDocumentType(null);

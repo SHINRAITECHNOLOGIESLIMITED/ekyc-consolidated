@@ -5,9 +5,6 @@ import os
 import boto3
 from portal import Portal
 
-KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
-assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
-
 CUSTOMERREGISTRATIONSM_ARN = os.environ.get('CUSTOMERREGISTRATIONSM_ARN', None)
 assert CUSTOMERREGISTRATIONSM_ARN is not None, "CUSTOMERREGISTRATIONSM_ARN is not set"
 
@@ -104,14 +101,16 @@ def register_customer(event_data):
             "name": {"type": "string"},
             "pinNumber": {"type": "string"},
             "idNumber": {"type": "string"},
+            "passportNumber": {"type": "string"},
             "gender": {"type": "string"},
             "dateOfBirth": {"type": "string"},
             "passportPhotoUrl": {"type": "string"},
-            "nationalIdOrPassportUrl": {"type": "string"},
+            "nationalIdCardUrl": {"type": "string"},
+            "passportUrl": {"type": "string"},
             "kraPinCardUrl": {"type": "string"}
         },
         "required": ["name", "pinNumber", "idNumber", "gender", "dateOfBirth", "passportPhotoUrl", 
-                    "nationalIdOrPassportUrl", "kraPinCardUrl"],
+                    "nationalIdUrl", "kraPinCardUrl"],
         "additionalProperties": True
     }
 

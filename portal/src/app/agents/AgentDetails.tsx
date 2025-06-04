@@ -11,7 +11,7 @@ import {
 const AgentDetails = (agent: Agent) => (
   <SpaceBetween size="l">
     <Header variant="h1">Agent Details</Header>
-    <ColumnLayout columns={2} variant="text-grid">
+    <ColumnLayout columns={4} variant="text-grid">
       <SpaceBetween size="xs">
         <Box variant="awsui-key-label">Agent Type</Box>
         <Box>{agent.agentType}</Box>

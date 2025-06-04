@@ -24,7 +24,13 @@ def lambda_handler(event, context):
     
     if http_method == 'POST':
         try:
-            data = json.loads(event.get('body', '{}'))
+            
+            data = event.get('body', {})
+            # check if data is dict - if its a string convert to dict
+            while isinstance(data, str):
+                data = json.loads(data)
+            logger.info(f"Request Data (body): {data}")
+            
             return handle_background_check(data)
         except json.JSONDecodeError:
             logger.error("Error decoding JSON body")

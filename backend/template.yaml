@@ -269,6 +269,8 @@ Resources:
         Variables:
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
           JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
+          JUBILEEAPICACHE_TABLE_NAME: !Ref JubileeApiCache
+          JUBILEEAPICACHE_TABLE_ARN: !GetAtt JubileeApiCache.Arn
       Events:
         ApiGatewayPOSTKRA:
           Type: Api
@@ -297,6 +299,8 @@ Resources:
               Resource:
                 - !Ref PortalGraphQLSecret
                 - !Ref JubileeESBAPISecret
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JubileeApiCache
       Layers:
         - !Ref PortalProjectionLayer
         - !Ref JubileeESBAPILayer
@@ -317,6 +321,8 @@ Resources:
         Variables:
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
           JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
+          JUBILEEAPICACHE_TABLE_NAME: !Ref JubileeApiCache
+          JUBILEEAPICACHE_TABLE_ARN: !GetAtt JubileeApiCache.Arn
       Events:
         ApiGatewayPOSTBackgroundCheck:
           Type: Api
@@ -336,6 +342,8 @@ Resources:
               Resource:
                 - !Ref PortalGraphQLSecret
                 - !Ref JubileeESBAPISecret
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JubileeApiCache
   BackgroundChecksFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -677,6 +685,22 @@ Resources:
       LogGroupName: !Sub
         - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
         - ResourceId: AgentRegistrationSM
+
+  JubileeApiCache:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: JubileeApiCache
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: cache_key
+          AttributeType: S
+      KeySchema:
+        - AttributeName: cache_key
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expiry_time
+        Enabled: true
+
 Metadata:
   AWS::Composer::Groups:
     Group2:
@@ -690,6 +714,7 @@ Metadata:
         - RegistrationFn
         - CustomerRegistrationSM
         - AgentRegistrationSM
+        - JubileeApiCache
 Outputs:
   ApiGatewayUrl:
     Description: API Gateway Production URL
@@ -703,3 +728,6 @@ Outputs:
   DocumentValidationFnLogGroup:
     Description: Document validation log group
     Value: !Ref DocumentValidationFnLogGroup
+  RegistrationFnLogGroup:
+    Description: Registration log group
+    Value: !Ref RegistrationFnLogGroup

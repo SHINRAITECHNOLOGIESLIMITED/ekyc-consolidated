@@ -1,4 +1,4 @@
-import {DocumentResponse, LivenessResponse, SessionResponse} from "@/types/liveness";
+import {LivenessResponse, SessionResponse} from "@/types/liveness";
 
 import {API_CONFIG} from "@/constants/api";
 
@@ -58,26 +58,3 @@ export const livenessApi = {
     }
 };
 
-
-export const documentApi = {
-    uploadDocument: async (documentDetails: {
-        customerId: string,
-        url: string
-        documentType: string,
-        s3Path: string
-    }): Promise<DocumentResponse> => {
-        const headers = await getAuthHeaders();
-        const response = await fetch(API_CONFIG.API_ENDPOINTS.UPLOAD_DOCUMENT, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(documentDetails)
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        return response.json();
-    },
-
-};
