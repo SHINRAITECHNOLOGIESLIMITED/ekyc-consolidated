@@ -11,7 +11,7 @@ dynamodb_client = session.client('dynamodb')
 def getDynamoDBTables():
     response = dynamodb_client.list_tables()
     table_names = response['TableNames']
-    return table_names
+    return [t for t in table_names if 'jubileeapicache' not in t.lower()]
 
 
 def getUserTruncateConfirmation(tablename):
