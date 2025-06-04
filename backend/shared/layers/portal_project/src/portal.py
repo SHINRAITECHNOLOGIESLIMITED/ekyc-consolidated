@@ -431,7 +431,7 @@ class Portal:
         isResponse = False
         try:
             200 == response.status_code
-            isResponse = False
+            isResponse = True
         except:
             pass
         if isResponse:

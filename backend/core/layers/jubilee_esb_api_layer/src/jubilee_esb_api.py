@@ -8,7 +8,6 @@ from utiities import JubileeESBUtilities
 logger = Logger()
 tracer = Tracer()
 
-
 class JubileeESBAPI:
 
     def __init__(self, portal):

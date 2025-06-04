@@ -39,7 +39,7 @@ class TestBackgroundCheck(unittest.TestCase):
 
     def test_valid_background_check_timothy(self):
         payload = {
-            "firstName": "Tomothy",
+            "firstName": "Timothy",
             "middleName": "",
             "lastName": "Munyao",
             "gender": "Male",

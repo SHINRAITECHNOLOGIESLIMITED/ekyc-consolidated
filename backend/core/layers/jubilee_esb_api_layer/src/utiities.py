@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import hashlib
 from http import HTTPStatus
 from typing import Dict, Any
 
@@ -17,6 +18,15 @@ JUBILEE_ESB_API_SECRET_ARN = os.getenv('JUBILEE_ESB_API_SECRET_ARN', None)
 assert JUBILEE_ESB_API_SECRET_ARN, "JUBILEE_ESB_API_SECRET_ARN environment variable is not set"
 JUBILEE_ESB_TOKEN_VALIDITY_MINS = 4.5
 
+JUBILEEAPICACHE_TABLE_NAME = os.getenv('JUBILEEAPICACHE_TABLE_NAME', None)
+assert JUBILEEAPICACHE_TABLE_NAME, "JUBILEEAPICACHE_TABLE_NAME environment variable is not set"
+
+JUBILEEAPICACHE_TABLE_ARN = os.getenv('JUBILEEAPICACHE_TABLE_ARN', None)
+assert JUBILEEAPICACHE_TABLE_ARN, "JUBILEEAPICACHE_TABLE_ARN environment variable is not set"
+
+#cache table
+dynamodb = boto3.resource('dynamodb')
+cache_table = dynamodb.Table(JUBILEEAPICACHE_TABLE_NAME)
 
 class JubileeESBError(Exception):
     """Custom exception for ESB validation errors"""
@@ -114,7 +124,9 @@ class JubileeESBUtilities:
                       service: str,
                       api_method: str,
                       url: str,
-                      data: Dict[str, Any], is_post: bool = True):
+                      data: Dict[str, Any], 
+                      is_post: bool = True,
+                      cache_ttl_seconds: int = 3600 * 24* 7):  # Default TTL of 1 week
         """
         Make API call with error handling and logging
 
@@ -124,9 +136,30 @@ class JubileeESBUtilities:
             url: API endpoint URL
             data: Request payload
             is_post: true if http method is POST other it will call GET
-            :param :
+            cache_ttl_seconds: Time to live for cache in seconds (default: 1 hour)
         """
         try:
+            # Create a cache key based on the request parameters and hash it
+            raw_key = f"{service}:{api_method}:{url}:{json.dumps(data, sort_keys=True)}"
+            cache_key = hashlib.sha256(raw_key.encode()).hexdigest()
+            
+            
+            try:
+                cache_response = cache_table.get_item(Key={'cache_key': cache_key})
+                
+                # If item exists in cache and hasn't expired
+                if 'Item' in cache_response:
+                    item = cache_response['Item']
+                    expiry_time = item.get('expiry_time', 0)
+                    
+                    # Check if cache is still valid
+                    if int(time.time()) < expiry_time:
+                        logger.info(f"Jubilee ESB: {service} API call retrieved from cache")
+                        return json.loads(item['response_data'])
+            except ClientError as e:
+                logger.warning(f"Cache retrieval error: {str(e)}")
+            
+            # Cache miss or error, proceed with API call
             current_segment = xray_recorder.current_segment()
             trace_id = current_segment.trace_id if current_segment else None
 
@@ -134,7 +167,7 @@ class JubileeESBUtilities:
                 "Authorization": self.authorization_jwt,
                 "Content-Type": "application/json"
             }
-            # re-authetincating every four and hald a minute.
+            # re-authenticating every four and half a minute.
             # JWT access tokens are valid for 5 mins only
             if int(time.time()) - self.authorization_jwt_time > 60 * JUBILEE_ESB_TOKEN_VALIDITY_MINS:
                 self._load_jubilee_esb_credentials()
@@ -159,8 +192,27 @@ class JubileeESBUtilities:
                                      trace_id=trace_id, capture_data=True)
             response.raise_for_status()
 
+            # Get the response data
+            response_data = response.json()
+            
+            # Store in cache if successful
+            try:
+                expiry_time = int(time.time()) + cache_ttl_seconds
+                cache_table.put_item(
+                    Item={
+                        'cache_key': cache_key,
+                        'service': service,
+                        'api_method': api_method,
+                        'response_data': json.dumps(response_data),
+                        'expiry_time': expiry_time,
+                        'cached_at': int(time.time())
+                    }
+                )
+            except ClientError as e:
+                logger.warning(f"Cache storage error: {str(e)}")
+
             logger.info(f"Jubilee ESB: {service} API call successful")
-            return response.json()
+            return response_data
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Jubilee ESB: {service} API call failed: {str(e)}")
