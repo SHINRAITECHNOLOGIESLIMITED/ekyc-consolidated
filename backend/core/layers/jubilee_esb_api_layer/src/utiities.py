@@ -105,8 +105,8 @@ class JubileeESBUtilities:
                 raise JubileeESBError("Missing username or password in credentials")
 
             # Retrieve JWT token through login
-            self.authorization_jwt = self._retrieve_jwt_token(username, password)
-            self.authorization_jwt_time = int(time.time())
+            self.authorization_jwt = None # self._retrieve_jwt_token(username, password)
+            self.authorization_jwt_time = None #int(time.time())
             logger.info("Successfully loaded Jubilee ESB credentials")
         except ClientError as e:
             if e.response['Error']['Code'] == 'AccessDeniedException':
@@ -169,8 +169,16 @@ class JubileeESBUtilities:
             }
             # re-authenticating every four and half a minute.
             # JWT access tokens are valid for 5 mins only
-            if self.authorization_jwt is None or int(time.time()) - self.authorization_jwt_time > 60 * JUBILEE_ESB_TOKEN_VALIDITY_MINS:
-                self._load_jubilee_esb_credentials()
+            new_jwt = False
+            if self.authorization_jwt is None or self.authorization_jwt_time is None:
+                new_jwt = True
+            elif int(time.time()) - self.authorization_jwt_time > 60 * JUBILEE_ESB_TOKEN_VALIDITY_MINS:
+                new_jwt = True
+                
+            if new_jwt:
+                # self._load_jubilee_esb_credentials()
+                self.authorization_jwt = self._retrieve_jwt_token(username, password)
+                self.authorization_jwt_time = int(time.time())
             start_time = time.time() * 1000
             if is_post:
                 response = requests.post(
