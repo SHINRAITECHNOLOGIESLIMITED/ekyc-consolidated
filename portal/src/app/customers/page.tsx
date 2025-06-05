@@ -55,6 +55,7 @@ const listingProps: ListingProps<Customer> = {
   renderItemDetails: (item: Customer) => CustomerDetails(item),
   actions: [
     {
+      id: "customer-reg",
       label: "New Customer",
       render: () => (
         <SpaceBetween size={"s"}>

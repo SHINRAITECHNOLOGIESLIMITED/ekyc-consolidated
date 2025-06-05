@@ -1,12 +1,17 @@
 "use client";
 
 import Listing, { ListingProps } from "@/components/Listing";
-import NotImplemented from "@/components/NotImplemented";
 import { fetchDocumentValidations } from "@/services/DataService";
 import type { DocumentValidation } from "@/types/models";
 import { SpaceBetween } from "@cloudscape-design/components";
 import ValidationDetails from "./ValidationDetails";
 import { formatPercentage } from "@/utils/formatters";
+import { 
+  NationalIdValidationForm, 
+  PassportValidationForm, 
+  KRAPinCertificateValidationForm, 
+  CR12ValidationForm 
+} from "@/components/DocumentValidationForms";
 
 const columnDefinitions = [
   {
@@ -25,12 +30,12 @@ const columnDefinitions = [
     cell: (item: DocumentValidation) => item.documentIdentifier,
   },
   {
-    id: "accuracy",
+    id: "processing_accuracy",
     header: "Accuracy",
     cell: (item: DocumentValidation) => formatPercentage(item.processing_accuracy),
   },
   {
-    id: "accuracy",
+    id: "validation_accuracy",
     header: "Validity",
     cell: (item: DocumentValidation) => formatPercentage(item.validation_accuracy),
   },
@@ -58,40 +63,43 @@ const listingProps: ListingProps<DocumentValidation> = {
   actions: [
     {
       label: "New NationalId Validation",
+      id: "nationalid", // Add an id to each action
       render: () => (
         <SpaceBetween size={"s"}>
-          <NotImplemented title={"NationalID Validation"} />
+          <NationalIdValidationForm />
         </SpaceBetween>
       ),
     },
     {
       label: "New Passport Validation",
+      id: "passport", // Add an id to each action
       render: () => (
         <SpaceBetween size={"s"}>
-          <NotImplemented title={"Passport Validation"} />
+          <PassportValidationForm />
         </SpaceBetween>
       ),
     },
     {
       label: "New KRAPinCertificate Validation",
+      id: "krapincertificate", // Add an id to each action
       render: () => (
         <SpaceBetween size={"s"}>
-          <NotImplemented title={"KRAPinCertificate Validation"} />
+          <KRAPinCertificateValidationForm />
         </SpaceBetween>
       ),
     },
     {
       label: "Certification of Incoporation (CR12) Validation",
+      id: "cr12", // Add an id to each action
       render: () => (
         <SpaceBetween size={"s"}>
-          <NotImplemented
-            title={"New Certification of Incoporation (CR12) Validation"}
-          />
+          <CR12ValidationForm />
         </SpaceBetween>
       ),
     },
   ],
 };
+
 
 const DocumentsListing: React.FC = () => {
   return <Listing {...listingProps} />;

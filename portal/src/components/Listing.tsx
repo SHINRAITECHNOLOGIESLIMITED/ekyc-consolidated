@@ -25,6 +25,7 @@ interface EmptyStateProps {
 }
 
 export interface ActionProps {
+  id: string;
   label: string;
   iconName?: string;
   render: () => React.ReactNode;

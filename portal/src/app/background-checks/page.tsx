@@ -71,6 +71,7 @@ const listingProps: ListingProps<BackGroundCheck> = {
   renderItemDetails: (item: BackGroundCheck) => BackGroundCheckDetails(item),
   actions: [
     {
+      id: "background-check",
       label: "New BackGround Check",
       render: () => (
         <SpaceBetween size={"s"}>

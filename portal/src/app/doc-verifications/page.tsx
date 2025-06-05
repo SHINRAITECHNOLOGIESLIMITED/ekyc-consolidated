@@ -47,6 +47,7 @@ const listingProps: ListingProps<DocumentVerification> = {
   renderItemDetails: (item: DocumentVerification) => VerificationDetails(item),
   actions: [
     {
+      id: "nationalid-verification",
       label: "New NationalId Verification",
       render: () => (
         <SpaceBetween size={"s"}>
@@ -55,6 +56,7 @@ const listingProps: ListingProps<DocumentVerification> = {
       ),
     },
     {
+      id: "passport-verification",
       label: "New Passport Verification",
       render: () => (
         <SpaceBetween size={"s"}>
@@ -63,10 +65,11 @@ const listingProps: ListingProps<DocumentVerification> = {
       ),
     },
     {
-      label: "New KRAPinCertificate Verification",
+      id: "kra-verification",
+      label: "New KRA Verification",
       render: () => (
         <SpaceBetween size={"s"}>
-          <NotImplemented title={"KRAPinCertificate Verification"} />
+          <NotImplemented title={"KRA Verification"} />
         </SpaceBetween>
       ),
     },

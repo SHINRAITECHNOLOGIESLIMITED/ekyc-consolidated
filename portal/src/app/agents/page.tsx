@@ -61,6 +61,7 @@ const listingProps: ListingProps<Agent> = {
   renderItemDetails: (item: Agent) => AgentDetails(item),
   actions: [
     {
+      id: "agent-reg",
       label: "New Agent Registration",
       render: () => (
         <SpaceBetween size={"s"}>
