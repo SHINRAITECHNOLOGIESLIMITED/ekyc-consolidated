@@ -260,15 +260,13 @@ def verify_passport(event_data):
     schema = {
         "type": "object",
         "properties": {
-            "citizenship": {"type": "string"},
             "idNumber": {"type": "string"},
             "passportNumber": {"type": "string"},
             "firstName": {"type": "string"},
             "otherName": {"type": "string"},
             "surname": {"type": "string"},
             "gender": {"type": "string"},
-            "dateOfBirthFromPassport": {"type": "string"},
-            "placeOfBirth": {"type": "string"},
+            "dateOfBirth": {"type": "string"},
             "dateOfIssue": {"type": "string"},
             "dateOfExpiry": {"type": "string"},
         },
@@ -296,10 +294,6 @@ def verify_passport(event_data):
             if api_result["success"] == False:
                 return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
         if "data" in api_result:
-            citizenshipMatchResult = process(event_name='citizenship', api_field_name='citizenship', event=event_data,
-                                            api_result=api_result)
-            idNumberMatchResult = process(event_name='idNumber', api_field_name='idNumber',
-                                                event=event_data, api_result=api_result)
             passportNumberMatchResult = process(event_name='passportNumber', api_field_name='passportNumber',
                                                 event=event_data, api_result=api_result)
             surnameMatchResult = process(event_name='surname', api_field_name='surname', event=event_data,
@@ -310,26 +304,21 @@ def verify_passport(event_data):
                                             api_result=api_result)
             genderMatchResult = process(event_name='gender', api_field_name='gender', event=event_data,
                                         api_result=api_result)
-            dateOfBirthMatchResult = process(event_name='dateOfBirthFromPassport', api_field_name='dateOfBirthFromPassport', event=event_data,
+            dateOfBirthMatchResult = process(event_name='dateOfBirth', api_field_name='dateOfBirth', event=event_data,
                                             api_result=api_result,is_date_field=True)
-            placeOfBirthMatchResult = process(event_name='placeOfBirth', api_field_name='placeOfBirth', event=event_data,
-                                            api_result=api_result)
             dateOfIssueMatchResult = process(event_name='dateOfIssue', api_field_name='dateOfIssue', event=event_data,
                                             api_result=api_result,is_date_field=True)
             dateOfExpiryMatchResult = process(event_name='dateOfExpiry', api_field_name='dateOfExpiry', event=event_data,
-                                            api_result=api_result)
+                                            api_result=api_result, is_date_field=True)
 
 
             matchResults = dict(
-                                citizenship=citizenshipMatchResult,
                                 passportNumber=passportNumberMatchResult,
-                                idNumber=idNumberMatchResult,
                                 surname=surnameMatchResult,
                                 firstName=firstNameMatchResult,
                                 otherName=otherNameMatchResult,
                                 gender=genderMatchResult,
                                 dateOfBirth=dateOfBirthMatchResult,
-                                placeOfBirth=placeOfBirthMatchResult,
                                 dateOfIssue=dateOfIssueMatchResult,
                                 dateOfExpiry=dateOfExpiryMatchResult
                                 )

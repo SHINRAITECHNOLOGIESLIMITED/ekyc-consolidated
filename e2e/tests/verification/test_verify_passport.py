@@ -6,15 +6,13 @@ class TestPassportDocumentVerification(unittest.TestCase):
     URL=f"{APIGW_URL}/government/passport"
     def test_passportnumber_AK1515374(self):
         payload ={
-            "citizenship":"KEN",
+            "idNumber": "32140017",
             "passportNumber":"AK1515374",
-            "idNumber":"32140017",
             "surname":"NYAMBURA",
             "gender": "F",
             "firstName": "EFFIE",
             "otherName": "NJOKI",
-            "dateOfBirthFromPassport":"1994-12-19",
-            "placeOfBirth":"KIAMBU, KEN",
+            "dateOfBirth":"1994-12-19",
             "dateOfIssue":"2024-05-06",
             "dateOfExpiry":"2034-05-05",
         }
@@ -25,15 +23,13 @@ class TestPassportDocumentVerification(unittest.TestCase):
 
     def test_passportnumber_AK1370344(self):
         payload ={
-            "citizenship":"KENYAN",
-            "idNumber":"",
+            "idNumber": "26465570",
             "passportNumber":"AK1370344",
             "gender": "M",
             "firstName":"Timothy",
             "otherName": "",
             "surname":"Munyao",
-            "dateOfBirthFromPassport":"1988-01-13",
-            "placeOfBirth":"NAIROBI, KEN",
+            "dateOfBirth":"1988-01-13",
             "dateOfIssue":"2023-07-20",
             "dateOfExpiry":"2033-07-19",
         }
@@ -43,15 +39,13 @@ class TestPassportDocumentVerification(unittest.TestCase):
 
     def test_passportnumber_A168105_old(self):
         payload ={
-            "citizenship":"KEN",
-            "idNumber":"23224868",
+            "idNumber": "23224868",
             "passportNumber":"A168105",
             "gender": "M",
             "surname":"Nyamai",
             "firstName":"Stephen",
             "otherName": "Biko",
-            "dateOfBirthFromPassport":"1984-02-19",
-            "placeOfBirth":"NAIROBI, KEN",
+            "dateOfBirth":"1984-02-19",
             "dateOfIssue":"2009-06-16",
             "dateOfExpiry":"2019-06-16",
         }
@@ -61,16 +55,14 @@ class TestPassportDocumentVerification(unittest.TestCase):
 
     def test_passportnumber_AK1577133_new(self):
         payload ={
-            "citizenship":"KEN",
             "idNumber":"23224868",
             "passportNumber":"AK1577133",
             "gender": "M",
             "surname":"Nyamai",
             "firstName":"Stephen",
             "otherName": "Biko",
-            "dateOfBirthFromPassport":"1984-02-19",
-            "placeOfBirth":"NAIROBI, KEN",
-            "dateOfIssue":"2024-06-08",
+            "dateOfBirth":"1984-02-19",
+            "dateOfIssue":"2024-08-06",
             "dateOfExpiry":"2034-06-07",
         }
         verifity_test(tester= self,
