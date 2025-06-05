@@ -217,7 +217,6 @@ def process(event_name, textract_name, event, form,is_date_field = False):
                 '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d',  # Standard formats
                 '%d %b %Y', '%d %B %Y',  # 18 May 1987, 18 MAY 1987
                 '%Y-%b-%d', '%Y-%B-%d',  # 1987-May-18
-                '%Y-%b-%d', '%Y-%B-%d',  # 2030-AUG-03
                 '%d- %m- %Y' # 19- 02- 1984
             ]
 

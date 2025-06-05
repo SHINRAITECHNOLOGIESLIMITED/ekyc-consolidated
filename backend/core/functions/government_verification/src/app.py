@@ -99,11 +99,12 @@ def process(event_name, api_field_name, event, api_result,is_date_field = False)
 
             # Try different date formats
             date_formats = [
-                '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d',  # Standard formats
+                '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d', # Standard formats
+                '%m/%d/%Y', '%Y/%d/%m',  # US format and year-day-month format
                 '%d %b %Y', '%d %B %Y',  # 18 May 1987, 18 MAY 1987
                 '%Y-%b-%d', '%Y-%B-%d',  # 1987-May-18
-                '%Y-%b-%d', '%Y-%B-%d',  # 2030-AUG-03
-                '%m/%d/%Y'  # 6/9/2021 format
+                '%d- %m- %Y',  # 19- 02- 1984
+                '%m-%d-%Y',   # 12-24-2009
             ]
 
             expected_date = None

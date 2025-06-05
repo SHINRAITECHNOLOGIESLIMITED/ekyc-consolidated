@@ -14,7 +14,7 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
             "fullNames":"JANE WAIRIMU MAINA",
             "dateOfBirth":"1985-01-01",
             "dateOfIssue":"2016-10-28",
-            "gender":"Female",
+            "gender":"F",
             "districtOfBirth":"THIKA WEST"
         }
         verifity_test(tester= self,
@@ -24,10 +24,10 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
         payload ={"serialNumber":"702945559",
             "idNumber":"32140017",
             "fullNames":"EFFIE NJOKI NYAMBURA",
-            "dateOfBirth":"1994-19-12",
+            "dateOfBirth":"12-19-1994",
             "dateOfIssue":"2021-09-06",
-            "gender":"Female",
-            "districtOfBirth":"KIAMBU"
+            "gender":"F",
+            "districtOfBirth":"KIAMBU\nDISTRICT - KIAMBU\n"
         }
         verifity_test(tester= self,
                       url= self.URL,
@@ -39,8 +39,8 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
             "fullNames":"JOEL MUUO",
             "dateOfBirth":"1998-08-30",
             "dateOfIssue":"2017-03-31",
-            "gender":"Male",
-            "districtOfBirth":"KIBWEZI"
+            "gender":"M",
+            "districtOfBirth":"KIBWEZI\nDISTRICT - KIBWEZI\n"
         }
         verifity_test(tester= self,
                       url= self.URL,
@@ -51,9 +51,9 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
             "idNumber":"23224868",
             "fullNames":"STEPHEN BIKO NYAMAI",
             "dateOfBirth":"1984-02-19",
-            "dateOfIssue":"2003-04-01",
-            "gender":"Male",
-            "districtOfBirth":"KIBWEZI"
+            "dateOfIssue":"2011-10-24",
+            "gender":"M",
+            "districtOfBirth":"NAIROBI\nDISTRICT - STAREHE\n\n"
         }
         verifity_test(tester= self,
                       url= self.URL,
