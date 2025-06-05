@@ -88,10 +88,10 @@ def register_agent(event_data):
                     raise Exception("businessNumber should be supplied for Business")
                 if "idNumber" in event_data:
                     raise Exception("idNumber should not be supplied for Business")
-                if not("passportPhotoUrl" in event_data):
-                    raise Exception("passportPhotoUrl should be supplied for Business")
-                if not("nationalIdCardUrl" in event_data):
-                    raise Exception("nationalIdCardUrl should be supplied for Business")
+                if "passportPhotoUrl" in event_data:
+                    raise Exception("passportPhotoUrl should not be supplied for Business")
+                if "nationalIdCardUrl" in event_data:
+                    raise Exception("nationalIdCardUrl should not be supplied for Business")
                 if not("companyCertificateUrl" in event_data):
                     raise Exception("companyCertificateUrl should be supplied for Business")
                 if "dateOfBirth" in event_data:

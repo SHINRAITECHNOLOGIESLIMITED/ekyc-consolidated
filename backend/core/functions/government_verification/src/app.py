@@ -99,11 +99,12 @@ def process(event_name, api_field_name, event, api_result,is_date_field = False)
 
             # Try different date formats
             date_formats = [
-                '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d',  # Standard formats
+                '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d', # Standard formats
+                '%m/%d/%Y', '%Y/%d/%m',  # US format and year-day-month format
                 '%d %b %Y', '%d %B %Y',  # 18 May 1987, 18 MAY 1987
                 '%Y-%b-%d', '%Y-%B-%d',  # 1987-May-18
-                '%Y-%b-%d', '%Y-%B-%d',  # 2030-AUG-03
-                '%m/%d/%Y'  # 6/9/2021 format
+                '%d- %m- %Y',  # 19- 02- 1984
+                '%m-%d-%Y',   # 12-24-2009
             ]
 
             expected_date = None
@@ -192,7 +193,7 @@ def verify_nationalid(event_data):
     except Exception as e:
         logger.error(f"Schema validation failed for NationalID: {e}")
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
-    
+
     try:
         api_result = serviceValidator.iprs.search_generic(dict(identifier="ID_NUMBER", value=event_data['idNumber']))
         if "error" in api_result:
@@ -259,20 +260,15 @@ def verify_passport(event_data):
     schema = {
         "type": "object",
         "properties": {
-            "documentType": {"type": "string"},
-            "countryCode": {"type": "string"},
             "idNumber": {"type": "string"},
             "passportNumber": {"type": "string"},
-            "personalNumber": {"type": "string"},
+            "firstName": {"type": "string"},
+            "otherName": {"type": "string"},
             "surname": {"type": "string"},
-            "givenNames": {"type": "string"},
             "gender": {"type": "string"},
             "dateOfBirth": {"type": "string"},
-            "placeOfBirth": {"type": "string"},
             "dateOfIssue": {"type": "string"},
             "dateOfExpiry": {"type": "string"},
-            "nationality": {"type": "string"},
-            "issuingAuthority": {"type": "string"},
         },
         "required": ["passportNumber","idNumber"],
         "additionalProperties": False
@@ -283,7 +279,7 @@ def verify_passport(event_data):
     except Exception as e:
         logger.error(f"Schema validation failed for Passport: {e}")
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
-    
+
     try:
         api_result = serviceValidator.iprs.search_passport_number(dict(
                 identifier="PASSPORT",
@@ -298,50 +294,33 @@ def verify_passport(event_data):
             if api_result["success"] == False:
                 return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
         if "data" in api_result:
-            documentTypeMatchResult = process(event_name='documentType', api_field_name='documentType', event=event_data,
-                                            api_result=api_result)
-            countryCodeMatchResult = process(event_name='countryCode', api_field_name='countryCode', event=event_data,
-                                            api_result=api_result)
-            idNumberMatchResult = process(event_name='idNumber', api_field_name='idNumber',
-                                                event=event_data, api_result=api_result)
             passportNumberMatchResult = process(event_name='passportNumber', api_field_name='passportNumber',
-                                                event=event_data, api_result=api_result)
-            personalNumberMatchResult = process(event_name='personalNumber', api_field_name='personalNumber',
                                                 event=event_data, api_result=api_result)
             surnameMatchResult = process(event_name='surname', api_field_name='surname', event=event_data,
                                         api_result=api_result)
-            givenNamesMatchResult = process(event_name='givenNames', api_field_name='givenNames', event=event_data,
+            firstNameMatchResult = process(event_name='firstName', api_field_name='firstName', event=event_data,
+                                            api_result=api_result)
+            otherNameMatchResult = process(event_name='otherName', api_field_name='otherName', event=event_data,
                                             api_result=api_result)
             genderMatchResult = process(event_name='gender', api_field_name='gender', event=event_data,
                                         api_result=api_result)
             dateOfBirthMatchResult = process(event_name='dateOfBirth', api_field_name='dateOfBirth', event=event_data,
                                             api_result=api_result,is_date_field=True)
-            placeOfBirthMatchResult = process(event_name='placeOfBirth', api_field_name='placeOfBirth', event=event_data,
-                                            api_result=api_result)
             dateOfIssueMatchResult = process(event_name='dateOfIssue', api_field_name='dateOfIssue', event=event_data,
                                             api_result=api_result,is_date_field=True)
             dateOfExpiryMatchResult = process(event_name='dateOfExpiry', api_field_name='dateOfExpiry', event=event_data,
-                                            api_result=api_result)
-            nationalityMatchResult = process(event_name='nationality', api_field_name='nationality', event=event_data,
-                                            api_result=api_result)
-            issuingAuthorityMatchResult = process(event_name='issuingAuthority', api_field_name='issuingAuthority',
-                                                event=event_data, api_result=api_result)
+                                            api_result=api_result, is_date_field=True)
 
 
-            matchResults = dict(documentType=documentTypeMatchResult,
-                                countryCode=countryCodeMatchResult,
+            matchResults = dict(
                                 passportNumber=passportNumberMatchResult,
-                                personalNumber=personalNumberMatchResult,
-                                idNumber=idNumberMatchResult,
                                 surname=surnameMatchResult,
-                                givenNames=givenNamesMatchResult,
+                                firstName=firstNameMatchResult,
+                                otherName=otherNameMatchResult,
                                 gender=genderMatchResult,
                                 dateOfBirth=dateOfBirthMatchResult,
-                                placeOfBirth=placeOfBirthMatchResult,
                                 dateOfIssue=dateOfIssueMatchResult,
-                                dateOfExpiry=dateOfExpiryMatchResult,
-                                nationality=nationalityMatchResult,
-                                issuingAuthority=issuingAuthorityMatchResult,
+                                dateOfExpiry=dateOfExpiryMatchResult
                                 )
 
             _documentType=DOCUMENT_TYPE.PASSPORT
@@ -381,7 +360,7 @@ def verify_taxpayerinfo(event_data):
     except Exception as e:
         logger.error(f"Schema validation failed for KRA Pin: {e}")
         return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
-    
+
     """
     Following are the options for the typeOfTaxpayer parameter:
         COMP: Non-Individual – Company
