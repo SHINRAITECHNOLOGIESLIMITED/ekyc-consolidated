@@ -206,7 +206,7 @@ def process(event_name, textract_name, event, form,is_date_field = False):
     else:
         expected = form[textract_name]['value']
         confidence= form[textract_name]['confidence']
-        
+
         actual = event[event_name]
         if is_date_field:
             expected = expected.replace(".","-")
@@ -217,7 +217,8 @@ def process(event_name, textract_name, event, form,is_date_field = False):
                 '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d',  # Standard formats
                 '%d %b %Y', '%d %B %Y',  # 18 May 1987, 18 MAY 1987
                 '%Y-%b-%d', '%Y-%B-%d',  # 1987-May-18
-                '%Y-%b-%d', '%Y-%B-%d'  # 2030-AUG-03
+                '%Y-%b-%d', '%Y-%B-%d',  # 2030-AUG-03
+                '%d- %m- %Y' # 19- 02- 1984
             ]
 
             expected_date = None
@@ -258,7 +259,7 @@ def process(event_name, textract_name, event, form,is_date_field = False):
                 # calculate edit distance
                 editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
         details = dict(editdistance=editdistance, expected=expected, actual=actual, confidence = confidence)
-        
+
 
     return dict(status=status, details=details)
 
@@ -357,8 +358,8 @@ def validate_nationalid(data):
                         "result": "Jamhuri ya Kenya".lower() in extracted_prose})
             checks.append({"check": 'Contains the words "Republic of Kenya"',
                         "result": "Republic of Kenya".lower() in extracted_prose})
-            
-        
+
+
         serialNumberMatchResult = process(event_name='serialNumber', textract_name='SERIAL_NUMBER', event=data,
                                           form=extracted_form)
         idNumberMatchResult = process(event_name='idNumber', textract_name='ID_NUMBER', event=data,
@@ -399,7 +400,7 @@ def validate_nationalid(data):
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
-    
+
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_nationalid: {e}")
         return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
@@ -580,7 +581,7 @@ def validate_krapincertificate(data):
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
-    
+
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_krapincertificate: {e}")
         return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
@@ -593,8 +594,6 @@ def validate_cr12(data):
             "uploadedDocumentUrl": {"type": "string", "format": "uri"},
             "businessNumber": {"type": "string"},
             "businessName": {"type": "string"},
-            "dateOfIncorporation": {"type": "string"},
-            "businessType": {"type": "string"},
         },
         "required": ["uploadedDocumentUrl", "businessNumber"],
         "additionalProperties": False
@@ -619,16 +618,9 @@ def validate_cr12(data):
                                             form=extracted_form)
         businessNameMatchResult = process(event_name='businessName', textract_name='businessName', event=data,
                                           form=extracted_form)
-        dateOfIncorporationMatchResult = process(event_name='dateOfIncorporation',
-                                                 textract_name='dateOfIncorporation', event=data,
-                                                 form=extracted_form,is_date_field=True)
-        businessTypeMatchResult = process(event_name='businessType', textract_name='businessType', event=data,
-                                          form=extracted_form)
 
         matchResults = dict(businessNumber=businessNumberMatchResult,
-                            businessName=businessNameMatchResult,
-                            dateOfIncorporation=dateOfIncorporationMatchResult,
-                            businessType=businessTypeMatchResult,
+                            businessName=businessNameMatchResult
                             )
 
         _documentType=DOCUMENT_TYPE.CERTIFICATE_OF_INCORPORATION
