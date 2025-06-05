@@ -105,7 +105,7 @@ class JubileeESBUtilities:
                 raise JubileeESBError("Missing username or password in credentials")
 
             # Retrieve JWT token through login
-            self.authorization_jwt = None #self._retrieve_jwt_token(username, password)
+            self.authorization_jwt = self._retrieve_jwt_token(username, password)
             self.authorization_jwt_time = int(time.time())
             logger.info("Successfully loaded Jubilee ESB credentials")
         except ClientError as e:
