@@ -63,7 +63,7 @@ class TestPassportDocumentVerification(unittest.TestCase):
             "otherName": "Biko",
             "dateOfBirth":"1984-02-19",
             "dateOfIssue":"2024-08-06",
-            "dateOfExpiry":"2034-06-07",
+            "dateOfExpiry":"2034-07-06",
         }
         verifity_test(tester= self,
                       url= self.URL,
