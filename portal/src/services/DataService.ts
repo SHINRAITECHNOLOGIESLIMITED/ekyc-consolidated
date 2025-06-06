@@ -118,19 +118,30 @@ export const fetchMetrics = async (): Promise<DashboardMetrics> => {
   const [
     documentValidations,
     documentVerifications,
+    backGroundChecks,
+    agentRegistrations,
+    customerRegistrations,
     apiCalls,
     faceLivenessCount,
   ] = await Promise.all([
     fetchDocumentValidations(),
     fetchDocumentVerifications(),
+    fetchBackGroundChecks(),
+    fetchAgents(),
+    fetchCustomers(),
     fetchAPICalls(),
     fetchLivenessSessions(),
   ]);
 
+  const apiCallsCachehits = apiCalls.filter((apiCall) => apiCall.cacheHit);
   return {
     documentValidations: documentValidations.length,
     documentVerifications: documentVerifications.length,
+    backGroundChecks:backGroundChecks.length,
+    agentRegistrations:agentRegistrations.length,
+    customerRegistrations:customerRegistrations.length,
     apiCalls: apiCalls.length,
+    apiCallsCachehits: apiCallsCachehits.length,
     faceLivenessCount: faceLivenessCount.length,
   };
 };

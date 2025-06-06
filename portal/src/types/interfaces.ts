@@ -6,8 +6,12 @@ export interface CognitoUser {
     userCreateDate: string;
 }
 export interface DashboardMetrics {
-    documentValidations:number;
-    documentVerifications:number;
+    documentValidations: number;
+    documentVerifications: number;
+    backGroundChecks: number;
+    agentRegistrations: number;
+    customerRegistrations: number;
     apiCalls: number;
+    apiCallsCachehits: number;
     faceLivenessCount: number;
 }

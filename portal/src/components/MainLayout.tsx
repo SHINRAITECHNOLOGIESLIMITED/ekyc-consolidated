@@ -62,12 +62,7 @@ const Navigation = () => {
         {
           type: "link",
           text: "Dashboard",
-          href: "/",
-          info: (
-                <Badge color="red" size="small">
-                  WIP
-                </Badge>
-              ),
+          href: "/"
         },
         { type: "divider" },
         // Processes Section
