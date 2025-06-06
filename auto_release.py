@@ -118,7 +118,7 @@ def save_version_data(data):
             yaml.dump(data, file, default_flow_style=False)
 
         with open(PORTAL_TS_VERSION_PATH, 'w') as file:
-            file.write(f"export default '{get_new_version_string(data)}';\n")
+            file.write(f"const RELEASE_VERSION = '{get_new_version_string(data)}';\nexport default RELEASE_VERSION;\n")
         return True
     except Exception as e:
         print(f"Error saving version data: {e}")
