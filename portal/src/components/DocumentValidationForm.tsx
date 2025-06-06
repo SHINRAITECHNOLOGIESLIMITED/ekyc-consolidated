@@ -21,7 +21,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { DocumentValidationResponse } from "@/types/liveness";
 import { API_CONFIG } from "@/constants/api";
 
-
 // Define the common props for all document validation forms
 interface DocumentValidationFormProps {
   title: string;
@@ -42,7 +41,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
   documentType,
   fields,
   onSuccess,
-  onError
+  onError,
 }) => {
   // State declarations first
   const [formData, setFormData] = useState<Record<string, string>>({});
@@ -55,28 +54,34 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [isFormValid, setIsFormValid] = useState<boolean>(false);
-  
+
   // Initialize PDF.js worker
   useEffect(() => {
     pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
   }, []);
-  
+
   // Define validateForm before it's used in useEffect
-  const validateForm = useCallback((currentFormData: Record<string, string> = formData) => {
-    // Check if all required fields have values
-    const requiredFieldsFilled = fields
-      .filter(field => field.required)
-      .every(field => currentFormData[field.id] && currentFormData[field.id].trim() !== '');
-      
-    // Form is valid if all required fields are filled and a document is uploaded
-    setIsFormValid(requiredFieldsFilled && uploadedDocumentUrl !== '');
-  }, [fields, formData, uploadedDocumentUrl]);
+  const validateForm = useCallback(
+    (currentFormData: Record<string, string> = formData) => {
+      // Check if all required fields have values
+      const requiredFieldsFilled = fields
+        .filter((field) => field.required)
+        .every(
+          (field) =>
+            currentFormData[field.id] && currentFormData[field.id].trim() !== ""
+        );
+
+      // Form is valid if all required fields are filled and a document is uploaded
+      setIsFormValid(requiredFieldsFilled && uploadedDocumentUrl !== "");
+    },
+    [fields, formData, uploadedDocumentUrl]
+  );
 
   // Validate form whenever dependencies change
   useEffect(() => {
     validateForm();
   }, [validateForm]);
-  
+
   const { user } = useAuthenticator((context) => [context.user]);
 
   const handleInputChange = (id: string, value: string) => {
@@ -126,17 +131,18 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
   };
 
   const handleUploadSuccess = async (event: { key?: string; file?: File }) => {
-    // Create the S3 URL format required by the API
-    const s3Url = `s3://${API_CONFIG.VALIDATED_DOCS_BASE_S3_PATH}/${event.key}`;
-    setUploadedDocumentUrl(s3Url);
-
     // Save the file name for display
     if (event.file) {
-      setUploadedFileName(event.file.name);
+      const s3Url = event.file.name;
+      setUploadedFileName(s3Url);
+      setUploadedDocumentUrl(s3Url);
+
+      // Revalidate the form after document upload
+      validateForm();
+    }else {
+      //show user error
+      setError("Uploaded document could not be located")
     }
-    
-    // Revalidate the form after document upload
-    validateForm();
   };
 
   const handleSubmit = async () => {
@@ -171,14 +177,13 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
         uploadedDocumentUrl,
       };
 
-      
-      const data:DocumentValidationResponse = await eKYCApi.validateDocument(
-        documentType, 
+      const data: DocumentValidationResponse = await eKYCApi.validateDocument(
+        documentType,
         JSON.stringify(payload)
       );
       if (data.error) {
         setError(data.error);
-        return
+        return;
       }
       setSuccess(true);
       if (onSuccess) onSuccess(data);
@@ -243,7 +248,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
                     i18nStrings={{
                       nextMonthAriaLabel: "Next month",
                       previousMonthAriaLabel: "Previous month",
-                      todayAriaLabel: "Today"
+                      todayAriaLabel: "Today",
                     }}
                   />
                 ) : (
@@ -279,9 +284,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
               {uploadedDocumentUrl && (
                 <Box textAlign="center" padding={{ bottom: "s" }}>
                   <Box variant="h4">Preview: {uploadedFileName}</Box>
-                  <Box
-                    padding="s"                  
-                  >
+                  <Box padding="s">
                     <Document
                       file={`https://${API_CONFIG.VALIDATED_DOCS_BASE_S3_PATH}.s3.amazonaws.com/${uploadedDocumentUrl.replace("s3://", "")}`}
                       onLoadSuccess={({ numPages }) => setNumPages(numPages)}
@@ -289,7 +292,9 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
                         console.error("Error loading PDF:", error)
                       }
                       loading={<Box>Loading PDF...</Box>}
-                      error={<Box>Failed to load PDF. {uploadedDocumentUrl}</Box>}
+                      error={
+                        <Box>Failed to load PDF. {uploadedDocumentUrl}</Box>
+                      }
                     >
                       <Page
                         pageNumber={pageNumber}
