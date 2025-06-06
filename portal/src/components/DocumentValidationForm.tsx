@@ -212,9 +212,6 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
               iconName="remove"
               ariaLabel="Clear form"
             />
-            <Button key="cancel-button" variant="link" onClick={() => document.querySelector('[aria-label="Close modal"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}>
-              Cancel
-            </Button>
             <Button
               key="validate-button"
               variant="primary"
