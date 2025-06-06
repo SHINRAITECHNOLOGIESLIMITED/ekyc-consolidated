@@ -18,8 +18,8 @@ import {
 import { eKYCApi } from "@/services/api";
 import { Document, Page, pdfjs } from "react-pdf";
 import React, { useState, useEffect, useCallback } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { DocumentValidationResponse } from "@/types/liveness";
+import { API_CONFIG } from "@/constants/api";
 
 
 // Define the common props for all document validation forms
@@ -127,7 +127,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
 
   const handleUploadSuccess = async (event: { key?: string; file?: File }) => {
     // Create the S3 URL format required by the API
-    const s3Url = `s3://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME}/${event.key}`;
+    const s3Url = `s3://${API_CONFIG.VALIDATED_DOCS_BASE_S3_PATH}/${event.key}`;
     setUploadedDocumentUrl(s3Url);
 
     // Save the file name for display
@@ -212,9 +212,6 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
               iconName="remove"
               ariaLabel="Clear form"
             />
-            <Button key="cancel-button" variant="link" onClick={() => document.querySelector('[aria-label="Close modal"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}>
-              Cancel
-            </Button>
             <Button
               key="validate-button"
               variant="primary"
@@ -272,7 +269,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
                 acceptedFileTypes={[".pdf", ".jpg", ".jpeg", ".png", "image/*"]}
                 maxFileCount={1}
                 processFile={processFile}
-                path={() => `uploaded_kyc_docs/${documentType}/${uuidv4()}/`}
+                path={() => `uploaded_kyc_docs/`}
                 onUploadSuccess={handleUploadSuccess}
                 onUploadError={(message: string) => {
                   setError(message);
@@ -286,7 +283,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
                     padding="s"                  
                   >
                     <Document
-                      file={`https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME}.s3.amazonaws.com/${uploadedDocumentUrl.replace("s3://", "")}`}
+                      file={`https://${API_CONFIG.VALIDATED_DOCS_BASE_S3_PATH}.s3.amazonaws.com/${uploadedDocumentUrl.replace("s3://", "")}`}
                       onLoadSuccess={({ numPages }) => setNumPages(numPages)}
                       onLoadError={(error) =>
                         console.error("Error loading PDF:", error)
