@@ -12,6 +12,7 @@ export const API_CONFIG = {
     SWAGGER_UI_URL: `${API_BASE_URL}/swagger-ui/`,
     API_ENDPOINTS: {
         CREATE_SESSION: `${API_BASE_URL}/faceliveness`,
-        GET_RESULTS: `${API_BASE_URL}/faceliveness`
+        GET_RESULTS: `${API_BASE_URL}/faceliveness`,
+        VALIDATION: `${API_BASE_URL}/document`
     }
 };

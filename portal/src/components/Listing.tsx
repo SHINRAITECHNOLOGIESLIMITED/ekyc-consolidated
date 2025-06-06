@@ -188,8 +188,8 @@ export const Listing = <T,>({
         {error}
       </Alert>
     );
-  const action_items = actions?.map((action) => ({
-                      id: action.label,
+  const action_items = actions?.map((action, index) => ({
+                      id: index.toString(),
                       text: action.label
                     })) ?? [];
   return (
@@ -210,9 +210,12 @@ export const Listing = <T,>({
                   <ButtonDropdown
                     items={action_items}
                     onItemClick={({ detail }) => {
-                      const action = actions[parseInt(detail.id)];
-                      setModal(action.render());
-                      setIsModalVisible(true);
+                      const actionIndex = parseInt(detail.id);
+                      const action = actions[actionIndex];
+                      if (action && action.render) {
+                        setModal(action.render());
+                        setIsModalVisible(true);
+                      }
                     }}
                   >
                     Actions

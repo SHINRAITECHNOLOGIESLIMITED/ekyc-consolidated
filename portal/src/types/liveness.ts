@@ -22,6 +22,8 @@ export interface LivenessResponse {
   message: string;
 }
 
-export interface DocumentResponse {
+export interface DocumentValidationResponse {
+  validationId?: string;
   message:string
+  error?:string
 }
