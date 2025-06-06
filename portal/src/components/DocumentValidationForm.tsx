@@ -225,7 +225,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
         }
       >
         <SpaceBetween size="l">
-          <ColumnLayout columns={2} variant="text-grid" borders="horizontal">
+          <ColumnLayout columns={3} variant="text-grid" borders="horizontal">
             {fields.map((field) => (
               <FormField
                 key={field.id}
