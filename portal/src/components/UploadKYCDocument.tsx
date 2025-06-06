@@ -172,6 +172,7 @@ const UploadKYCDocument: React.FC<UploadKYCDocumentProps> = ({
                     description="Select a document to upload. Supported formats: PDF, JPG, PNG"
                 >
                     {documentType ? (
+                        
                         <FileUploader
                             acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png', 'image/*']}
                             maxFileCount={1}
