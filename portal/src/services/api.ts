@@ -1,4 +1,4 @@
-import {LivenessResponse, SessionResponse} from "@/types/liveness";
+import {DocumentValidationResponse, LivenessResponse, SessionResponse} from "@/types/liveness";
 
 import {API_CONFIG} from "@/constants/api";
 
@@ -7,13 +7,12 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 const getAuthHeaders = async () => {
     try {
         const session = await fetchAuthSession();
-        // const accessToken = `${session.tokens?.accessToken.toString()}`;
-        // console.log("Access Token:", accessToken);
         const idToken = session.tokens?.idToken?.toString() ?? "";
         console.log("Id Token",idToken);
         return {
             'Content-Type': 'application/json',
-            'Authorization': idToken 
+            'Authorization': idToken
+
         };
     } catch (error) {
         console.error('Error getting authentication tokens:', error);
@@ -56,5 +55,24 @@ export const livenessApi = {
 
         return response.json();
     }
+};
+
+export const eKYCApi = {
+    validateDocument: async (document: string,payload: string): Promise<DocumentValidationResponse> => {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_CONFIG.API_ENDPOINTS.VALIDATION}/${document}`, {
+            method: 'POST',
+            headers,
+            body: payload
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return response.json();
+    },
+
+    
 };
 
