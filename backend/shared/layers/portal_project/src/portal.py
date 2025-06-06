@@ -420,7 +420,7 @@ class Portal:
         pass
         
     def log_api_call(self, response: Response, api_name: str, api_method: str, duration_ms: int,
-                     trace_id: str, capture_data=False):
+                     trace_id: str,cacheHit:bool=False, capture_data=False):
         mutation = """
             mutation CreateAPICall($input: CreateAPICallInput!) {
                 createAPICall(input: $input) {
@@ -479,7 +479,8 @@ class Portal:
                 "responseStatusCode": responseStatusCode,
                 "responseResult": responseResult,
                 "requestData": json.dumps(request_data, indent=4),
-                "responseData": json.dumps(response_data, indent=4)
+                "responseData": json.dumps(response_data, indent=4),
+                "cacheHit": cacheHit
             }
         }
 

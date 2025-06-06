@@ -23,6 +23,11 @@ const columnDefinitions =
             cell: (item: APICall) => item.apiMethod
         },
         {
+            id: "cacheHit",
+            header: "Cache",
+            cell: (item: APICall) => item.cacheHit ? "Hit" : ""
+        },
+        {
             id: "requestHttpMethod",
             header: "Http Method",
             cell: (item: APICall) => item.requestHttpMethod ?? ""
