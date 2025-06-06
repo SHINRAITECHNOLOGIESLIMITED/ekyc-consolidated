@@ -65,7 +65,7 @@ class JubileeESBUtilities:
             duration_ms = round(time.time() * 1000 - start_time)
             current_segment = xray_recorder.current_segment()
             trace_id = current_segment.trace_id if current_segment else ""
-            self.portal.log_api_call(response, api_name="EBS", api_method="auth/signin",
+            self.portal.log_api_call(response, api_name="ESB", api_method="auth/signin",
                                      duration_ms=duration_ms,
                                      trace_id=trace_id, capture_data=False)
             response.raise_for_status()
@@ -155,7 +155,10 @@ class JubileeESBUtilities:
                         # Check if cache is still valid
                         if int(time.time()) < expiry_time:
                             logger.info(f"Jubilee ESB: {service} API call retrieved from cache")
-                            return json.loads(item['response_data'])
+                            cached_data = json.loads(item['response_data'])
+                            self.portal.log_api_call(cached_data, api_name=service, api_method=api_method, duration_ms=duration_ms,
+                                     trace_id=trace_id,cacheHit=True, capture_data=True)
+                            return cached_data
                 except ClientError as e:
                     logger.warning(f"Cache retrieval error: {str(e)}")
             

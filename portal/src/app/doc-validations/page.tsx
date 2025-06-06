@@ -1,10 +1,8 @@
 "use client";
 
 import Listing, { ListingProps } from "@/components/Listing";
-import { useState } from "react";
 import { fetchDocumentValidations } from "@/services/DataService";
 import type { DocumentValidation } from "@/types/models";
-import { SpaceBetween } from "@cloudscape-design/components";
 import ValidationDetails from "./ValidationDetails";
 import { formatPercentage } from "@/utils/formatters";
 import DocumentValidationForm from "@/components/DocumentValidationForm";
@@ -61,9 +59,8 @@ const listingProps: ListingProps<DocumentValidation> = {
       label: "New NationalId Validation",
       id: "nationalid", // Add an id to each action
       render: () => {
-        const handleCancel = () => setIsModalVisible(false);
         return (
-          <NationalIdValidationForm onCancel={handleCancel} />
+          <NationalIdValidationForm/>
         );
       },
     },
@@ -71,9 +68,8 @@ const listingProps: ListingProps<DocumentValidation> = {
       label: "New Passport Validation",
       id: "passport", // Add an id to each action
       render: () => {
-        const handleCancel = () => setIsModalVisible(false);
         return (
-          <PassportValidationForm onCancel={handleCancel} />
+          <PassportValidationForm/>
         );
       },
     },
@@ -81,9 +77,8 @@ const listingProps: ListingProps<DocumentValidation> = {
       label: "New KRAPinCertificate Validation",
       id: "krapincertificate", // Add an id to each action
       render: () => {
-        const handleCancel = () => setIsModalVisible(false);
         return (
-          <KRAPinCertificateValidationForm onCancel={handleCancel} />
+          <KRAPinCertificateValidationForm/>
         );
       },
     },
@@ -91,9 +86,8 @@ const listingProps: ListingProps<DocumentValidation> = {
       label: "Certification of Incoporation (CR12) Validation",
       id: "cr12", // Add an id to each action
       render: () => {
-        const handleCancel = () => setIsModalVisible(false);
         return (
-          <CR12ValidationForm onCancel={handleCancel} />
+          <CR12ValidationForm/>
         );
       },
     },
@@ -102,11 +96,10 @@ const listingProps: ListingProps<DocumentValidation> = {
 
 
 const DocumentsListing: React.FC = () => {
-  const [isModalVisible, setIsModalVisible] = useState(false);
   return <Listing {...listingProps} />;
 };
 
-const NationalIdValidationForm: React.FC<{ onCancel?: () => void }> = ({ onCancel }) => (
+const NationalIdValidationForm: React.FC = () => (
   <DocumentValidationForm
     title="National ID Validation"
     documentType="nationalid"
@@ -120,11 +113,10 @@ const NationalIdValidationForm: React.FC<{ onCancel?: () => void }> = ({ onCance
       { id: "districtOfBirth", label: "District of Birth", placeholder: "THIKA WEST" },
       { id: "placeOfIssue", label: "Place of Issue", placeholder: "NGENDA" },
     ]}
-    onCancel={onCancel}
   />
 );
 
-const PassportValidationForm: React.FC<{ onCancel?: () => void }> = ({ onCancel }) => (
+const PassportValidationForm: React.FC = () => (
   <DocumentValidationForm
     title="Passport Validation"
     documentType="passport"
@@ -143,11 +135,10 @@ const PassportValidationForm: React.FC<{ onCancel?: () => void }> = ({ onCancel 
       { id: "nationality", label: "Nationality", placeholder: "KENYAN" },
       { id: "issuingAuthority", label: "Issuing Authority", placeholder: "GOVERNMENT OF KENYA" },
     ]}
-    onCancel={onCancel}
   />
 );
 
-const KRAPinCertificateValidationForm: React.FC<{ onCancel?: () => void }> = ({ onCancel }) => (
+const KRAPinCertificateValidationForm: React.FC = () => (
   <DocumentValidationForm
     title="KRA Pin Certificate Validation"
     documentType="krapincertificate"
@@ -157,11 +148,10 @@ const KRAPinCertificateValidationForm: React.FC<{ onCancel?: () => void }> = ({ 
       { id: "taxPayerName", label: "Tax Payer Name", placeholder: "Jackson Gitonga Mwangi" },
       { id: "emailAddress", label: "Email Address", placeholder: "jackmwangi02@gmail.com" },
     ]}
-    onCancel={onCancel}
   />
 );
 
-const CR12ValidationForm: React.FC<{ onCancel?: () => void }> = ({ onCancel }) => (
+const CR12ValidationForm: React.FC = () => (
   <DocumentValidationForm
     title="Certificate of Incorporation (CR12) Validation"
     documentType="cr12"
@@ -169,7 +159,6 @@ const CR12ValidationForm: React.FC<{ onCancel?: () => void }> = ({ onCancel }) =
       { id: "businessNumber", label: "Business Number", required: true, placeholder: "PVT-RXUMYGVQ" },
       { id: "businessName", label: "Business Name", placeholder: "DETALI INSURANCE AGENCY LIMITED" },
     ]}
-    onCancel={onCancel}
   />
 );
 export default DocumentsListing;

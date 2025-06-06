@@ -115,6 +115,7 @@ const schema = a.schema({
       requestTimestamp: a.integer(),
       responseStatusCode: a.string(),
       responseResult: a.string(),
+      cacheHit: a.boolean().required(),
       requestData: a.json(),
       responseData: a.json(),
     })

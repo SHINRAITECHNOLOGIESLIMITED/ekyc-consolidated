@@ -17,7 +17,7 @@ import {
 } from "@cloudscape-design/components";
 import { eKYCApi } from "@/services/api";
 import { Document, Page, pdfjs } from "react-pdf";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { DocumentValidationResponse } from "@/types/liveness";
 
@@ -35,7 +35,6 @@ interface DocumentValidationFormProps {
   }>;
   onSuccess?: (data: DocumentValidationResponse) => void;
   onError?: (error: Error) => void;
-  onCancel?: () => void;
 }
 
 const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
@@ -43,8 +42,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
   documentType,
   fields,
   onSuccess,
-  onError,
-  onCancel,
+  onError
 }) => {
   // State declarations first
   const [formData, setFormData] = useState<Record<string, string>>({});
@@ -63,19 +61,8 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
     pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
   }, []);
   
-  // Validate form whenever dependencies change
-  useEffect(() => {
-    validateForm();
-  }, [uploadedDocumentUrl]);
-  const { user } = useAuthenticator((context) => [context.user]);
-
-  const handleInputChange = (id: string, value: string) => {
-    const updatedFormData = { ...formData, [id]: value };
-    setFormData(updatedFormData);
-    validateForm(updatedFormData);
-  };
-  
-  const validateForm = (currentFormData: Record<string, string> = formData) => {
+  // Define validateForm before it's used in useEffect
+  const validateForm = useCallback((currentFormData: Record<string, string> = formData) => {
     // Check if all required fields have values
     const requiredFieldsFilled = fields
       .filter(field => field.required)
@@ -83,6 +70,19 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
       
     // Form is valid if all required fields are filled and a document is uploaded
     setIsFormValid(requiredFieldsFilled && uploadedDocumentUrl !== '');
+  }, [fields, formData, uploadedDocumentUrl]);
+
+  // Validate form whenever dependencies change
+  useEffect(() => {
+    validateForm();
+  }, [validateForm]);
+  
+  const { user } = useAuthenticator((context) => [context.user]);
+
+  const handleInputChange = (id: string, value: string) => {
+    const updatedFormData = { ...formData, [id]: value };
+    setFormData(updatedFormData);
+    validateForm(updatedFormData);
   };
 
   const handleClearForm = () => {
@@ -212,7 +212,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
               iconName="remove"
               ariaLabel="Clear form"
             />
-            <Button key="cancel-button" variant="link" onClick={onCancel}>
+            <Button key="cancel-button" variant="link" onClick={() => document.querySelector('[aria-label="Close modal"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}>
               Cancel
             </Button>
             <Button
@@ -242,19 +242,11 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
                       handleInputChange(field.id, detail.value)
                     }
                     placeholder="YYYY-MM-DD"
-                    ariaLabels={{
-                      openCalendarAriaLabel: "Open calendar",
-                      todayAriaLabel: "Today",
+                    ariaLabel="Date picker"
+                    i18nStrings={{
                       nextMonthAriaLabel: "Next month",
                       previousMonthAriaLabel: "Previous month",
-                    }}
-                    formatValue={(value) => {
-                      try {
-                        const date = new Date(value);
-                        return date.toISOString().split("T")[0]; // YYYY-MM-DD format
-                      } catch (e) {
-                        return value;
-                      }
+                      todayAriaLabel: "Today"
                     }}
                   />
                 ) : (
@@ -291,8 +283,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
                 <Box textAlign="center" padding={{ bottom: "s" }}>
                   <Box variant="h4">Preview: {uploadedFileName}</Box>
                   <Box
-                    padding="s"
-                    style={{ display: "flex", justifyContent: "center" }}
+                    padding="s"                  
                   >
                     <Document
                       file={`https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME}.s3.amazonaws.com/${uploadedDocumentUrl.replace("s3://", "")}`}
