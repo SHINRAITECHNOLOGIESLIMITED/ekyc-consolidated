@@ -43,7 +43,6 @@ aws configure --profile shinrai.devpost
 
 To run all tests with report:
 ```
-pip install pytest pytest-html
 pytest e2e/tests --html=temp/report.html
 ```
 
