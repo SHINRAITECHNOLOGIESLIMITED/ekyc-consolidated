@@ -130,7 +130,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
       });
   };
 
-  const handleUploadSuccess = async (event: { key?: string; file?: File }) => {
+  const handleUploadSuccess = async (event: { key?: string, file?: File,bucket?: string, region?: string, url?: string }) => {
     // Save the file name for display
     if (event.file) {
       const s3Url = event.file.name;
@@ -140,8 +140,10 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
       // Revalidate the form after document upload
       validateForm();
     }else {
+      const s3Url = `${API_CONFIG.UPLOADED_DOCS_BASE_S3_PATH}/${event.key}`;
       //show user error
-      setError("Uploaded document could not be located")
+      setUploadedFileName(s3Url);
+      setUploadedDocumentUrl(s3Url);
     }
   };
 
@@ -273,8 +275,10 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
               <FileUploader
                 acceptedFileTypes={[".pdf", ".jpg", ".jpeg", ".png", "image/*"]}
                 maxFileCount={1}
+                // accessLevel="protected"
+                path="uploaded_kyc_docs/"
                 processFile={processFile}
-                path={() => `uploaded_kyc_docs/`}
+                // path={() => `uploaded_kyc_docs/`}
                 onUploadSuccess={handleUploadSuccess}
                 onUploadError={(message: string) => {
                   setError(message);
