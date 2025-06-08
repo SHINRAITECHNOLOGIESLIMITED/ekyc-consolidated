@@ -5,7 +5,7 @@ import { fetchDocumentValidations } from "@/services/DataService";
 import type { DocumentValidation } from "@/types/models";
 import ValidationDetails from "./ValidationDetails";
 import { formatPercentage } from "@/utils/formatters";
-import DocumentValidationForm from "@/components/DocumentValidationForm";
+import DocumentForm from "@/components/DocumentForm";
 
 const columnDefinitions = [
   {
@@ -100,7 +100,7 @@ const DocumentsListing: React.FC = () => {
 };
 
 const NationalIdValidationForm: React.FC = () => (
-  <DocumentValidationForm
+  <DocumentForm
     title="National ID Validation"
     documentType="nationalid"
     fields={[
@@ -125,7 +125,7 @@ const NationalIdValidationForm: React.FC = () => (
 );
 
 const PassportValidationForm: React.FC = () => (
-  <DocumentValidationForm
+  <DocumentForm
     title="Passport Validation"
     documentType="passport"
     fields={[
@@ -155,7 +155,7 @@ const PassportValidationForm: React.FC = () => (
 );
 
 const KRAPinCertificateValidationForm: React.FC = () => (
-  <DocumentValidationForm
+  <DocumentForm
     title="KRA Pin Certificate Validation"
     documentType="krapincertificate"
     fields={[
@@ -176,7 +176,7 @@ const KRAPinCertificateValidationForm: React.FC = () => (
 );
 
 const CR12ValidationForm: React.FC = () => (
-  <DocumentValidationForm
+  <DocumentForm
     title="Certificate of Incorporation (CR12) Validation"
     documentType="cr12"
     fields={[

@@ -14,6 +14,7 @@ import {
   Input,
   SpaceBetween,
 } from "@cloudscape-design/components";
+import { Modal, Box } from "@cloudscape-design/components";
 import { eKYCApi } from "@/services/api";
 import React, { useState, useEffect, useCallback } from "react";
 import { DocumentValidationResponse } from "@/types/liveness";
@@ -54,7 +55,7 @@ interface DocumentValidationFormProps {
   onError?: (error: Error) => void;
 }
 
-const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
+const DocumentForm: React.FC<DocumentValidationFormProps> = ({
   title,
   documentType,
   fields,
@@ -68,6 +69,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState<boolean>(false);
   const [isFormValid, setIsFormValid] = useState<boolean>(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
 
   // Define validateForm before it's used in useEffect
   const validateForm = useCallback(
@@ -205,6 +207,8 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
         return;
       }
       setSuccess(true);
+      //Close the form as show a success dialoge asking user if they want to view the details
+      setShowSuccessDialog(true);
       if (onSuccess) onSuccess(data);
     } catch (err: unknown) {
       const errorMessage =
@@ -339,8 +343,44 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
             ))}
         </SpaceBetween>
       </Form>
+      <Modal
+        onDismiss={() => setShowSuccessDialog(false)}
+        visible={showSuccessDialog}
+        header="Document Validation Successful!"
+        closeAriaLabel="Close dialog"
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button
+                onClick={() => setShowSuccessDialog(false)}
+                variant="link"
+              >
+                Close
+              </Button>
+              {/* You might want a button to view details */}
+              <Button
+                variant="primary"
+                onClick={() => {
+                  // Logic to navigate to a details page or show details in a different component
+                  console.log("Viewing details...");
+                  setShowSuccessDialog(false); // Close dialog after action
+                  // Example: if you have a routing mechanism
+                  // router.push(`/document-details/<span class="math-inline">\{documentType\}/</span>{data.id}`);
+                }}
+              >
+                View Details
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+      >
+        <p>Your document has been successfully validated.</p>
+        <p>Would you like to view the details?</p>
+        {/* Optionally display some summary details here from the 'data' */}
+        {/* <p>Validation ID: {validatedData?.validationId}</p> */}
+      </Modal>
     </Container>
   );
 };
 
-export default DocumentValidationForm;
+export default DocumentForm;
