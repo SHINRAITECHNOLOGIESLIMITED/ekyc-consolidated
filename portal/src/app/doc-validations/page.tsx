@@ -102,7 +102,7 @@ const DocumentsListing: React.FC = () => {
 const NationalIdValidationForm: React.FC = () => (
   <DocumentForm
     title="National ID Validation"
-    documentType="nationalid"
+    apiEndpoint="document/nationalid"
     fields={[
       { id: "idNumber", label: "ID Number", type: "text", required: true, placeholder: "23667272" },
       { id: "serialNumber", label: "Serial Number", type: "text", placeholder: "217934147" },
@@ -127,7 +127,7 @@ const NationalIdValidationForm: React.FC = () => (
 const PassportValidationForm: React.FC = () => (
   <DocumentForm
     title="Passport Validation"
-    documentType="passport"
+    apiEndpoint="document/passport"
     fields={[
       { id: "passportNumber", label: "Passport Number", type: "text", required: true, placeholder: "BK120129" },
       { id: "documentType", label: "Document Type", type: "text", placeholder: "P" },
@@ -157,7 +157,7 @@ const PassportValidationForm: React.FC = () => (
 const KRAPinCertificateValidationForm: React.FC = () => (
   <DocumentForm
     title="KRA Pin Certificate Validation"
-    documentType="krapincertificate"
+    apiEndpoint="document/krapincertificate"
     fields={[
       { id: "pin", label: "PIN", type: "text", required: true, placeholder: "A003388522V" },
       { id: "certificateDate", label: "Certificate Date", type: "date", placeholder: "2014-10-14" },
@@ -178,7 +178,7 @@ const KRAPinCertificateValidationForm: React.FC = () => (
 const CR12ValidationForm: React.FC = () => (
   <DocumentForm
     title="Certificate of Incorporation (CR12) Validation"
-    documentType="cr12"
+    apiEndpoint="document/cr12"
     fields={[
       { id: "businessNumber", label: "Business Number", type: "text", required: true, placeholder: "PVT-RXUMYGVQ" },
       { id: "businessName", label: "Business Name", type: "text", placeholder: "DETALI INSURANCE AGENCY LIMITED" },

@@ -12,9 +12,9 @@ export const API_CONFIG = {
     VALIDATED_DOCS_BASE_S3_PATH:VALIDATED_DOCS_BASE_S3_PATH,
     UPLOADED_DOCS_BASE_S3_PATH:UPLOADED_DOCS_BASE_S3_PATH,
     SWAGGER_UI_URL: `${API_BASE_URL}/swagger-ui/`,
+    API_BASE_URL: API_BASE_URL,
     API_ENDPOINTS: {
         CREATE_SESSION: `${API_BASE_URL}/faceliveness`,
-        GET_RESULTS: `${API_BASE_URL}/faceliveness`,
-        VALIDATION: `${API_BASE_URL}/document`
+        GET_RESULTS: `${API_BASE_URL}/faceliveness`
     }
 };

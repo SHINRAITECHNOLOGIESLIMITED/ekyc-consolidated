@@ -75,7 +75,7 @@ const listingProps: ListingProps<DocumentVerification> = {
 const NationalIdVerificationForm: React.FC = () => (
   <DocumentForm
     title="National ID Verification"
-    documentType="nationalid"
+    apiEndpoint="government/nationalid"
     fields={[
       { id: "idNumber", label: "ID Number", type: "text", required: true, placeholder: "23667272" },
       { id: "serialNumber", label: "Serial Number", type: "text", placeholder: "217934147" },
@@ -91,7 +91,7 @@ const NationalIdVerificationForm: React.FC = () => (
 const PassportVerificationForm: React.FC = () => (
   <DocumentForm
     title="Passport Verification"
-    documentType="passport"
+    apiEndpoint="government/passport"
     fields={[
       { id: "passportNumber", label: "Passport Number", type: "text", required: true, placeholder: "BK120129" },
       { id: "idNumber", label: "ID Number", type: "text", required: true, placeholder: "23667272" },
@@ -109,7 +109,7 @@ const PassportVerificationForm: React.FC = () => (
 const KRAVerificationForm: React.FC = () => (
   <DocumentForm
     title="KRA Verification"
-    documentType="krapincertificate"
+    apiEndpoint="government/kra"
     fields={[
       { id: "idNumber", label: "ID Number", type: "text", required: true, placeholder: "23667272" },
       { id: "pin", label: "PIN", type: "text", placeholder: "A003388522V" },

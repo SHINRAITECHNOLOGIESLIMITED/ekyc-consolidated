@@ -82,7 +82,7 @@ const listingProps: ListingProps<BackGroundCheck> = {
 const BackGroundCheckForm: React.FC = () => (
   <DocumentForm
     title="Background Check"
-    documentType="nationalid"
+    apiEndpoint="backgroundcheck"
     fields={[
       { id: "firstName", label: "First Name", type: "text", required: true, placeholder: "Jane" },
       { id: "middleName", label: "Middle Name", type: "text", placeholder: "Wairimu" },
