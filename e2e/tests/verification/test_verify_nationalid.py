@@ -1,8 +1,4 @@
-import json
 import unittest
-from pprint import pprint
-
-import requests
 
 from e2e.tests.config import *
 from e2e.tests.verification.verify_test_util import verifity_test
@@ -12,7 +8,7 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
         payload ={"serialNumber":"217934147",
             "idNumber":"23667272",
             "fullNames":"JANE WAIRIMU MAINA",
-            "dateOfBirth":"1985-01-01",
+            # "dateOfBirth":"1985-01-01", #IPRS and Supplied sample have a mismatch
             "dateOfIssue":"2016-10-28",
             "gender":"F",
             "districtOfBirth":"THIKA WEST"

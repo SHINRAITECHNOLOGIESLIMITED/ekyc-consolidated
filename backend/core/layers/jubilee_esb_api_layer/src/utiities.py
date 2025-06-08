@@ -138,7 +138,11 @@ class JubileeESBUtilities:
             is_post: true if http method is POST other it will call GET
             cache_ttl_seconds: Time to live for cache in seconds (default: 1 hour)
         """
-        try:
+        try:            
+            # Cache miss or error, proceed with API call
+            current_segment = xray_recorder.current_segment()
+            trace_id = current_segment.trace_id if current_segment else None
+
             # Create a cache key based on the request parameters and hash it
             raw_key = f"{service}:{api_method}:{url}:{json.dumps(data, sort_keys=True)}"
             cache_key = hashlib.sha256(raw_key.encode()).hexdigest()
@@ -156,16 +160,13 @@ class JubileeESBUtilities:
                         if int(time.time()) < expiry_time:
                             logger.info(f"Jubilee ESB: {service} API call retrieved from cache")
                             cached_data = json.loads(item['response_data'])
-                            self.portal.log_api_call(cached_data, api_name=service, api_method=api_method, duration_ms=duration_ms,
+                            self.portal.log_api_call(cached_data, api_name=service, api_method=api_method, duration_ms=0,
                                      trace_id=trace_id,cacheHit=True, capture_data=True)
                             return cached_data
                 except ClientError as e:
                     logger.warning(f"Cache retrieval error: {str(e)}")
             
-            # Cache miss or error, proceed with API call
-            current_segment = xray_recorder.current_segment()
-            trace_id = current_segment.trace_id if current_segment else None
-
+            
             headers = {
                 "Authorization": self.authorization_jwt,
                 "Content-Type": "application/json"
