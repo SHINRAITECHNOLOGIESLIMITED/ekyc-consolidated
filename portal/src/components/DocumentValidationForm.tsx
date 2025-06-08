@@ -271,7 +271,6 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
             description="Upload the document for validation"
             constraintText="Supported formats: JPG, PNG, PDF"
           >
-            <SpaceBetween size={"s"} direction="horizontal">
               <FileUploader
                 acceptedFileTypes={[".pdf", ".jpg", ".jpeg", ".png", "image/*"]}
                 maxFileCount={1}
@@ -285,59 +284,6 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
                   onError?.(Error(message));
                 }}
               />
-              {uploadedDocumentUrl && (
-                <Box textAlign="center" padding={{ bottom: "s" }}>
-                  <Box variant="h4">Preview: {uploadedFileName}</Box>
-                  <Box padding="s">
-                    <Document
-                      file={`https://${API_CONFIG.VALIDATED_DOCS_BASE_S3_PATH}.s3.amazonaws.com/${uploadedDocumentUrl.replace("s3://", "")}`}
-                      onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-                      onLoadError={(error) =>
-                        console.error("Error loading PDF:", error)
-                      }
-                      loading={<Box>Loading PDF...</Box>}
-                      error={
-                        <Box>Failed to load PDF. {uploadedDocumentUrl}</Box>
-                      }
-                    >
-                      <Page
-                        pageNumber={pageNumber}
-                        width={300}
-                        renderTextLayer={false}
-                        renderAnnotationLayer={false}
-                      />
-                    </Document>
-                  </Box>
-                  {numPages && (
-                    <Box padding="xs">
-                      <SpaceBetween direction="horizontal" size="xs">
-                        <Button
-                          key="prev-button"
-                          disabled={pageNumber <= 1}
-                          onClick={() =>
-                            setPageNumber((prev) => Math.max(prev - 1, 1))
-                          }
-                          iconName="angle-left"
-                        />
-                        <Box key="page-info">
-                          Page {pageNumber} of {numPages}
-                        </Box>
-                        <Button
-                          key="next-button"
-                          disabled={pageNumber >= numPages}
-                          onClick={() =>
-                            setPageNumber((prev) =>
-                              Math.min(prev + 1, numPages || 1)
-                            )
-                          }
-                          iconName="angle-right"
-                        />
-                      </SpaceBetween>
-                    </Box>
-                  )}
-                </Box>
-              )}
-            </SpaceBetween>
           </FormField>
         </SpaceBetween>
       </Form>
