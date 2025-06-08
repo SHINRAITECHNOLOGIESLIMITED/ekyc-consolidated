@@ -58,9 +58,9 @@ export const livenessApi = {
 };
 
 export const eKYCApi = {
-    validateDocument: async (document: string,payload: string): Promise<DocumentValidationResponse> => {
+    call: async (apiEndpoint: string,payload: string): Promise<DocumentValidationResponse> => {
         const headers = await getAuthHeaders();
-        const response = await fetch(`${API_CONFIG.API_ENDPOINTS.VALIDATION}/${document}`, {
+        const response = await fetch(`${API_CONFIG.API_BASE_URL}/${apiEndpoint}`, {
             method: 'POST',
             headers,
             body: payload

@@ -78,7 +78,7 @@ const listingProps: ListingProps<Agent> = {
 const IndividualAgentForm: React.FC = () => (
   <DocumentForm
     title="Individual Agent Registration"
-    documentType="nationalid"
+    apiEndpoint="agent-registration"
     fields={[
       {
         id: "agentType",
@@ -131,7 +131,7 @@ const IndividualAgentForm: React.FC = () => (
 const BusinessAgentForm: React.FC = () => (
   <DocumentForm
     title="Agent Registration"
-    documentType="nationalid"
+    apiEndpoint="agent-registration"
     fields={[
       {
         id: "agentType",

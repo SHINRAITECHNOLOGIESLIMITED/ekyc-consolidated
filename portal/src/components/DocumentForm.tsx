@@ -26,7 +26,7 @@ interface BaseField {
   label: string;
   required?: boolean;
   defaultValue?: string; // <-- Add this
-  disabled?: boolean;    // <-- And this
+  disabled?: boolean; // <-- And this
 }
 
 interface TextField extends BaseField {
@@ -51,7 +51,7 @@ type FormField = TextField | DateField | DocumentField;
 // Define the common props for all document validation forms
 interface DocumentValidationFormProps {
   title: string;
-  documentType: "nationalid" | "passport" | "krapincertificate" | "cr12";
+  apiEndpoint: string;
   fields: FormField[];
   onSuccess?: (data: DocumentValidationResponse) => void;
   onError?: (error: Error) => void;
@@ -59,27 +59,30 @@ interface DocumentValidationFormProps {
 
 const DocumentForm: React.FC<DocumentValidationFormProps> = ({
   title,
-  documentType,
+  apiEndpoint,
   fields,
   onSuccess,
   onError,
 }) => {
   // Initialize formData with default values
-  const initialFormData = fields.reduce((acc, field) => {
-    if (field.defaultValue !== undefined) {
-      acc[field.id] = field.defaultValue;
-    }
-    return acc;
-  }, {} as Record<string, string>);
+  const initialFormData = fields.reduce(
+    (acc, field) => {
+      if (field.defaultValue !== undefined) {
+        acc[field.id] = field.defaultValue;
+      }
+      return acc;
+    },
+    {} as Record<string, string>
+  );
 
-  const [formData, setFormData] = useState<Record<string, string>>(initialFormData);
+  const [formData, setFormData] =
+    useState<Record<string, string>>(initialFormData);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState<boolean>(false);
   const [isFormValid, setIsFormValid] = useState<boolean>(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
-  
 
   // Define validateForm before it's used in useEffect
   const validateForm = useCallback(
@@ -148,9 +151,9 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
         return {
           file,
           fieldId,
-          key: `${user.userId}/${documentType}/${fieldId}/${hashHex}.${fileExtension}`,
+          key: `${user.userId}/${apiEndpoint}/${fieldId}/${hashHex}.${fileExtension}`,
           metadata: {
-            documentType: documentType,
+            form: apiEndpoint,
             fieldId: fieldId,
             uploadDate: new Date().toISOString(),
           },
@@ -209,8 +212,8 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
         ...formData,
       };
 
-      const data: DocumentValidationResponse = await eKYCApi.validateDocument(
-        documentType,
+      const data: DocumentValidationResponse = await eKYCApi.call(
+        apiEndpoint,
         JSON.stringify(payload)
       );
       if (data.error) {
@@ -291,97 +294,98 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
   };
 
   return (
-    <Container header={<Header variant="h2">{title}</Header>}>
+    <SpaceBetween size={"s"}>
+      <Header variant="h2">{title}</Header>
       {error && <Alert type="error">{error}</Alert>}
-      {success && (
-        <Alert type="success">Document validated successfully!</Alert>
-      )}
-
+        {success && (
+          <Alert type="success">Document validated successfully!</Alert>
+        )}
       <Form
-        actions={
-          <SpaceBetween direction="horizontal" size="xs">
-            <Button
-              key="clear-button"
-              variant="icon"
-              onClick={handleClearForm}
-              iconName="remove"
-              ariaLabel="Clear form"
-            />
-            <Button
-              key="validate-button"
-              variant="primary"
-              onClick={handleSubmit}
-              loading={isLoading}
-              disabled={!isFormValid}
-            >
-              Validate Document
-            </Button>
-          </SpaceBetween>
-        }
-      >
-        <SpaceBetween size="l">
-          <ColumnLayout columns={3} variant="text-grid" borders="horizontal">
+          actions={
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button
+                key="clear-button"
+                variant="icon"
+                onClick={handleClearForm}
+                iconName="remove"
+                ariaLabel="Clear form"
+              />
+              <Button
+                key="validate-button"
+                variant="primary"
+                onClick={handleSubmit}
+                loading={isLoading}
+                disabled={!isFormValid}
+              >
+                Validate Document
+              </Button>
+            </SpaceBetween>
+          }
+        >
+      <Container>
+          <SpaceBetween size="l">
+            <ColumnLayout columns={3} variant="text-grid" borders="horizontal">
+              {fields
+                .filter((field) => field.type !== "document")
+                .map((field) => (
+                  <FormField
+                    key={field.id}
+                    label={field.required ? `${field.label} *` : field.label}
+                    errorText={fieldErrors[field.id]}
+                  >
+                    {renderField(field)}
+                  </FormField>
+                ))}
+            </ColumnLayout>
+
             {fields
-              .filter((field) => field.type !== "document")
+              .filter((field) => field.type === "document")
               .map((field) => (
                 <FormField
                   key={field.id}
                   label={field.required ? `${field.label} *` : field.label}
+                  description={
+                    field.type === "document"
+                      ? (field as DocumentField).description
+                      : undefined
+                  }
+                  constraintText={
+                    field.type === "document"
+                      ? (field as DocumentField).constraintText
+                      : undefined
+                  }
                   errorText={fieldErrors[field.id]}
                 >
                   {renderField(field)}
                 </FormField>
               ))}
-          </ColumnLayout>
-
-          {fields
-            .filter((field) => field.type === "document")
-            .map((field) => (
-              <FormField
-                key={field.id}
-                label={field.required ? `${field.label} *` : field.label}
-                description={
-                  field.type === "document"
-                    ? (field as DocumentField).description
-                    : undefined
-                }
-                constraintText={
-                  field.type === "document"
-                    ? (field as DocumentField).constraintText
-                    : undefined
-                }
-                errorText={fieldErrors[field.id]}
-              >
-                {renderField(field)}
-              </FormField>
-            ))}
-        </SpaceBetween>
-      </Form>
-      <Modal
-        onDismiss={() => setShowSuccessDialog(false)}
-        visible={showSuccessDialog}
-        header="Document Validation Successful!"
-        closeAriaLabel="Close dialog"
-        footer={
-          <Box float="right">
-            <SpaceBetween direction="horizontal" size="xs">
-              <Button
-                onClick={() => setShowSuccessDialog(false)}
-                //TODO: Close parent modal
-                variant="link"
-              >
-                Close
-              </Button>
-              {/* You might want a button to view details */}
-              
-            </SpaceBetween>
-          </Box>
-        }
-      >
-        <p>Processsing Successful</p>
+          </SpaceBetween>
         
-      </Modal>
-    </Container>
+        <Modal
+          onDismiss={() => setShowSuccessDialog(false)}
+          visible={showSuccessDialog}
+          header="Document Validation Successful!"
+          closeAriaLabel="Close dialog"
+          footer={
+            <Box float="right">
+              <SpaceBetween direction="horizontal" size="xs">
+                <Button
+                  onClick={() => setShowSuccessDialog(false)}
+                  //TODO: Close parent modal
+                  variant="link"
+                >
+                  Close
+                </Button>
+                {/* You might want a button to view details */}
+              </SpaceBetween>
+            </Box>
+          }
+        >
+          <p>Processsing Successful</p>
+        </Modal>
+      </Container>
+      </Form>
+    </SpaceBetween>
   );
 };
 

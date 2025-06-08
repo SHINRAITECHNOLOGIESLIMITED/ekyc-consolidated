@@ -66,7 +66,7 @@ const listingProps: ListingProps<Customer> = {
 const CustomerForm: React.FC = () => (
   <DocumentForm
     title="Customer Registration"
-    documentType="nationalid"
+    apiEndpoint="customer-registration"
     fields={[
       { id: "name", label: "Full Name", type: "text", required: true, placeholder: "Jane Wairimu Maina" },
       { id: "pinNumber", label: "PIN Number", type: "text", required: true, placeholder: "A003388522V" },
