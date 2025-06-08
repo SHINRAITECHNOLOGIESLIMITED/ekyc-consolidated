@@ -3,6 +3,8 @@
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { FileUploader } from "@aws-amplify/ui-react-storage";
 import {
+  Modal,
+  Box,
   Alert,
   Button,
   ColumnLayout,
@@ -14,11 +16,11 @@ import {
   Input,
   SpaceBetween,
 } from "@cloudscape-design/components";
-import { Modal, Box } from "@cloudscape-design/components";
 import { eKYCApi } from "@/services/api";
 import React, { useState, useEffect, useCallback } from "react";
 import { DocumentValidationResponse } from "@/types/liveness";
 import { API_CONFIG } from "@/constants/api";
+import CopyableValue from "./CopyableValue";
 
 // Define field types
 interface BaseField {
@@ -70,6 +72,8 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
   const [success, setSuccess] = useState<boolean>(false);
   const [isFormValid, setIsFormValid] = useState<boolean>(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
+  const [proccesingDocumentId, setProccesingDocumentId] = useState<string>("");
+  
 
   // Define validateForm before it's used in useEffect
   const validateForm = useCallback(
@@ -208,7 +212,7 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
       }
       setSuccess(true);
       //Close the form as show a success dialoge asking user if they want to view the details
-      setShowSuccessDialog(true);
+      setShowSuccessDialog(false);
       if (onSuccess) onSuccess(data);
     } catch (err: unknown) {
       const errorMessage =
@@ -250,6 +254,7 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
               "image/*",
             ]
           }
+          bucket={API_CONFIG.UPLOADED_DOCS_BASE_S3_PATH}
           maxFileCount={1}
           path="uploaded_kyc_docs/"
           processFile={(params) =>
@@ -353,31 +358,21 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
             <SpaceBetween direction="horizontal" size="xs">
               <Button
                 onClick={() => setShowSuccessDialog(false)}
+                //TODO: Close parent modal
                 variant="link"
               >
                 Close
               </Button>
               {/* You might want a button to view details */}
-              <Button
-                variant="primary"
-                onClick={() => {
-                  // Logic to navigate to a details page or show details in a different component
-                  console.log("Viewing details...");
-                  setShowSuccessDialog(false); // Close dialog after action
-                  // Example: if you have a routing mechanism
-                  // router.push(`/document-details/<span class="math-inline">\{documentType\}/</span>{data.id}`);
-                }}
-              >
-                View Details
-              </Button>
+              
             </SpaceBetween>
           </Box>
         }
       >
-        <p>Your document has been successfully validated.</p>
-        <p>Would you like to view the details?</p>
-        {/* Optionally display some summary details here from the 'data' */}
-        {/* <p>Validation ID: {validatedData?.validationId}</p> */}
+        <p>Processsing sucessfully.</p>
+        <CopyableValue label={"id"} value={documentId}>
+
+        </CopyableValue>
       </Modal>
     </Container>
   );
