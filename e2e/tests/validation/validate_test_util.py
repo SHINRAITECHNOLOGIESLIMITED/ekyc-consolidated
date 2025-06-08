@@ -19,8 +19,16 @@ def validate_test(tester,payload,url):
     tester.assertTrue("results" in results)
     results = results["results"]
     tester.assertTrue("matchResults" in results)
+    unmatched = []
+    not_found = []
     for field_name,match_result in results["matchResults"].items():
         if match_result["status"] == "Not Matched":
-            tester.fail(f"Field {field_name} did not match {match_result['details']}")
+            unmatched.append(field_name)
         if match_result["status"] == "Not Found":
-            tester.fail(f"Field {field_name} was not found")
+            not_found.append(field_name)
+    if unmatched or not_found:
+        if unmatched:
+            print("Not Matched ",  ",".join(unmatched), ")")
+        if not_found:
+            print("Not Found ",  ",".join(not_found), ")")
+        tester.fail(f"Issues with Fields")

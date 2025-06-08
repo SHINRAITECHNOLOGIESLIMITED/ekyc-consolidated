@@ -5,7 +5,6 @@ import {
   Box,
   ColumnLayout,
   Container,
-  ExpandableSection,
   Header,
   SpaceBetween,
   StatusIndicator,
@@ -68,7 +67,10 @@ const BackgroundCheckResults = ({ data }: { data: BackgroundCheckResultsProps })
         </ColumnLayout>
 
         {/* Entity details section */}
-        <ExpandableSection headerText="Entity Details">
+        <Container>
+          <Header>
+            Entity Details
+          </Header>
           <Table
             columnDefinitions={[
               {
@@ -93,7 +95,7 @@ const BackgroundCheckResults = ({ data }: { data: BackgroundCheckResultsProps })
             variant="embedded"
             stickyHeader
           />
-        </ExpandableSection>
+        </Container>
       </SpaceBetween>
     </Container>
   );
