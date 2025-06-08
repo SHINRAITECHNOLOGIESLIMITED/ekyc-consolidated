@@ -16,22 +16,42 @@ import {
   SpaceBetween,
 } from "@cloudscape-design/components";
 import { eKYCApi } from "@/services/api";
-import { Document, Page, pdfjs } from "react-pdf";
 import React, { useState, useEffect, useCallback } from "react";
 import { DocumentValidationResponse } from "@/types/liveness";
 import { API_CONFIG } from "@/constants/api";
+
+// Define field types
+interface BaseField {
+  id: string;
+  label: string;
+  required?: boolean;
+}
+
+interface TextField extends BaseField {
+  type: "text";
+  placeholder?: string;
+}
+
+interface DateField extends BaseField {
+  type: "date";
+  placeholder?: string;
+}
+
+interface DocumentField extends BaseField {
+  type: "document";
+  acceptedFileTypes?: string[];
+  maxFileCount?: number;
+  description?: string;
+  constraintText?: string;
+}
+
+type FormField = TextField | DateField | DocumentField;
 
 // Define the common props for all document validation forms
 interface DocumentValidationFormProps {
   title: string;
   documentType: "nationalid" | "passport" | "krapincertificate" | "cr12";
-  fields: Array<{
-    id: string;
-    label: string;
-    type?: "text" | "date";
-    required?: boolean;
-    placeholder?: string;
-  }>;
+  fields: FormField[];
   onSuccess?: (data: DocumentValidationResponse) => void;
   onError?: (error: Error) => void;
 }
@@ -44,37 +64,34 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
   onError,
 }) => {
   // State declarations first
-  const [formData, setFormData] = useState<Record<string, string>>({});
-  const [uploadedDocumentUrl, setUploadedDocumentUrl] = useState<string>("");
-  const [uploadedFileName, setUploadedFileName] = useState<string>("");
+  const [formData, setFormData] = useState<Record<string, string | string[]>>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState<boolean>(false);
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState<number>(1);
   const [isFormValid, setIsFormValid] = useState<boolean>(false);
-
-  // Initialize PDF.js worker
-  useEffect(() => {
-    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-  }, []);
 
   // Define validateForm before it's used in useEffect
   const validateForm = useCallback(
-    (currentFormData: Record<string, string> = formData) => {
+    (currentFormData: Record<string, string | string[]> = formData) => {
       // Check if all required fields have values
       const requiredFieldsFilled = fields
         .filter((field) => field.required)
-        .every(
-          (field) =>
-            currentFormData[field.id] && currentFormData[field.id].trim() !== ""
-        );
+        .every((field) => {
+          if (field.type === "document") {
+            // For document fields, check if we have at least one document URL
+            const urls = currentFormData[field.id] as string[] || [];
+            return field.maxFileCount === 0 || urls.length > 0;
+          }
+          // For text and date fields
+          return currentFormData[field.id] && 
+                 typeof currentFormData[field.id] === 'string' && 
+                 (currentFormData[field.id] as string).trim() !== "";
+        });
 
-      // Form is valid if all required fields are filled and a document is uploaded
-      setIsFormValid(requiredFieldsFilled && uploadedDocumentUrl !== "");
+      setIsFormValid(requiredFieldsFilled);
     },
-    [fields, formData, uploadedDocumentUrl]
+    [fields, formData]
   );
 
   // Validate form whenever dependencies change
@@ -98,15 +115,18 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
 
   interface ProcessFileInput {
     file: File;
+    fieldId: string;
   }
 
   interface ProcessFileOutput {
     file: File;
     key: string;
+    fieldId: string;
   }
 
   const processFile = async ({
     file,
+    fieldId,
   }: ProcessFileInput): Promise<ProcessFileOutput> => {
     const fileExtension = file.name.split(".").pop() || "";
     return file
@@ -121,46 +141,86 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
           .join("");
         return {
           file,
-          key: `${user.userId}/${documentType}/${hashHex}.${fileExtension}`,
+          fieldId,
+          key: `${user.userId}/${documentType}/${fieldId}/${hashHex}.${fileExtension}`,
           metadata: {
             documentType: documentType,
+            fieldId: fieldId,
             uploadDate: new Date().toISOString(),
           },
         };
       });
   };
 
-  const handleUploadSuccess = async (event: { key?: string, file?: File,bucket?: string, region?: string, url?: string }) => {
-    // Save the file name for display
+  const handleUploadSuccess = async (event: { 
+    key?: string, 
+    file?: File,
+    bucket?: string, 
+    region?: string, 
+    url?: string,
+    fieldId: string 
+  }) => {
+    // Save the file URL in the form data as an array of URLs
+    let s3Url: string;
+    
     if (event.file) {
-      const s3Url = event.file.name;
-      setUploadedFileName(s3Url);
-      setUploadedDocumentUrl(s3Url);
-
-      // Revalidate the form after document upload
-      validateForm();
-    }else {
-      const s3Url = `${API_CONFIG.UPLOADED_DOCS_BASE_S3_PATH}/${event.key}`;
-      //show user error
-      setUploadedFileName(s3Url);
-      setUploadedDocumentUrl(s3Url);
+      s3Url = event.file.name;
+    } else {
+      s3Url = `${API_CONFIG.UPLOADED_DOCS_BASE_S3_PATH}/${event.key}`;
     }
+
+    // Update the form data with the new document URL
+    setFormData(prevData => {
+      const fieldId = event.fieldId;
+      const currentUrls = Array.isArray(prevData[fieldId]) 
+        ? [...(prevData[fieldId] as string[])] 
+        : [];
+      
+      return {
+        ...prevData,
+        [fieldId]: [...currentUrls, s3Url]
+      };
+    });
+
+    // Revalidate the form after document upload
+    validateForm();
+  };
+
+  const handleRemoveDocument = (fieldId: string, urlToRemove: string) => {
+    setFormData(prevData => {
+      const currentUrls = Array.isArray(prevData[fieldId]) 
+        ? [...(prevData[fieldId] as string[])] 
+        : [];
+      
+      const updatedUrls = currentUrls.filter(url => url !== urlToRemove);
+      
+      return {
+        ...prevData,
+        [fieldId]: updatedUrls
+      };
+    });
+    
+    // Revalidate the form after document removal
+    validateForm();
   };
 
   const handleSubmit = async () => {
-    if (!uploadedDocumentUrl) {
-      setError("Please upload a document first");
-      return;
-    }
-
     // Validate required fields
     const newFieldErrors: Record<string, string> = {};
     let hasErrors = false;
 
     fields.forEach((field) => {
-      if (field.required && !formData[field.id]) {
-        newFieldErrors[field.id] = "This field is required";
-        hasErrors = true;
+      if (field.required) {
+        if (field.type === "document") {
+          const urls = formData[field.id] as string[] || [];
+          if (field.maxFileCount !== 0 && urls.length === 0) {
+            newFieldErrors[field.id] = "At least one document is required";
+            hasErrors = true;
+          }
+        } else if (!formData[field.id] || (formData[field.id] as string).trim() === "") {
+          newFieldErrors[field.id] = "This field is required";
+          hasErrors = true;
+        }
       }
     });
 
@@ -176,7 +236,6 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
     try {
       const payload = {
         ...formData,
-        uploadedDocumentUrl,
       };
 
       const data: DocumentValidationResponse = await eKYCApi.validateDocument(
@@ -199,6 +258,73 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
         onError(err instanceof Error ? err : new Error(errorMessage));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const renderField = (field: FormField) => {
+    if (field.type === "date") {
+      return (
+        <DatePicker
+          value={formData[field.id] as string || ""}
+          onChange={({ detail }) =>
+            handleInputChange(field.id, detail.value)
+          }
+          placeholder={field.placeholder || "YYYY-MM-DD"}
+          ariaLabel="Date picker"
+          i18nStrings={{
+            nextMonthAriaLabel: "Next month",
+            previousMonthAriaLabel: "Previous month",
+            todayAriaLabel: "Today",
+          }}
+        />
+      );
+    } else if (field.type === "document") {
+      const documentUrls = (formData[field.id] as string[]) || [];
+      return (
+        <SpaceBetween size="s">
+          <FileUploader
+            acceptedFileTypes={field.acceptedFileTypes || [".pdf", ".jpg", ".jpeg", ".png", "image/*"]}
+            maxFileCount={1}
+            path="uploaded_kyc_docs/"
+            processFile={(params) => processFile({ ...params, fieldId: field.id })}
+            onUploadSuccess={(event) => handleUploadSuccess({ ...event, fieldId: field.id })}
+            onUploadError={(message: string) => {
+              setError(message);
+              onError?.(Error(message));
+            }}
+          />
+          {documentUrls.length > 0 && (
+            <Box>
+              <SpaceBetween size="xs">
+                {documentUrls.map((url, index) => (
+                  <Box key={index}>
+                    <SpaceBetween direction="horizontal" size="xs">
+                      <span>{url.split('/').pop()}</span>
+                      <Button
+                        variant="icon"
+                        iconName="remove"
+                        onClick={() => handleRemoveDocument(field.id, url)}
+                        ariaLabel="Remove document"
+                      />
+                    </SpaceBetween>
+                  </Box>
+                ))}
+              </SpaceBetween>
+            </Box>
+          )}
+        </SpaceBetween>
+      );
+    } else {
+      // Default to text input
+      return (
+        <Input
+          value={formData[field.id] as string || ""}
+          onChange={({ detail }) =>
+            handleInputChange(field.id, detail.value)
+          }
+          placeholder={field.placeholder || field.label}
+        />
+      );
     }
   };
 
@@ -233,58 +359,28 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
       >
         <SpaceBetween size="l">
           <ColumnLayout columns={3} variant="text-grid" borders="horizontal">
-            {fields.map((field) => (
+            {fields.filter(field => field.type !== "document").map((field) => (
               <FormField
                 key={field.id}
                 label={field.required ? `${field.label} *` : field.label}
                 errorText={fieldErrors[field.id]}
               >
-                {field.type === "date" ? (
-                  <DatePicker
-                    value={formData[field.id] || ""}
-                    onChange={({ detail }) =>
-                      handleInputChange(field.id, detail.value)
-                    }
-                    placeholder="YYYY-MM-DD"
-                    ariaLabel="Date picker"
-                    i18nStrings={{
-                      nextMonthAriaLabel: "Next month",
-                      previousMonthAriaLabel: "Previous month",
-                      todayAriaLabel: "Today",
-                    }}
-                  />
-                ) : (
-                  <Input
-                    value={formData[field.id] || ""}
-                    onChange={({ detail }) =>
-                      handleInputChange(field.id, detail.value)
-                    }
-                    placeholder={field.placeholder || field.label}
-                  />
-                )}
+                {renderField(field)}
               </FormField>
             ))}
           </ColumnLayout>
-
-          <FormField
-            label="Upload Document *"
-            description="Upload the document for validation"
-            constraintText="Supported formats: JPG, PNG, PDF"
-          >
-              <FileUploader
-                acceptedFileTypes={[".pdf", ".jpg", ".jpeg", ".png", "image/*"]}
-                maxFileCount={1}
-                // accessLevel="protected"
-                path="uploaded_kyc_docs/"
-                processFile={processFile}
-                // path={() => `uploaded_kyc_docs/`}
-                onUploadSuccess={handleUploadSuccess}
-                onUploadError={(message: string) => {
-                  setError(message);
-                  onError?.(Error(message));
-                }}
-              />
-          </FormField>
+          
+          {fields.filter(field => field.type === "document").map((field) => (
+            <FormField
+              key={field.id}
+              label={field.required ? `${field.label} *` : field.label}
+              description={field.type === "document" ? (field as DocumentField).description : undefined}
+              constraintText={field.type === "document" ? (field as DocumentField).constraintText : undefined}
+              errorText={fieldErrors[field.id]}
+            >
+              {renderField(field)}
+            </FormField>
+          ))}
         </SpaceBetween>
       </Form>
     </Container>
