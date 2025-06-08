@@ -20,8 +20,6 @@ import { eKYCApi } from "@/services/api";
 import React, { useState, useEffect, useCallback } from "react";
 import { DocumentValidationResponse } from "@/types/liveness";
 import { API_CONFIG } from "@/constants/api";
-import CopyableValue from "./CopyableValue";
-
 // Define field types
 interface BaseField {
   id: string;
@@ -72,7 +70,6 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
   const [success, setSuccess] = useState<boolean>(false);
   const [isFormValid, setIsFormValid] = useState<boolean>(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
-  const [proccesingDocumentId, setProccesingDocumentId] = useState<string>("");
   
 
   // Define validateForm before it's used in useEffect
@@ -369,10 +366,8 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
           </Box>
         }
       >
-        <p>Processsing sucessfully.</p>
-        <CopyableValue label={"id"} value={documentId}>
-
-        </CopyableValue>
+        <p>Processsing Successful</p>
+        
       </Modal>
     </Container>
   );
