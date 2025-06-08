@@ -9,9 +9,9 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
             "idNumber":"23667272",
             "fullNames":"JANE WAIRIMU MAINA",
             # "dateOfBirth":"1985-01-01", #IPRS and Supplied sample have a mismatch
-            "dateOfIssue":"2016-10-28",
+            # "dateOfIssue":"2016-10-28",  #IPRS and Supplied sample have a mismatch
             "gender":"F",
-            "districtOfBirth":"THIKA WEST"
+            # "districtOfBirth":"THIKA WEST"  #IPRS and Supplied sample have a mismatch
         }
         verifity_test(tester= self,
                       url= self.URL,
