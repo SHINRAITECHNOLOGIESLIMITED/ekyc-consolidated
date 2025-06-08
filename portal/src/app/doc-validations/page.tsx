@@ -117,7 +117,6 @@ const NationalIdValidationForm: React.FC = () => (
         label: "Natinal ID", 
         type: "document", 
         required: true,
-        maxFileCount: 1,
         description: "Upload the front side of your ID",
         constraintText: "Supported formats: JPG, PNG, PDF"
       }
@@ -148,7 +147,6 @@ const PassportValidationForm: React.FC = () => (
         label: "Passport Document", 
         type: "document", 
         required: true,
-        maxFileCount: 1,
         description: "Upload a clear image of the passport",
         constraintText: "Supported formats: JPG, PNG, PDF"
       }
@@ -170,7 +168,6 @@ const KRAPinCertificateValidationForm: React.FC = () => (
         label: "KRA Pin Certificate", 
         type: "document", 
         required: true,
-        maxFileCount: 1,
         description: "Upload the KRA Pin Certificate",
         constraintText: "Supported formats: JPG, PNG, PDF"
       }
@@ -190,7 +187,6 @@ const CR12ValidationForm: React.FC = () => (
         label: "CR12 Document", 
         type: "document", 
         required: true,
-        maxFileCount: 1,
         description: "Upload the CR12 document showing directors/shareholders",
         constraintText: "Supported formats: JPG, PNG, PDF"
       }

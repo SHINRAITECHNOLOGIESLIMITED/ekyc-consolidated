@@ -4,7 +4,6 @@ import { useAuthenticator } from "@aws-amplify/ui-react";
 import { FileUploader } from "@aws-amplify/ui-react-storage";
 import {
   Alert,
-  Box,
   Button,
   ColumnLayout,
   Container,
@@ -40,7 +39,6 @@ interface DateField extends BaseField {
 interface DocumentField extends BaseField {
   type: "document";
   acceptedFileTypes?: string[];
-  maxFileCount?: number;
   description?: string;
   constraintText?: string;
 }
@@ -64,7 +62,7 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
   onError,
 }) => {
   // State declarations first
-  const [formData, setFormData] = useState<Record<string, string | string[]>>({});
+  const [formData, setFormData] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -73,20 +71,15 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
 
   // Define validateForm before it's used in useEffect
   const validateForm = useCallback(
-    (currentFormData: Record<string, string | string[]> = formData) => {
+    (currentFormData: Record<string, string> = formData) => {
       // Check if all required fields have values
       const requiredFieldsFilled = fields
         .filter((field) => field.required)
         .every((field) => {
-          if (field.type === "document") {
-            // For document fields, check if we have at least one document URL
-            const urls = currentFormData[field.id] as string[] || [];
-            return field.maxFileCount === 0 || urls.length > 0;
-          }
-          // For text and date fields
-          return currentFormData[field.id] && 
-                 typeof currentFormData[field.id] === 'string' && 
-                 (currentFormData[field.id] as string).trim() !== "";
+          // For all fields including document fields
+          return (
+            currentFormData[field.id] && currentFormData[field.id].trim() !== ""
+          );
         });
 
       setIsFormValid(requiredFieldsFilled);
@@ -152,55 +145,23 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
       });
   };
 
-  const handleUploadSuccess = async (event: { 
-    key?: string, 
-    file?: File,
-    bucket?: string, 
-    region?: string, 
-    url?: string,
-    fieldId: string 
+  const handleUploadSuccess = async (event: {
+    key?: string;
+    fieldId: string;
   }) => {
     // Save the file URL in the form data as an array of URLs
-    let s3Url: string;
-    
-    if (event.file) {
-      s3Url = event.file.name;
-    } else {
-      s3Url = `${API_CONFIG.UPLOADED_DOCS_BASE_S3_PATH}/${event.key}`;
-    }
+    const s3Url = `${API_CONFIG.UPLOADED_DOCS_BASE_S3_PATH}/${event.key}`;
 
     // Update the form data with the new document URL
-    setFormData(prevData => {
+    setFormData((prevData) => {
       const fieldId = event.fieldId;
-      const currentUrls = Array.isArray(prevData[fieldId]) 
-        ? [...(prevData[fieldId] as string[])] 
-        : [];
-      
       return {
         ...prevData,
-        [fieldId]: [...currentUrls, s3Url]
+        [fieldId]: s3Url,
       };
     });
 
     // Revalidate the form after document upload
-    validateForm();
-  };
-
-  const handleRemoveDocument = (fieldId: string, urlToRemove: string) => {
-    setFormData(prevData => {
-      const currentUrls = Array.isArray(prevData[fieldId]) 
-        ? [...(prevData[fieldId] as string[])] 
-        : [];
-      
-      const updatedUrls = currentUrls.filter(url => url !== urlToRemove);
-      
-      return {
-        ...prevData,
-        [fieldId]: updatedUrls
-      };
-    });
-    
-    // Revalidate the form after document removal
     validateForm();
   };
 
@@ -211,13 +172,10 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
 
     fields.forEach((field) => {
       if (field.required) {
-        if (field.type === "document") {
-          const urls = formData[field.id] as string[] || [];
-          if (field.maxFileCount !== 0 && urls.length === 0) {
-            newFieldErrors[field.id] = "At least one document is required";
-            hasErrors = true;
-          }
-        } else if (!formData[field.id] || (formData[field.id] as string).trim() === "") {
+        if (
+          !formData[field.id] ||
+          (formData[field.id] as string).trim() === ""
+        ) {
           newFieldErrors[field.id] = "This field is required";
           hasErrors = true;
         }
@@ -265,10 +223,8 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
     if (field.type === "date") {
       return (
         <DatePicker
-          value={formData[field.id] as string || ""}
-          onChange={({ detail }) =>
-            handleInputChange(field.id, detail.value)
-          }
+          value={(formData[field.id] as string) || ""}
+          onChange={({ detail }) => handleInputChange(field.id, detail.value)}
           placeholder={field.placeholder || "YYYY-MM-DD"}
           ariaLabel="Date picker"
           i18nStrings={{
@@ -279,49 +235,37 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
         />
       );
     } else if (field.type === "document") {
-      const documentUrls = (formData[field.id] as string[]) || [];
       return (
-        <SpaceBetween size="s">
-          <FileUploader
-            acceptedFileTypes={field.acceptedFileTypes || [".pdf", ".jpg", ".jpeg", ".png", "image/*"]}
-            maxFileCount={1}
-            path="uploaded_kyc_docs/"
-            processFile={(params) => processFile({ ...params, fieldId: field.id })}
-            onUploadSuccess={(event) => handleUploadSuccess({ ...event, fieldId: field.id })}
-            onUploadError={(message: string) => {
-              setError(message);
-              onError?.(Error(message));
-            }}
-          />
-          {documentUrls.length > 0 && (
-            <Box>
-              <SpaceBetween size="xs">
-                {documentUrls.map((url, index) => (
-                  <Box key={index}>
-                    <SpaceBetween direction="horizontal" size="xs">
-                      <span>{url.split('/').pop()}</span>
-                      <Button
-                        variant="icon"
-                        iconName="remove"
-                        onClick={() => handleRemoveDocument(field.id, url)}
-                        ariaLabel="Remove document"
-                      />
-                    </SpaceBetween>
-                  </Box>
-                ))}
-              </SpaceBetween>
-            </Box>
-          )}
-        </SpaceBetween>
+        <FileUploader
+          acceptedFileTypes={
+            field.acceptedFileTypes || [
+              ".pdf",
+              ".jpg",
+              ".jpeg",
+              ".png",
+              "image/*",
+            ]
+          }
+          maxFileCount={1}
+          path="uploaded_kyc_docs/"
+          processFile={(params) =>
+            processFile({ ...params, fieldId: field.id })
+          }
+          onUploadSuccess={(event) =>
+            handleUploadSuccess({ ...event, fieldId: field.id })
+          }
+          onUploadError={(message: string) => {
+            setError(message);
+            onError?.(Error(message));
+          }}
+        />
       );
     } else {
       // Default to text input
       return (
         <Input
-          value={formData[field.id] as string || ""}
-          onChange={({ detail }) =>
-            handleInputChange(field.id, detail.value)
-          }
+          value={(formData[field.id] as string) || ""}
+          onChange={({ detail }) => handleInputChange(field.id, detail.value)}
           placeholder={field.placeholder || field.label}
         />
       );
@@ -359,28 +303,40 @@ const DocumentValidationForm: React.FC<DocumentValidationFormProps> = ({
       >
         <SpaceBetween size="l">
           <ColumnLayout columns={3} variant="text-grid" borders="horizontal">
-            {fields.filter(field => field.type !== "document").map((field) => (
+            {fields
+              .filter((field) => field.type !== "document")
+              .map((field) => (
+                <FormField
+                  key={field.id}
+                  label={field.required ? `${field.label} *` : field.label}
+                  errorText={fieldErrors[field.id]}
+                >
+                  {renderField(field)}
+                </FormField>
+              ))}
+          </ColumnLayout>
+
+          {fields
+            .filter((field) => field.type === "document")
+            .map((field) => (
               <FormField
                 key={field.id}
                 label={field.required ? `${field.label} *` : field.label}
+                description={
+                  field.type === "document"
+                    ? (field as DocumentField).description
+                    : undefined
+                }
+                constraintText={
+                  field.type === "document"
+                    ? (field as DocumentField).constraintText
+                    : undefined
+                }
                 errorText={fieldErrors[field.id]}
               >
                 {renderField(field)}
               </FormField>
             ))}
-          </ColumnLayout>
-          
-          {fields.filter(field => field.type === "document").map((field) => (
-            <FormField
-              key={field.id}
-              label={field.required ? `${field.label} *` : field.label}
-              description={field.type === "document" ? (field as DocumentField).description : undefined}
-              constraintText={field.type === "document" ? (field as DocumentField).constraintText : undefined}
-              errorText={fieldErrors[field.id]}
-            >
-              {renderField(field)}
-            </FormField>
-          ))}
         </SpaceBetween>
       </Form>
     </Container>

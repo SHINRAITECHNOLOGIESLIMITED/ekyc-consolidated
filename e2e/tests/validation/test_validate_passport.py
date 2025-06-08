@@ -14,7 +14,7 @@ class TestPassportDocumentValidation(unittest.TestCase):
             # "gender":"M",
             "dateOfBirth":"1987-05-18",
             "placeOfBirth":"M MIGORI, Ken",
-            "dateOfIssue":"2020-08-20",
+            # "dateOfIssue":"2020-08-20", #Supplied sample documents has date of issuer blurred out
             "dateOfExpiry":"2030-09-03",
             "nationality":"KENYAN",
             "issuingAuthority":"GOVERNMENT OF KENYA",
@@ -46,7 +46,7 @@ class TestPassportDocumentValidation(unittest.TestCase):
 
     def test_passportnumber_AK1577133(self):
         payload ={"uploadedDocumentUrl": f"s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_PASSPORT-003-sample.png",
-            "documentType":"P",
+            # "documentType":"P", #old passports dont have a document type
             "countryCode":"KEN",
             "passportNumber":"AK1577133",
             "personalNumber":"560224",
