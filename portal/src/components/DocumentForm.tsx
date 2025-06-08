@@ -265,7 +265,7 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
               "image/*",
             ]
           }
-          bucket={API_CONFIG.UPLOADED_DOCS_BASE_S3_PATH}
+          bucket="kyc_documents"
           maxFileCount={1}
           path="uploaded_kyc_docs/"
           processFile={(params) =>
