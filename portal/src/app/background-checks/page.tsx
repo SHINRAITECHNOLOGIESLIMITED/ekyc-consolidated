@@ -1,11 +1,10 @@
 "use client";
 
 import Listing, { ListingProps } from "@/components/Listing";
-import NotImplemented from "@/components/NotImplemented";
 import { fetchBackGroundChecks } from "@/services/DataService";
 import type { BackGroundCheck } from "@/types/models";
-import { SpaceBetween } from "@cloudscape-design/components";
 import BackGroundCheckDetails from "./BackGroundCheckDetails";
+import DocumentForm from "@/components/DocumentForm";
 
 const columnDefinitions = [
   {
@@ -71,16 +70,29 @@ const listingProps: ListingProps<BackGroundCheck> = {
   renderItemDetails: (item: BackGroundCheck) => BackGroundCheckDetails(item),
   actions: [
     {
-      id: "background-check",
-      label: "New BackGround Check",
-      render: () => (
-        <SpaceBetween size={"s"}>
-          <NotImplemented title={"Background Check"} />
-        </SpaceBetween>
-      ),
+      label: "New NationalId Verification",
+      id: "nationalid",
+      render: () => {
+        return <BackGroundCheckForm />;
+      },
     },
   ],
 };
+
+const BackGroundCheckForm: React.FC = () => (
+  <DocumentForm
+    title="Background Check"
+    documentType="nationalid"
+    fields={[
+      { id: "firstName", label: "First Name", type: "text", required: true, placeholder: "Jane" },
+      { id: "middleName", label: "Middle Name", type: "text", placeholder: "Wairimu" },
+      { id: "lastName", label: "Last Name", type: "text", required: true, placeholder: "Maina" },
+      { id: "gender", label: "Gender", type: "text", required: true, placeholder: "Female" },
+      { id: "dateOfBirth", label: "Date of Birth", type: "date", required: true, placeholder: "1985-01-01" },
+      { id: "nationalIdentificationNumber", label: "ID Number", type: "text", required: true, placeholder: "23667272" },
+    ]}
+  />
+);
 
 const BackGroundChecksListing: React.FC = () => {
   return <Listing {...listingProps} />;
