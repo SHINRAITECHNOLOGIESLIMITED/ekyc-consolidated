@@ -25,6 +25,8 @@ interface BaseField {
   id: string;
   label: string;
   required?: boolean;
+  defaultValue?: string; // <-- Add this
+  disabled?: boolean;    // <-- And this
 }
 
 interface TextField extends BaseField {
@@ -62,8 +64,15 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
   onSuccess,
   onError,
 }) => {
-  // State declarations first
-  const [formData, setFormData] = useState<Record<string, string>>({});
+  // Initialize formData with default values
+  const initialFormData = fields.reduce((acc, field) => {
+    if (field.defaultValue !== undefined) {
+      acc[field.id] = field.defaultValue;
+    }
+    return acc;
+  }, {} as Record<string, string>);
+
+  const [formData, setFormData] = useState<Record<string, string>>(initialFormData);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -103,8 +112,9 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
     validateForm(updatedFormData);
   };
 
+  // Update handleClearForm to reset to default values
   const handleClearForm = () => {
-    setFormData({});
+    setFormData(initialFormData);
     setFieldErrors({});
     setIsFormValid(false);
   };
@@ -237,6 +247,7 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
             previousMonthAriaLabel: "Previous month",
             todayAriaLabel: "Today",
           }}
+          disabled={field.disabled}
         />
       );
     } else if (field.type === "document") {
@@ -273,6 +284,7 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
           value={(formData[field.id] as string) || ""}
           onChange={({ detail }) => handleInputChange(field.id, detail.value)}
           placeholder={field.placeholder || field.label}
+          disabled={field.disabled} // <-- Add this
         />
       );
     }

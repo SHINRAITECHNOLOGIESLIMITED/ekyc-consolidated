@@ -84,8 +84,8 @@ const IndividualAgentForm: React.FC = () => (
         id: "agentType",
         label: "Agent Type",
         type: "text",
-        required: true,
-        placeholder: "Individual",
+        defaultValue: "Individual",
+        disabled: true,
       },
       {
         id: "name",
@@ -137,8 +137,8 @@ const BusinessAgentForm: React.FC = () => (
         id: "agentType",
         label: "Agent Type",
         type: "text",
-        required: true,
-        placeholder: "Company",
+        defaultValue: "Company",
+        disabled: true,
       },
       {
         id: "name",
