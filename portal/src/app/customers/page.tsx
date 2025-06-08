@@ -1,11 +1,10 @@
 "use client";
 
 import Listing, { ListingProps } from "@/components/Listing";
-import NotImplemented from "@/components/NotImplemented";
 import { fetchCustomers } from "@/services/DataService";
 import type { Customer } from "@/types/models";
-import { SpaceBetween } from "@cloudscape-design/components";
 import CustomerDetails from "./CustomerDetails";
+import DocumentForm from "@/components/DocumentForm";
 
 const columnDefinitions = [
   {
@@ -57,14 +56,31 @@ const listingProps: ListingProps<Customer> = {
     {
       id: "customer-reg",
       label: "New Customer",
-      render: () => (
-        <SpaceBetween size={"s"}>
-          <NotImplemented title={"Customer Registration"} />
-        </SpaceBetween>
-      ),
-    },
+      render: () => {
+        return <CustomerForm />;
+      },
+    }
   ],
 };
+
+const CustomerForm: React.FC = () => (
+  <DocumentForm
+    title="Customer Registration"
+    documentType="nationalid"
+    fields={[
+      { id: "name", label: "Full Name", type: "text", required: true, placeholder: "Jane Wairimu Maina" },
+      { id: "pinNumber", label: "PIN Number", type: "text", required: true, placeholder: "A003388522V" },
+      { id: "idNumber", label: "ID Number", type: "text", required: true, placeholder: "23667272" },
+      { id: "passportNumber", label: "Passport Number", type: "text", placeholder: "BK120129" },
+      { id: "gender", label: "Gender", type: "text", required: true, placeholder: "Female" },
+      { id: "dateOfBirth", label: "Date of Birth", type: "date", required: true, placeholder: "1985-01-01" },
+      { id: "passportPhotoUrl", label: "Passport Photo", type: "document", required: true, acceptedFileTypes: [".jpg", ".jpeg", ".png"] },
+      { id: "nationalIdCardUrl", label: "National ID Card", type: "document", required: true, acceptedFileTypes: [".jpg", ".jpeg", ".png", ".pdf"] },
+      { id: "passportUrl", label: "Passport Scan", type: "document", acceptedFileTypes: [".jpg", ".jpeg", ".png", ".pdf"] },
+      { id: "kraPinCardUrl", label: "KRA PIN Certificate", type: "document", required: true, acceptedFileTypes: [".jpg", ".jpeg", ".png", ".pdf"] },
+    ]}
+  />
+);
 
 const CustomersListing: React.FC = () => {
   return <Listing {...listingProps} />;

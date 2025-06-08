@@ -1,10 +1,9 @@
 "use client";
 
+import DocumentForm from "@/components/DocumentForm";
 import Listing, { ListingProps } from "@/components/Listing";
-import NotImplemented from "@/components/NotImplemented";
 import { fetchAgents } from "@/services/DataService";
 import type { Agent } from "@/types/models";
-import { SpaceBetween } from "@cloudscape-design/components";
 import AgentDetails from "./AgentDetails";
 
 const columnDefinitions = [
@@ -47,7 +46,7 @@ const columnDefinitions = [
     id: "kycStatus",
     header: "KYC Status",
     cell: (item: Agent) => item.kycStatus,
-  }
+  },
 ];
 
 const listingProps: ListingProps<Agent> = {
@@ -56,22 +55,120 @@ const listingProps: ListingProps<Agent> = {
   pageSize: 100,
   columnDefinitions,
   itemKey: (item: Agent) => item.agentId.toString(),
-  itemDetailsLink: (item: Agent) =>
-    `agents/${item.agentId}`,
+  itemDetailsLink: (item: Agent) => `agents/${item.agentId}`,
   renderItemDetails: (item: Agent) => AgentDetails(item),
   actions: [
     {
-      id: "agent-reg",
-      label: "New Agent Registration",
-      render: () => (
-        <SpaceBetween size={"s"}>
-          <NotImplemented title={"Agent Registration"} />
-        </SpaceBetween>
-      ),
+      id: "individual-agent-reg",
+      label: "New Individual Agent",
+      render: () => {
+        return <IndividualAgentForm />;
+      },
+    },
+    {
+      id: "company-agent-reg",
+      label: "New Business Agent",
+      render: () => {
+        return <BusinessAgentForm />;
+      },
     },
   ],
 };
 
+const IndividualAgentForm: React.FC = () => (
+  <DocumentForm
+    title="Individual Agent Registration"
+    documentType="nationalid"
+    fields={[
+      {
+        id: "agentType",
+        label: "Agent Type",
+        type: "text",
+        defaultValue: "Individual",
+        disabled: true,
+      },
+      {
+        id: "name",
+        label: "Full Name",
+        type: "text",
+        required: true,
+        placeholder: "Jane Wairimu Maina",
+      },
+      {
+        id: "pinNumber",
+        label: "PIN Number",
+        type: "text",
+        required: true,
+        placeholder: "A003388522V",
+      },
+      {
+        id: "idNumber",
+        label: "ID Number",
+        type: "text",
+        placeholder: "23667272",
+      },
+      {
+        id: "dateOfBirth",
+        label: "Date of Birth",
+        type: "date",
+        placeholder: "1985-01-01",
+      },
+      {
+        id: "passportPhotoUrl",
+        label: "Passport Photo",
+        type: "document",
+        acceptedFileTypes: [".jpg", ".jpeg", ".png"],
+      },
+      {
+        id: "nationalIdCardUrl",
+        label: "National ID Card",
+        type: "document",
+        acceptedFileTypes: [".jpg", ".jpeg", ".png", ".pdf"],
+      },
+    ]}
+  />
+);
+const BusinessAgentForm: React.FC = () => (
+  <DocumentForm
+    title="Agent Registration"
+    documentType="nationalid"
+    fields={[
+      {
+        id: "agentType",
+        label: "Agent Type",
+        type: "text",
+        defaultValue: "Company",
+        disabled: true,
+      },
+      {
+        id: "name",
+        label: "Business Name",
+        type: "text",
+        required: true,
+        placeholder: "DETALI INSURANCE AGENCY LIMITED",
+      },
+      {
+        id: "businessNumber",
+        label: "Business Number",
+        type: "text",
+        placeholder: "PVT-RXUMYGVQ",
+      },
+      {
+        id: "pinNumber",
+        label: "PIN Number",
+        type: "text",
+        required: true,
+        placeholder: "A003388522V",
+      },
+      {
+        id: "companyCertificateUrl",
+        label: "Certificate of Incorporation",
+        type: "document",
+        acceptedFileTypes: [".jpg", ".jpeg", ".png", ".pdf"],
+      },
+    ]}
+  />
+);
 const AgentsListing: React.FC = () => {
   return <Listing {...listingProps} />;
 };
