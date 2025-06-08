@@ -871,6 +871,13 @@
               "isRequired": false,
               "attributes": []
             },
+            "cacheHit": {
+              "name": "cacheHit",
+              "isArray": false,
+              "type": "Boolean",
+              "isRequired": true,
+              "attributes": []
+            },
             "requestData": {
               "name": "requestData",
               "isArray": false,
