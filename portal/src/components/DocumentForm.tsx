@@ -18,7 +18,7 @@ import {
 } from "@cloudscape-design/components";
 import { eKYCApi } from "@/services/api";
 import React, { useState, useEffect, useCallback } from "react";
-import { DocumentValidationResponse } from "@/types/liveness";
+import { DocumentResponse } from "@/types/liveness";
 import { API_CONFIG } from "@/constants/api";
 // Define field types
 interface BaseField {
@@ -53,7 +53,7 @@ interface DocumentValidationFormProps {
   title: string;
   apiEndpoint: string;
   fields: FormField[];
-  onSuccess?: (data: DocumentValidationResponse) => void;
+  onSuccess?: (data: DocumentResponse) => void;
   onError?: (error: Error) => void;
 }
 
@@ -212,12 +212,12 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
         ...formData,
       };
 
-      const data: DocumentValidationResponse = await eKYCApi.call(
+      const data: DocumentResponse = await eKYCApi.call(
         apiEndpoint,
         JSON.stringify(payload)
       );
       if (data.error) {
-        setError(data.error);
+        setError(`{data.message}\n${data.error}`);
         return;
       }
       setSuccess(true);
@@ -228,7 +228,7 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
       const errorMessage =
         err instanceof Error
           ? err.message
-          : "An error occurred during validation";
+          : "An error occurred during processing";
       setError(errorMessage);
       if (onError)
         onError(err instanceof Error ? err : new Error(errorMessage));
@@ -298,7 +298,7 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
       <Header variant="h2">{title}</Header>
       {error && <Alert type="error">{error}</Alert>}
         {success && (
-          <Alert type="success">Document validated successfully!</Alert>
+          <Alert type="success">Document processed successfully!</Alert>
         )}
       <Form
           actions={
@@ -311,7 +311,7 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
                 ariaLabel="Clear form"
               />
               <Button
-                key="validate-button"
+                key="submit-button"
                 variant="primary"
                 onClick={handleSubmit}
                 loading={isLoading}

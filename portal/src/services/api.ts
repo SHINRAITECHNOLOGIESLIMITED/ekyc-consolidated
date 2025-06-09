@@ -1,4 +1,4 @@
-import {DocumentValidationResponse, LivenessResponse, SessionResponse} from "@/types/liveness";
+import {DocumentResponse, LivenessResponse, SessionResponse} from "@/types/liveness";
 
 import {API_CONFIG} from "@/constants/api";
 
@@ -58,7 +58,7 @@ export const livenessApi = {
 };
 
 export const eKYCApi = {
-    call: async (apiEndpoint: string,payload: string): Promise<DocumentValidationResponse> => {
+    call: async (apiEndpoint: string,payload: string): Promise<DocumentResponse> => {
         const headers = await getAuthHeaders();
         const response = await fetch(`${API_CONFIG.API_BASE_URL}/${apiEndpoint}`, {
             method: 'POST',
