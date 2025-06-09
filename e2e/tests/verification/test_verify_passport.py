@@ -1,4 +1,5 @@
 import unittest
+import json
 from e2e.tests.config import *
 from e2e.tests.verification.verify_test_util import verifity_test
 
@@ -16,10 +17,27 @@ class TestPassportDocumentVerification(unittest.TestCase):
             "dateOfIssue":"2024-05-06",
             "dateOfExpiry":"2034-05-05",
         }
-        # verifity_test(tester= self,
-        #               url= self.URL,
-        #               payload=payload)
-        self.assertEqual(post_with_auth(self.URL, json=payload).status_code, 417)
+        verifity_test(tester= self,
+                      url= self.URL,
+                      payload=payload)
+        # self.assertEqual(post_with_auth(self.URL, json=payload).status_code, 417)
+
+    def test_passportnumber_A2312084_old(self):
+            payload ={
+                "idNumber": "32140017",
+                "passportNumber":"A2312084",
+                "surname":"NYAMBURA",
+                "gender": "F",
+                "firstName": "EFFIE",
+                "otherName": "NJOKI",
+                "dateOfBirth":"1994-12-19",
+                "dateOfIssue":"2014-12-29",
+                "dateOfExpiry":"2024-12-27",
+            }
+            verifity_test(tester= self,
+                          url= self.URL,
+                          payload=payload)
+            # self.assertEqual(post_with_auth(self.URL, json=payload).status_code, 417)
 
 
     def test_passportnumber_AK1370344(self):

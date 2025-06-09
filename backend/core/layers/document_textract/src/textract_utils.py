@@ -7,6 +7,7 @@ import boto3
 from aws_lambda_powertools import Logger, Tracer
 from aws_xray_sdk.core import xray_recorder
 from aws_lambda_powertools.utilities.validation import validate
+import requests
 
 from portal import Portal
 
@@ -30,7 +31,13 @@ def _get_kv_map(s3Path):
         FeatureTypes=["FORMS","TABLES", "LAYOUT"]
     )
     duration_ms = round(time.time() * 1000 - start_time)
-    portal.log_api_call(None, api_name="textract", api_method="analyze_document", duration_ms=duration_ms,
+    response2 = requests.Response(
+        status_code=response['ResponseMetadata']['HTTPStatusCode'],
+        content=json.dumps(response).encode('utf-8'),
+        headers={'Content-Type': 'application/json'}
+    )
+    
+    portal.log_api_call(response2, api_name="textract", api_method="extract", duration_ms=duration_ms,
                         trace_id=trace_id, capture_data=True)
 
     # Get the text blocks
@@ -151,12 +158,24 @@ def extract(s3Path: str):
 
 def query(s3Path: str,queriesConfig,adaptersConfig):
     try:
+        current_segment = xray_recorder.current_segment()
+        trace_id = current_segment.trace_id if current_segment else None
+        start_time = time.time() * 1000
         response = textract_client.analyze_document(
             Document={'S3Object': {'Bucket': KYCDOCUMENTSBUCKET_NAME, 'Name': s3Path}},
             FeatureTypes=["QUERIES"], 
             QueriesConfig=queriesConfig,
             AdaptersConfig=adaptersConfig
         )
+        response2 = requests.Response(
+            status_code=response['ResponseMetadata']['HTTPStatusCode'],
+            content=json.dumps(response).encode('utf-8'),
+            headers={'Content-Type': 'application/json'}
+        )
+        duration_ms = round(time.time() * 1000 - start_time)
+        portal.log_api_call(response2, api_name="textract", api_method="query", duration_ms=duration_ms,
+                            trace_id=trace_id, capture_data=True)
+        
         query_answers = _extract_query_answers(response)
         return query_answers
     except Exception as e:

@@ -111,18 +111,21 @@ const IndividualAgentForm: React.FC = () => (
         id: "dateOfBirth",
         label: "Date of Birth",
         type: "date",
+        required: true,
         placeholder: "1985-01-01",
       },
       {
         id: "passportPhotoUrl",
         label: "Passport Photo",
         type: "document",
+        required: true,
         acceptedFileTypes: [".jpg", ".jpeg", ".png"],
       },
       {
         id: "nationalIdCardUrl",
         label: "National ID Card",
         type: "document",
+        required: true,
         acceptedFileTypes: [".jpg", ".jpeg", ".png", ".pdf"],
       },
     ]}
@@ -151,6 +154,7 @@ const BusinessAgentForm: React.FC = () => (
         id: "businessNumber",
         label: "Business Number",
         type: "text",
+        required: true,
         placeholder: "PVT-RXUMYGVQ",
       },
       {
@@ -164,6 +168,7 @@ const BusinessAgentForm: React.FC = () => (
         id: "companyCertificateUrl",
         label: "Certificate of Incorporation",
         type: "document",
+        required: true,
         acceptedFileTypes: [".jpg", ".jpeg", ".png", ".pdf"],
       },
     ]}
