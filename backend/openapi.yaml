@@ -898,26 +898,21 @@ components:
         message:
           type: string
           description: Additional information about the background check result
-          
     ErrorResponse:
       type: object
       properties:
-        statusCode:
-          type: integer
-          description: HTTP status code of the error
-          example: 400
         message:
           type: string
           description: A human-readable error message
           example: Invalid input data provided.
-        details:
+        error:
           type: string
           description: More detailed information about the error
           nullable: true
           example: The provided ID number format is incorrect.
       required:
-        - statusCode
         - message
+        - error
       additionalProperties: false
 
     DocumentValidationResult:
