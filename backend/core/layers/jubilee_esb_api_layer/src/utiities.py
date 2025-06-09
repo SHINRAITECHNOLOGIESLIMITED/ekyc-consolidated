@@ -159,15 +159,16 @@ class JubileeESBUtilities:
                         if int(time.time()) < expiry_time:
                             logger.info(f"Jubilee ESB: {service} API call retrieved from cache")
                             cached_data = json.loads(item['response_data'])
-                            response = requests.Response(
-                                status_code=HTTPStatus.OK,
-                                json=lambda: cached_data
-                            )
-                            self.portal.log_api_call(response, api_name=service, api_method=api_method, duration_ms=0,
+                            response = requests.Response()
+                            response.status_code = HTTPStatus.OK
+                            response.headers = {
+                                "Content-Type": "application/json"
+                            }
+                            response._content = json.dumps(cached_data).encode('utf-8')
+                            logger.info(response.json())
+                            self.portal.log_api_call(None, api_name=service, api_method=api_method, duration_ms=0,
                                      trace_id=trace_id,cacheHit=True, capture_data=True)
                             return response
-                except ClientError as e:
-                            return cached_data
                 except ClientError as e:
                     logger.warning(f"Cache retrieval error: {str(e)}")
             
@@ -204,24 +205,25 @@ class JubileeESBUtilities:
             self.portal.log_api_call(response, api_name=service, api_method=api_method, duration_ms=duration_ms,
                                      trace_id=trace_id, capture_data=True)
             # response.raise_for_status()
-
+            
             # Store in cache if successful
             if url != self.AUTH_URL:
-                try:
-                    response_data = response.json()
-                    expiry_time = int(time.time()) + cache_ttl_seconds
-                    cache_table.put_item(
-                        Item={
-                            'cache_key': cache_key,
-                            'service': service,
-                            'api_method': api_method,
-                            'response_data': json.dumps(response_data),
-                            'expiry_time': expiry_time,
-                            'cached_at': int(time.time())
-                        }
-                    )
-                except ClientError as e:
-                    logger.warning(f"Cache storage error: {str(e)}")
+                if response.status_code in [HTTPStatus.OK,HTTPStatus.CREATED, HTTPStatus.ACCEPTED]:
+                    try:
+                        response_data = response.json()
+                        expiry_time = int(time.time()) + cache_ttl_seconds
+                        cache_table.put_item(
+                            Item={
+                                'cache_key': cache_key,
+                                'service': service,
+                                'api_method': api_method,
+                                'response_data': json.dumps(response_data),
+                                'expiry_time': expiry_time,
+                                'cached_at': int(time.time())
+                            }
+                        )
+                    except ClientError as e:
+                        logger.warning(f"Cache storage error: {str(e)}")
 
             logger.info(f"Jubilee ESB: {service} API call successful")
             return response

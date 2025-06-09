@@ -1,19 +1,22 @@
+"""
+Mock version of app.py for testing purposes.
+This file contains the same functions as app.py but with mocked dependencies.
+"""
 import json
-from aws_lambda_powertools import Logger, Tracer
-from aws_lambda_powertools.utilities.validation import validate
-from jubilee_esb_api import JubileeESBAPI
-from portal import Portal
+from unittest.mock import MagicMock
 
-from portal import Portal
+# Mock external dependencies
+Logger = MagicMock()
+Tracer = MagicMock()
+validate = MagicMock()
+JubileeESBAPI = MagicMock()
+Portal = MagicMock()
+
 logger = Logger()
 tracer = Tracer()
 portal = Portal()
-
 validator = JubileeESBAPI(portal)
 
-
-@logger.inject_lambda_context
-@tracer.capture_lambda_handler
 def lambda_handler(event, context):
     """
     Lambda handler perfomating background checks against lexis nexis.
@@ -24,7 +27,6 @@ def lambda_handler(event, context):
     
     if http_method == 'POST':
         try:
-            
             data = event.get('body', {})
             # check if data is dict - if its a string convert to dict
             while isinstance(data, str):
@@ -81,14 +83,14 @@ def handle_background_check(data):
         sourceName = "Portals"
         
         lexis_nexis_input = dict(firstName=firstName,
-                                                middleName=middleName,
-                                                lastName=lastName,
-                                                gender=gender,
-                                                dob=dob,
-                                                nationalIdentificationNumber=nationalIdentificationNumber,
-                                                countryCode=countryCode,
-                                                entityType=entityType,
-                                                sourceName=sourceName)
+                                middleName=middleName,
+                                lastName=lastName,
+                                gender=gender,
+                                dob=dob,
+                                nationalIdentificationNumber=nationalIdentificationNumber,
+                                countryCode=countryCode,
+                                entityType=entityType,
+                                sourceName=sourceName)
         
         response = validator.lexisnexis.search_record(lexis_nexis_input)
         if response.status_code >= 500:
