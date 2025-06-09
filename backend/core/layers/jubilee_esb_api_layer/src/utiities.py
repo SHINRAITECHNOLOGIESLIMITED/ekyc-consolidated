@@ -39,6 +39,8 @@ class JubileeESBUtilities:
         """Initialize Jubilee ESB API with AWS Secrets Manager configuration"""
         self.secrets_client = boto3.client('secretsmanager')
         self.portal = portal
+        self.authorization_jwt = None
+        self.authorization_jwt_time = None
         self._load_jubilee_esb_credentials()
     def _retrieve_jwt_token(self, username: str, password: str) -> str:
         try:
@@ -103,11 +105,8 @@ class JubileeESBUtilities:
 
             if not username or not password:
                 raise JubileeESBError("Missing username or password in credentials")
-
-            # Retrieve JWT token through login
-            self.authorization_jwt = None # self._retrieve_jwt_token(username, password)
-            self.authorization_jwt_time = None #int(time.time())
             logger.info("Successfully loaded Jubilee ESB credentials")
+            return username, password
         except ClientError as e:
             if e.response['Error']['Code'] == 'AccessDeniedException':
                 logger.error(f"Access denied to secret {JUBILEE_ESB_API_SECRET_ARN}: {str(e)}")
@@ -160,19 +159,19 @@ class JubileeESBUtilities:
                         if int(time.time()) < expiry_time:
                             logger.info(f"Jubilee ESB: {service} API call retrieved from cache")
                             cached_data = json.loads(item['response_data'])
-                            self.portal.log_api_call(cached_data, api_name=service, api_method=api_method, duration_ms=0,
+                            response = requests.Response(
+                                status_code=HTTPStatus.OK,
+                                json=lambda: cached_data
+                            )
+                            self.portal.log_api_call(response, api_name=service, api_method=api_method, duration_ms=0,
                                      trace_id=trace_id,cacheHit=True, capture_data=True)
+                            return response
+                except ClientError as e:
                             return cached_data
                 except ClientError as e:
                     logger.warning(f"Cache retrieval error: {str(e)}")
             
-            
-            headers = {
-                "Authorization": self.authorization_jwt,
-                "Content-Type": "application/json"
-            }
-            # re-authenticating every four and half a minute.
-            # JWT access tokens are valid for 5 mins only
+            # re-authenticating every four and half a minute as JWT access tokens are valid for 5 mins only
             new_jwt = False
             if self.authorization_jwt is None or self.authorization_jwt_time is None:
                 new_jwt = True
@@ -180,16 +179,13 @@ class JubileeESBUtilities:
                 new_jwt = True
                 
             if new_jwt:
-                # Get credentials from the secret manager
-                jubilee_esb_response = self.secrets_client.get_secret_value(
-                    SecretId=JUBILEE_ESB_API_SECRET_ARN
-                )
-                credentials = json.loads(jubilee_esb_response['SecretString'])
-                username = credentials['username']
-                password = credentials['password']
-                
+                username,password =   self._load_jubilee_esb_credentials()
                 self.authorization_jwt = self._retrieve_jwt_token(username, password)
                 self.authorization_jwt_time = int(time.time())
+            headers = {
+                "Authorization": self.authorization_jwt,
+                "Content-Type": "application/json"
+            }
             start_time = time.time() * 1000
             if is_post:
                 response = requests.post(
@@ -205,18 +201,14 @@ class JubileeESBUtilities:
                     timeout=240
                 )
             duration_ms = round(time.time() * 1000 - start_time)
-            if response.status_code == 500:
-                logger.error(response.json())
             self.portal.log_api_call(response, api_name=service, api_method=api_method, duration_ms=duration_ms,
                                      trace_id=trace_id, capture_data=True)
-            response.raise_for_status()
+            # response.raise_for_status()
 
-            # Get the response data
-            response_data = response.json()
-            
             # Store in cache if successful
             if url != self.AUTH_URL:
                 try:
+                    response_data = response.json()
                     expiry_time = int(time.time()) + cache_ttl_seconds
                     cache_table.put_item(
                         Item={
@@ -231,8 +223,8 @@ class JubileeESBUtilities:
                 except ClientError as e:
                     logger.warning(f"Cache storage error: {str(e)}")
 
-                logger.info(f"Jubilee ESB: {service} API call successful")
-                return response_data
+            logger.info(f"Jubilee ESB: {service} API call successful")
+            return response
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Jubilee ESB: {service} API call failed: {str(e)}")

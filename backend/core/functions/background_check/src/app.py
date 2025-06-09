@@ -89,20 +89,29 @@ def handle_background_check(data):
                                                 countryCode=countryCode,
                                                 entityType=entityType,
                                                 sourceName=sourceName)
-        api_result = validator.lexisnexis.search_record(lexis_nexis_input)                        
-        logger.info(api_result)
-        if "error" in api_result:
-            if api_result["error"]:
-                return make_response(400, {'message': api_result['error'], 'details': api_result})
-        if "success" in api_result:
-            if api_result["success"] == False:
-                return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
-        if 'data' in api_result:
-            lexis_nexis_input['result'] = api_result['data']
-            portal.capture_background_check(lexis_nexis_input)
-            return make_response(200, api_result['data'])
+        
+        response = validator.lexisnexis.search_record(lexis_nexis_input)
+        if response.status_code >= 500:
+            logger.error(f"Received status code: {response.status_code}: {response.json()}")
+            return make_response(response.status_code, response.json)
+        elif response.status_code >= 400:
+            logger.warning(f"Received status code: {response.status_code}: {response.json()}")
+            return make_response(response.status_code, response.json)
         else:
-            return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
+            api_result = response.json()
+            logger.info(api_result)
+            if "error" in api_result:
+                if api_result["error"]:
+                    return make_response(400, {'message': api_result['error'], 'details': api_result})
+            if "success" in api_result:
+                if api_result["success"] == False:
+                    return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
+            if 'data' in api_result:
+                lexis_nexis_input['result'] = api_result['data']
+                portal.capture_background_check(lexis_nexis_input)
+                return make_response(200, api_result['data'])
+            else:
+                return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
     except Exception as e:
         logger.error(f"Error occurred while checking background check (LexisNexis): {e}")
         return make_response(500, {'message': 'LexisNexis backgroundcheck failed', 'details': str(e)})
