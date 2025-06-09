@@ -165,16 +165,16 @@ def handler(event, context):
 
         except json.JSONDecodeError as e:
             logger.error("Error decoding JSON body")
-            return make_response(400, {'message': 'Invalid JSON body: {e}'})
+            return make_response(400, {'message': 'Invalid JSON body','error': str(e)})
 
 
         except Exception as e:
             logger.error(f"An unexpected error occurred in lambda_handler: {e}")
-            return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
+            return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
 
     else:
         logger.error('Method Not Allowed - received {http_method}')
-        return make_response(405, {'message': 'Method Not Allowed'})
+        return make_response(405, {'message': 'Method Not Allowed','error': 'Method Not Allowed'})
 
 def levenshtein_distance(s1, s2):
     """Calculate the Levenshtein distance between two strings."""
@@ -320,7 +320,7 @@ def validate_nationalid(data):
         validate(event=data, schema=schema)
     except Exception as e:
         logger.error(f"Schema validation failed for NationalID document: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+        return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
     try:
         object_key = f"NationalID/{data['idNumber']}.pdf"
         url, s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
@@ -398,11 +398,11 @@ def validate_nationalid(data):
                                       overall_confidence=confidence)
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
-        return make_response(200, dict(s3Path=s3Path, results=results))
+        return make_response(200, dict(message="Validation successfull", s3Path=s3Path, results=results))
 
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_nationalid: {e}")
-        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
+        return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
 
 
 def validate_passport(data):
@@ -432,7 +432,7 @@ def validate_passport(data):
         validate(event=data, schema=schema)
     except Exception as e:
         logger.error(f"Schema validation failed for Passport document validation: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+        return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
     try:
         object_key = f"Passport/{data['passportNumber']}.pdf"
         url, s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
@@ -514,7 +514,7 @@ def validate_passport(data):
         return make_response(200, dict(s3Path=s3Path, results=results))
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_passport: {e}")
-        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
+        return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
 
 
 def validate_krapincertificate(data):
@@ -534,7 +534,7 @@ def validate_krapincertificate(data):
         validate(event=data, schema=schema)
     except Exception as e:
         logger.error(f"Schema validation failed for KRAPinCertificate document validation: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+        return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
     try:
         object_key = f"KRAPinCertificate/{data['pin']}.pdf"
         url, s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
@@ -583,7 +583,7 @@ def validate_krapincertificate(data):
 
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_krapincertificate: {e}")
-        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
+        return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
 
 
 def validate_cr12(data):
@@ -640,10 +640,10 @@ def validate_cr12(data):
         return make_response(200, dict(s3Path=s3Path, results=results))
     except Exception as e:
         logger.error(f"Schema validation failed for CertificateOfIncorporation  document validation: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+        return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_cr12: {e}")
-        return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
+        return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
 
 
 def extract_form_from_cr12_phrases(extractedData):

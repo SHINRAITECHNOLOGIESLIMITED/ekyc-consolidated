@@ -23,7 +23,6 @@ export interface LivenessResponse {
 }
 
 export interface DocumentValidationResponse {
-  validationId?: string;
   message:string
   error?:string
 }

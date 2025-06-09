@@ -38,17 +38,17 @@ def handler(event, context):
                     return register_customer(data)
                 case _:
                     logger.error(f"Path Not Found: {path}")
-                    return make_response(404, {'message': 'Path Not Found'})
+                    return make_response(404, {'message': 'Path Not Found','error': 'Invalid path'})
 
         except json.JSONDecodeError:
             logger.error("Error decoding JSON body")
             return make_response(400, {'message': 'Invalid JSON body'})
         except Exception as e:
             logger.error(f"An unexpected error occurred in lambda_handler: {e}")
-            return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
+            return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
     else:
         logger.error(f'Method Not Allowed - received {http_method}')
-        return make_response(405, {'message': 'Method Not Allowed'})
+        return make_response(405, {'message': 'Method Not Allowed','error': 'Invalid HTTP method'})
 
 def register_agent(event_data):
     schema = {
@@ -100,7 +100,7 @@ def register_agent(event_data):
                 raise Exception(f"agentType should be either Individual or Business not {event_data['agentType']}")
     except Exception as e:
         logger.error(f"Schema validation failed for Agent: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+        return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
     try:    
         # Call portal to capture agent registration
         event_data["kycStatus"] = "New"
@@ -118,7 +118,7 @@ def register_agent(event_data):
         })
     except Exception as e:
         logger.error(f"Error in registering agent: {e}")
-        return make_response(500, {'message': 'Error in registering agent', 'details': str(e)})
+        return make_response(500, {'message': 'Error in registering agent', 'error': str(e)})
     
                 
 def register_customer(event_data):
@@ -145,7 +145,7 @@ def register_customer(event_data):
         validate(schema=schema, event=event_data)
     except Exception as e:
         logger.error(f"Schema validation failed for Customer: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+        return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
     try:    
         event_data["kycStatus"] = "New"
         portal.capture_customer_registration(event_data)
@@ -163,7 +163,7 @@ def register_customer(event_data):
         })
     except Exception as e:
         logger.error(f"Error in registering customer: {e}")
-        return make_response(500, {'message': 'Error in registering customer', 'details': str(e)})
+        return make_response(500, {'message': 'Error in registering customer', 'error': str(e)})
     
                 
 def make_response(status_code, body):

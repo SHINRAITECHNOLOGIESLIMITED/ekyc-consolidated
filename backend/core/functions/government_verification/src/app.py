@@ -42,17 +42,17 @@ def handler(event, context):
                 case '/government/kra':
                     return verify_taxpayerinfo(data)
                 case _:
-                    return make_response(404, {'message': 'Path Not Found'})
+                    return make_response(404, {'message': 'Path Not Found',error: f'Path Not Found: {path}'})
 
         except json.JSONDecodeError:
             logger.error("Error decoding JSON body")
-            return make_response(400, {'message': 'Invalid JSON body'})
+            return make_response(400, {'message': 'Invalid JSON body','error': 'Invalid JSON body format'})
         except Exception as e:
             logger.error(f"An unexpected error occurred in lambda_handler: {e}")
-            return make_response(500, {'message': 'Internal Server Error', 'details': str(e)})
+            return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
     else:
         logger.error(f'Method Not Allowed - received {http_method}')
-        return make_response(405, {'message': 'Method Not Allowed'})
+        return make_response(405, {'message': 'Method Not Allowed', 'error': f'Method Not Allowed - received {http_method}'})
 
 def levenshtein_distance(s1, s2):
     """Calculate the Levenshtein distance between two strings."""
@@ -192,7 +192,7 @@ def verify_nationalid(event_data):
         validate(schema=schema, event=event_data)
     except Exception as e:
         logger.error(f"Schema validation failed for NationalID: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+        return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
 
     try:
         response = serviceValidator.iprs.search_generic(dict(identifier="ID_NUMBER", value=event_data['idNumber']))
@@ -207,10 +207,10 @@ def verify_nationalid(event_data):
             logger.info(api_result) 
             if "error" in api_result:
                 if api_result["error"]:
-                    return make_response(400, {'message': api_result['error'], 'details': api_result})
+                    return make_response(400, {'message': api_result['error'], 'error': api_result["error"]})
             if "success" in api_result:
                 if api_result["success"] == False:
-                    return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
+                    return make_response(400, {'message': 'Call was not successfull', 'error': "Call was not successfull"})
             if 'data' in api_result:
                 # Constructing fullNames field with uppercase letters
                 firstName = api_result['data']['firstName'] if 'firstName' in api_result['data'] else ''
@@ -257,12 +257,12 @@ def verify_nationalid(event_data):
                                                 validation_accuracy=validation_accuracy,
                                                 processing_accuracy=processing_accuracy)
 
-                return make_response(200, dict(results=matchResults))
+                return make_response(200, dict(message="Verification Sucessful",results=matchResults))
             else:
-                return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
+                return make_response(400, {'message': 'Missing \'data\' field in returned data', 'error': api_result})
     except Exception as e:
         logger.error(f"National Id verfification failed: {e}")
-        return make_response(500, {'message': 'Passport verfification failed','details': str(e)})
+        return make_response(500, {'message': 'Passport verfification failed','error': str(e)})
 
 
 def verify_passport(event_data):
@@ -287,7 +287,7 @@ def verify_passport(event_data):
         validate(schema=schema, event=event_data)
     except Exception as e:
         logger.error(f"Schema validation failed for Passport: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+        return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
 
     try:
         response = serviceValidator.iprs.search_passport_number(dict(
@@ -306,12 +306,10 @@ def verify_passport(event_data):
             logger.info(api_result) 
             if "error" in api_result:
                 if api_result["error"]:
-                    return make_response(400, {'message': api_result['error'], 'details': api_result})
-
+                    return make_response(400, {'message': api_result['error'], 'error': api_result["error"]})
             if "success" in api_result:
                 if api_result["success"] == False:
-                    return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
-
+                    return make_response(400, {'message': 'Call was not successfull', 'error': "Call was not successfull"})
             if "data" in api_result and isinstance(api_result["data"], dict) and api_result["data"]:
                 passportNumberMatchResult = process(event_name='passportNumber', api_field_name='passportNumber',
                                                     event=event_data, api_result=api_result)
@@ -353,13 +351,13 @@ def verify_passport(event_data):
                                                 processing_accuracy=processing_accuracy)
 
                 logger.info(f"Match results: {matchResults}")
-                return make_response(200, dict(results=matchResults))
+                return make_response(200, dict(message="Verification Sucessful",results=matchResults))
             else:
-                return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
+                return make_response(400, {'message': 'Missing \'data\' field in returned data', 'error': "Data missing in API response"})
     except Exception as e:
         error_message = str(e)
         logger.error(f"Passport verfification failed: {error_message}")
-        return make_response(500, {'message': 'Passport verfification failed','details': error_message})
+        return make_response(500, {'message': 'Passport verfification failed','error': error_message})
 
 
 def verify_taxpayerinfo(event_data):
@@ -378,7 +376,7 @@ def verify_taxpayerinfo(event_data):
         validate(schema=schema, event=event_data)
     except Exception as e:
         logger.error(f"Schema validation failed for KRA Pin: {e}")
-        return make_response(400, {'message': 'Request body validation failed', 'details': str(e)})
+        return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
 
     """
     Following are the options for the typeOfTaxpayer parameter:
@@ -404,10 +402,10 @@ def verify_taxpayerinfo(event_data):
 
             if "error" in api_result:
                 if api_result["error"]:
-                    return make_response(400, {'message': api_result['error'], 'details': api_result})
+                    return make_response(400, {'message': api_result['error'], 'error': api_result["error"]})
             if "success" in api_result:
                 if api_result["success"] == False:
-                    return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
+                    return make_response(400, {'message': 'Call was not successfull', 'error': "Call was not successfull"}})
             if "data" in api_result:
                 if "responseCode" in api_result["data"]:
                     match api_result["data"]["responseCode"]:
@@ -433,25 +431,25 @@ def verify_taxpayerinfo(event_data):
                                                             processing_accuracy=processing_accuracy)
 
                             logger.info(f"Match results: {matchResults}")
-                            return make_response(200, dict(results=matchResults))
+                            return make_response(200, dict(message="Verification Sucessful", results=matchResults))
                         case "30001":
                             #NOK Invalid User ID or Password
-                            return make_response(400, {'message': 'Invalid User ID or Password', 'details': api_result})
+                            return make_response(400, {'message': 'Invalid User ID or Password', 'error': api_result})
                         case "30002":
                             #NOK Invalid ID
-                            return make_response(400, {'message': 'Invalid ID', 'details': api_result})
+                            return make_response(400, {'message': 'Invalid ID', 'error': api_result})
                         case "30003":
                             #NOK iPage not Done
-                            return make_response(400, {'message': 'iPage not Done', 'details': api_result})
+                            return make_response(400, {'message': 'iPage not Done', 'error': api_result})
                         case _:
-                            return make_response(400, {'message': f'Unknown respsonse code {api_result["data"]["responseCode"]}', 'details': api_result})
+                            return make_response(400, {'message': f'Unknown respsonse code {api_result["data"]["responseCode"]}', 'error': api_result})
                 else:
-                    return make_response(400, {'message': 'Missing response code in returned data', 'details': api_result['data']})
+                    return make_response(400, {'message': 'Missing response code in returned data', 'error': api_result['data']})
             else:
-                return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
+                return make_response(400, {'message': 'Missing \'data\' field in returned data', 'error': api_result})
     except Exception as e:
         logger.error(f"KRA ID validation failed: {str(e)}")
-        return make_response(500, {'message': 'Error: KRA ID validation failed', 'details': str(e)})
+        return make_response(500, {'message': 'Error: KRA ID validation failed', 'error': str(e)})
 
 
 def make_response(status_code, body):
