@@ -160,12 +160,12 @@ class JubileeESBUtilities:
                             logger.info(f"Jubilee ESB: {service} API call retrieved from cache")
                             cached_data = json.loads(item['response_data'])
                             response = requests.Response()
-                            response.status_code = HTTPStatus.OK
+                            response.status_code = 200
                             response.headers = {
                                 "Content-Type": "application/json"
                             }
                             response._content = json.dumps(cached_data).encode('utf-8')
-                            logger.info(response.json())
+                            # logger.info(response.json())
                             self.portal.log_api_call(None, api_name=service, api_method=api_method, duration_ms=0,
                                      trace_id=trace_id,cacheHit=True, capture_data=True)
                             return response
