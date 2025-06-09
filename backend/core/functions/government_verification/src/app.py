@@ -284,16 +284,19 @@ def verify_passport(event_data):
         api_result = serviceValidator.iprs.search_passport_number(dict(
                 identifier="PASSPORT",
                 value=event_data["passportNumber"],
-                idNumber=event_data["idNumber"]),
+                idNumber=event_data["idNumber"])
             )
         logger.info(api_result)
+
         if "error" in api_result:
             if api_result["error"]:
                 return make_response(400, {'message': api_result['error'], 'details': api_result})
+
         if "success" in api_result:
             if api_result["success"] == False:
                 return make_response(400, {'message': 'Call was not successfull', 'details': api_result['details']})
-        if "data" in api_result:
+
+        if "data" in api_result and isinstance(api_result["data"], dict) and api_result["data"]:
             passportNumberMatchResult = process(event_name='passportNumber', api_field_name='passportNumber',
                                                 event=event_data, api_result=api_result)
             surnameMatchResult = process(event_name='surname', api_field_name='surname', event=event_data,
@@ -310,7 +313,6 @@ def verify_passport(event_data):
                                             api_result=api_result,is_date_field=True)
             dateOfExpiryMatchResult = process(event_name='dateOfExpiry', api_field_name='dateOfExpiry', event=event_data,
                                             api_result=api_result, is_date_field=True)
-
 
             matchResults = dict(
                                 passportNumber=passportNumberMatchResult,
@@ -339,8 +341,24 @@ def verify_passport(event_data):
         else:
             return make_response(400, {'message': 'Missing \'data\' field in returned data', 'details': api_result})
     except Exception as e:
-        logger.error(f"Passport verfification failed: {e}")
-        return make_response(500, {'message': 'Passport verfification failed','details': str(e)})
+        error_message = str(e)
+        logger.error(f"Passport verfification failed: {error_message}")
+
+        # Check for error codes in api_response
+        if "417" in error_message or "Expectation Failed" in error_message:
+            return make_response(417, {'message': 'Passport verification failed', 'details': error_message})
+        elif "401" in error_message:
+            return make_response(401, {'message': 'Passport verification failed - Unauthorized', 'details': error_message})
+        elif "IPRS API call failed:" in error_message:
+            # Extract status code from error message
+            import re
+            status_match = re.search(r'IPRS API call failed: (\d+)', error_message)
+            if status_match:
+                status_code = int(status_match.group(1))
+                return make_response(status_code, {'message': f'Passport verification failed - {status_code}', 'details': error_message})
+
+        # Default case
+        return make_response(500, {'message': 'Passport verfification failed','details': error_message})
 
 
 def verify_taxpayerinfo(event_data):

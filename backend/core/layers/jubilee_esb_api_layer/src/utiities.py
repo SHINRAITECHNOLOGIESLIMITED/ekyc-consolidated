@@ -180,7 +180,14 @@ class JubileeESBUtilities:
                 new_jwt = True
                 
             if new_jwt:
-                # self._load_jubilee_esb_credentials()
+                # Get credentials from the secret manager
+                jubilee_esb_response = self.secrets_client.get_secret_value(
+                    SecretId=JUBILEE_ESB_API_SECRET_ARN
+                )
+                credentials = json.loads(jubilee_esb_response['SecretString'])
+                username = credentials['username']
+                password = credentials['password']
+                
                 self.authorization_jwt = self._retrieve_jwt_token(username, password)
                 self.authorization_jwt_time = int(time.time())
             start_time = time.time() * 1000
