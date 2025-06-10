@@ -3,6 +3,7 @@
 import Listing, {ListingProps} from '@/components/Listing';
 import {fetchLivenessSessions} from '@/services/DataService';
 import type {LivenessSession} from '@/types/models';
+import LivenessDetection from "@/components/LivenessDetection";
 
 const columnDefinitions =
     [
@@ -34,7 +35,16 @@ const listingProps: ListingProps<LivenessSession> = {
     getAll: fetchLivenessSessions,
     pageSize: 100,
     columnDefinitions,
-    itemKey: (item: LivenessSession) => item.sessionId.toString()
+    itemKey: (item: LivenessSession) => item.sessionId.toString(),
+    actions: [
+        {
+            id: "new-liveness",
+            label: "Capture New Liveness Check",
+            render: () => {
+                return <LivenessDetection />
+            }
+        }
+    ],
 };
 
 const FaceLivenessListing: React.FC = () => {
