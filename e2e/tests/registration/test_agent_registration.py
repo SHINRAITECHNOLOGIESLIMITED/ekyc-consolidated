@@ -1,7 +1,7 @@
 
 import unittest
 from e2e.tests.config import *
-from e2e.tests.registration.register_test_util import register_test
+from e2e.tests.registration.register_test_util import register_200_test
 
 class TestAgentRegistration(unittest.TestCase):
     URL = f"{APIGW_URL}/agent-registration"
@@ -15,7 +15,7 @@ class TestAgentRegistration(unittest.TestCase):
             "nationalIdCardUrl": "https://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_NATIONAL_ID-9f0ea801f683f6c8314c9d7ad0e7a93ed01b9693.jpg",
             "dateOfBirth": "1994-12-19"
         }
-        register_test(tester= self, 
+        register_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
 
@@ -29,7 +29,7 @@ class TestAgentRegistration(unittest.TestCase):
             "nationalIdCardUrl": "https://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_NATIONAL_ID-9f0ea801f683f6c8314c9d7ad0e7a93ed01b9693.jpg",
             "dateOfBirth": "2001-09-04",
         }
-        register_test(tester= self, 
+        register_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
 
@@ -43,7 +43,7 @@ class TestAgentRegistration(unittest.TestCase):
             "nationalIdCardUrl": "https://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_NATIONAL_ID-9f0ea801f683f6c8314c9d7ad0e7a93ed01b9693.jpg",
             "dateOfBirth": "2001-09-04",
         }
-        register_test(tester= self, 
+        register_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
     def test_valid_agent_registration_BN987654321(self):
@@ -54,7 +54,7 @@ class TestAgentRegistration(unittest.TestCase):
             "companyCertificateUrl": "https://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/CERTIFICATE_OF_INCORPORATION-003Sample.jpg",
             "businessNumber": "BN987654321"
         }
-        register_test(tester= self, 
+        register_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
 

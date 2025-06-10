@@ -1,7 +1,7 @@
 
 import unittest
 
-from e2e.tests.background_checks.background_checks_test_util import background_check_test
+from e2e.tests.background_checks.background_checks_test_util import background_check_200_test
 from e2e.tests.config import *
 
 class TestBackgroundCheck(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestBackgroundCheck(unittest.TestCase):
             "nationalIdentificationNumber": "32140017"
         }
 
-        background_check_test(tester= self, 
+        background_check_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
 
@@ -32,7 +32,7 @@ class TestBackgroundCheck(unittest.TestCase):
             "nationalIdentificationNumber": ""
         }
 
-        background_check_test(tester= self, 
+        background_check_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
         
@@ -46,7 +46,7 @@ class TestBackgroundCheck(unittest.TestCase):
             "dateOfBirth": "1988-01-13",
             "nationalIdentificationNumber": "26465570"
         }
-        background_check_test(tester= self, 
+        background_check_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
 

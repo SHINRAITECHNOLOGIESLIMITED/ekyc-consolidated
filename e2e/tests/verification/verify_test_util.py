@@ -3,7 +3,7 @@ from pprint import pprint
 import sys
 from e2e.tests.config import *
 
-def verifity_test(tester,payload,url):
+def verifity_200_test(tester,payload,url):
     response = post_with_auth(url, json= json.dumps(payload))
     if response.status_code not in [200, 201]:
         print("\nResponse Body:",file=sys.stderr)

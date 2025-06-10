@@ -31,6 +31,13 @@ class IPRS:
                 "required": ["identifier", "value"]
             }
             validate(event=data, schema=schema)
+        except Exception as e:
+            logger.error(f"Verification schema failed: {str(e)}")
+            logger.error(data)
+            raise JubileeESBError(f"Verification schema failed: {str(e)}")
+        
+        try:
+            
             return self.utilities.make_api_call(
                 "IPRS",
                 api_method="searchV2",
@@ -79,6 +86,12 @@ class IPRS:
                 "required": ["identifier", "value"]
             }
             validate(event=data, schema=schema)
+        except Exception as e:
+            logger.error(f"Verification schema failed: {str(e)}")
+            logger.error(data)
+            raise JubileeESBError(f"Verification schema failed: {str(e)}")
+        
+        try:
             return self.utilities.make_api_call(
                 "IPRS",
                 api_method="search_alien_id",
@@ -110,6 +123,12 @@ class IPRS:
                 "required": ["identifier", "value", "idNumber"]
             }
             validate(event=data, schema=schema)
+        except Exception as e:
+            logger.error(f"IPRS passport verification schema failed: {str(e)}")
+            logger.error(data)
+            raise JubileeESBError(f"IPRS passport validation: {str(e)}")
+        
+        try:
             return self.utilities.make_api_call(
                 "IPRS",
                 api_method="search_passport_number",
@@ -140,6 +159,12 @@ class IPRS:
                 "required": ["identifier", "value"]
             }
             validate(event=data, schema=schema)
+        except Exception as e:
+            logger.error(f"Verification schema failed: {str(e)}")
+            logger.error(data)
+            raise JubileeESBError(f"Verification schema failed: {str(e)}")
+        
+        try:
             return self.utilities.make_api_call(
                 "IPRS",
                 api_method="search_birth_certificate_number",
@@ -171,6 +196,12 @@ class IPRS:
             }
 
             validate(event=data, schema=schema)
+        except Exception as e:
+            logger.error(f"Verification schema failed: {str(e)}")
+            logger.error(data)
+            raise JubileeESBError(f"Verification schema failed: {str(e)}")
+        
+        try:
             return self.utilities.make_api_call(
                 "IPRS",
                 api_method="search_death_certificate_number",
@@ -204,7 +235,12 @@ class IPRS:
             }
 
             validate(event=data, schema=schema)
-
+        except Exception as e:
+            logger.error(f"Verification schema failed: {str(e)}")
+            logger.error(data)
+            raise JubileeESBError(f"Verification schema failed: {str(e)}")
+        
+        try:
             return self.utilities.make_api_call(
                 "IPRS",
                 api_method="bulk_search",

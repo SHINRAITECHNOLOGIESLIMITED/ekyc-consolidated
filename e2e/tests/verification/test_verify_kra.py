@@ -1,7 +1,7 @@
 import unittest
 
 from e2e.tests.config import *
-from e2e.tests.verification.verify_test_util import verifity_test
+from e2e.tests.verification.verify_test_util import verifity_200_test
 class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
     URL = f"{APIGW_URL}/government/kra"
     def test_pin_A011797599Y(self):
@@ -10,7 +10,7 @@ class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
             "pin":"A011797599Y",
             "taxPayerName":"UUO19 TEST OEL01",
         }
-        verifity_test(tester= self,
+        verifity_200_test(tester= self,
                       url= self.URL,
                       payload=payload)
 
@@ -20,7 +20,7 @@ class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
             "pin":"A008279496S",
             "taxPayerName":"YAMBU09 TEST FFIE05",
         }
-        verifity_test(tester= self,
+        verifity_200_test(tester= self,
                       url= self.URL,
                       payload=payload)
 
@@ -30,7 +30,7 @@ class TestKRAPinCertificateDocumentVerification(unittest.TestCase):
             "pin":"A005394549Z",
             "taxPayerName":"DHIAM20 TEST ATRIC10",
         }
-        verifity_test(tester= self,
+        verifity_200_test(tester= self,
                       url= self.URL,
                       payload=payload)
 
