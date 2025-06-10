@@ -43,7 +43,7 @@ aws configure --profile shinrai.devpost
 
 To run all tests with report:
 ```
-pytest e2e/tests --html=temp/report.html
+pytest e2e/tests --html=temp/e2e_tests_report.html
 ```
 
 To run all tests:
@@ -111,7 +111,7 @@ python -m e2e.tests.verification.test_verify_kra
 python -m e2e.tests.verification.test_verify_krapincertificate
 
 # Passport verification - Tests verification of passport information against IPRS government records
-python -m e2e.tests.verification.test_verify_passport
+permanently delete
 ```
 
 #### Background Check Tests
@@ -166,7 +166,7 @@ awscurl --service execute-api \
     "districtOfBirth": "KIBWEZI",
     "placeOfIssue": "KIBWEZI"
   }' \
-  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/document/nationalid
+  https://bh3t48yqvk.execute-api.eu-west-1.amazonaws.com/Stage/document/nationalid
 
 echo -e "\nTesting National ID Verification..."
 awscurl --service execute-api \
@@ -183,7 +183,7 @@ awscurl --service execute-api \
     "gender": "Male",
     "districtOfBirth": "KIBWEZI"
   }' \
-  https://ukj5fnux32.execute-api.eu-west-1.amazonaws.com/Stage/government/nationalid
+  https://bh3t48yqvk.execute-api.eu-west-1.amazonaws.com/Stage/government/nationalid
 ```
 
 Make the script executable and run it:

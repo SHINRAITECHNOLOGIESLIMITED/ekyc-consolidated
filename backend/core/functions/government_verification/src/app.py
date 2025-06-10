@@ -198,10 +198,10 @@ def verify_nationalid(event_data):
         response = serviceValidator.iprs.search_generic(dict(identifier="ID_NUMBER", value=event_data['idNumber']))
         if response.status_code >= 500:
             logger.error(f"Received status code: {response.status_code}: {response.json()}")
-            return make_response(response.status_code, response.json)
+            return make_response(response.status_code,dict(message="Error in API response", error=response.json()))
         elif response.status_code >= 400:
             logger.warning(f"Received status code: {response.status_code}: {response.json()}")
-            return make_response(response.status_code, response.json)
+            return make_response(response.status_code, dict(message="Error in API response", error=response.json()))
         else:
             api_result = response.json()
             logger.info(api_result) 
@@ -297,10 +297,10 @@ def verify_passport(event_data):
             )
         if response.status_code >= 500:
             logger.error(f"Received status code: {response.status_code}: {response.json()}")
-            return make_response(response.status_code, response.json)
+            return make_response(response.status_code,dict(message="Error in API response", error=response.json()))
         elif response.status_code >= 400:
             logger.warning(f"Received status code: {response.status_code}: {response.json()}")
-            return make_response(response.status_code, response.json)
+            return make_response(response.status_code, dict(message="Error in API response", error=response.json()))
         else:
             api_result = response.json()
             logger.info(api_result) 
@@ -392,10 +392,10 @@ def verify_taxpayerinfo(event_data):
         ))
         if response.status_code >= 500:
             logger.error(f"Received status code: {response.status_code}: {response.json()}")
-            return make_response(response.status_code, response.json)
+            return make_response(response.status_code,dict(message="Error in API response", error=response.json()))
         elif response.status_code >= 400:
             logger.warning(f"Received status code: {response.status_code}: {response.json()}")
-            return make_response(response.status_code, response.json)
+            return make_response(response.status_code, dict(message="Error in API response", error=response.json()))
         else:
             api_result = response.json()
             logger.info(api_result)
@@ -405,7 +405,7 @@ def verify_taxpayerinfo(event_data):
                     return make_response(400, {'message': api_result['error'], 'error': api_result["error"]})
             if "success" in api_result:
                 if api_result["success"] == False:
-                    return make_response(400, {'message': 'Call was not successfull', 'error': "Call was not successfull"}})
+                    return make_response(400, {'message': 'Call was not successfull', 'error': "Call was not successfull"})
             if "data" in api_result:
                 if "responseCode" in api_result["data"]:
                     match api_result["data"]["responseCode"]:
