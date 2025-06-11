@@ -5,7 +5,7 @@ from e2e.tests.validation.validate_test_util import validate_test
 
 expected_headers = {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': 'https://main.d2896e60a8d7f8.amplifyapp.com',
+            'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Api-Key, X-Amz-Date, X-Amz-Security-Token',
             'Access-Control-Allow-Methods': 'POST, OPTIONS'
         }

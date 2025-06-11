@@ -25,7 +25,10 @@ def make_response(status_code, body):
     response = {
         'statusCode': status_code,
         'headers': {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Api-Key, X-Amz-Date, X-Amz-Security-Token',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS'
         },
         'body': json.dumps(body)
     }
