@@ -39,7 +39,12 @@ class LexisNexis:
                 "required": ["firstName", "lastName", "gender", "dob", "countryCode", "entityType", "sourceName"]
             }
             validate(event=data, schema=schema)
-
+        except Exception as e:
+            logger.error(f"Verification schema failed: {str(e)}")
+            logger.error(data)
+            raise JubileeESBError(f"Verification schema failed: {str(e)}")
+        
+        try:
             return self.utilities.make_api_call(
                 "LexisNexis",
                 api_method="search_record",

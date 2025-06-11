@@ -40,6 +40,12 @@ class KRA:
                 "required": ["idNo", "country"]
             }
             validate(event=data, schema=schema)
+        except Exception as e:
+            logger.error(f"Verification schema failed: {str(e)}")
+            logger.error(data)
+            raise JubileeESBError(f"Verification schema failed: {str(e)}")
+        
+        try:
             idNo = data['idNo']
             country = data['country']
 

@@ -1,7 +1,7 @@
 import unittest
 import json
 from e2e.tests.config import *
-from e2e.tests.verification.verify_test_util import verifity_test
+from e2e.tests.verification.verify_test_util import verifity_200_test
 
 class TestPassportDocumentVerification(unittest.TestCase):
     URL=f"{APIGW_URL}/government/passport"
@@ -17,10 +17,8 @@ class TestPassportDocumentVerification(unittest.TestCase):
             "dateOfIssue":"2024-05-06",
             "dateOfExpiry":"2034-05-05",
         }
-        verifity_test(tester= self,
-                      url= self.URL,
-                      payload=payload)
-        # self.assertEqual(post_with_auth(self.URL, json=payload).status_code, 417)
+        self.assertEqual(post_with_auth(self.URL, json=payload).status_code, 417)
+        # verifity_test should not be used here as it is not a valid passport number
 
     def test_passportnumber_A2312084_old(self):
             payload ={
@@ -34,7 +32,7 @@ class TestPassportDocumentVerification(unittest.TestCase):
                 "dateOfIssue":"2014-12-29",
                 "dateOfExpiry":"2024-12-27",
             }
-            verifity_test(tester= self,
+            verifity_200_test(tester= self,
                           url= self.URL,
                           payload=payload)
             # self.assertEqual(post_with_auth(self.URL, json=payload).status_code, 417)
@@ -52,7 +50,7 @@ class TestPassportDocumentVerification(unittest.TestCase):
             "dateOfIssue":"2023-07-20",
             "dateOfExpiry":"2033-07-19",
         }
-        verifity_test(tester= self,
+        verifity_200_test(tester= self,
                       url= self.URL,
                       payload=payload)
 
@@ -68,7 +66,7 @@ class TestPassportDocumentVerification(unittest.TestCase):
             "dateOfIssue":"2009-06-16",
             "dateOfExpiry":"2019-06-16",
         }
-        verifity_test(tester= self,
+        verifity_200_test(tester= self,
                       url= self.URL,
                       payload=payload)
 
@@ -84,7 +82,7 @@ class TestPassportDocumentVerification(unittest.TestCase):
             "dateOfIssue":"2024-08-06",
             "dateOfExpiry":"2034-07-06",
         }
-        verifity_test(tester= self,
+        verifity_200_test(tester= self,
                       url= self.URL,
                       payload=payload)
 

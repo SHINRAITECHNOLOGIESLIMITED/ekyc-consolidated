@@ -3,7 +3,7 @@ from pprint import pprint
 from e2e.tests.config import *
 import sys
 
-def background_check_test(tester,payload,url):
+def background_check_200_test(tester,payload,url):
     response = post_with_auth(url, json= json.dumps(payload))
     if response.status_code != 200:
         print("\nResponse Body:",file=sys.stderr)

@@ -1,6 +1,6 @@
 import unittest
 from e2e.tests.config import *
-from e2e.tests.registration.register_test_util import register_test
+from e2e.tests.registration.register_test_util import register_200_test
 
 class TestCustomerRegistration(unittest.TestCase):
     URL=f"{APIGW_URL}/customer-registration"
@@ -15,7 +15,7 @@ class TestCustomerRegistration(unittest.TestCase):
             "nationalIdCardUrl": "https://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_NATIONAL_ID.pdf",
             "kraPinCardUrl": "https://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KRA_PIN_CERTIFICATE-002samplekra.jpg"
         }
-        register_test(tester= self, 
+        register_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
 
@@ -31,7 +31,7 @@ class TestCustomerRegistration(unittest.TestCase):
             "nationalIdCardUrl": "https://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_NATIONAL_ID-9f0ea801f683f6c8314c9d7ad0e7a93ed01b9693.jpg",
             "kraPinCardUrl": ""
         }
-        register_test(tester= self, 
+        register_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
 
@@ -47,7 +47,7 @@ class TestCustomerRegistration(unittest.TestCase):
             "dateOfBirth": "1985-05-05",
             "kraPinCardUrl": ""
         }
-        register_test(tester= self, 
+        register_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
 

@@ -1,7 +1,7 @@
 import unittest
 
 from e2e.tests.config import *
-from e2e.tests.verification.verify_test_util import verifity_test
+from e2e.tests.verification.verify_test_util import verifity_200_test
 class TestNationalIDDocumentVerification(unittest.TestCase):
     URL =f"{APIGW_URL}/government/nationalid"
     def test_idnumber_23667272(self):
@@ -13,7 +13,7 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
             "gender":"F",
             # "districtOfBirth":"THIKA WEST"  #IPRS and Supplied sample have a mismatch
         }
-        verifity_test(tester= self,
+        verifity_200_test(tester= self,
                       url= self.URL,
                       payload=payload)
     def test_idnumber_32140017(self):
@@ -25,7 +25,7 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
             "gender":"F",
             "districtOfBirth":"KIAMBU\nDISTRICT - KIAMBU\n"
         }
-        verifity_test(tester= self,
+        verifity_200_test(tester= self,
                       url= self.URL,
                       payload=payload)
 
@@ -38,7 +38,7 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
             "gender":"M",
             "districtOfBirth":"KIBWEZI\nDISTRICT - KIBWEZI\n"
         }
-        verifity_test(tester= self,
+        verifity_200_test(tester= self,
                       url= self.URL,
                       payload=payload)
 
@@ -51,7 +51,7 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
             "gender":"M",
             "districtOfBirth":"NAIROBI\nDISTRICT - STAREHE\n\n"
         }
-        verifity_test(tester= self,
+        verifity_200_test(tester= self,
                       url= self.URL,
                       payload=payload)
 
