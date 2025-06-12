@@ -1,10 +1,11 @@
 "use client";
 
+import { API_CONFIG } from "@/constants/api";
+import { eKYCApi } from "@/services/api";
+import { DocumentResponse } from "@/types/liveness";
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { FileUploader } from "@aws-amplify/ui-react-storage";
 import {
-  Modal,
-  Box,
   Alert,
   Button,
   ColumnLayout,
@@ -16,10 +17,7 @@ import {
   Input,
   SpaceBetween,
 } from "@cloudscape-design/components";
-import { eKYCApi } from "@/services/api";
-import React, { useState, useEffect, useCallback } from "react";
-import { DocumentResponse } from "@/types/liveness";
-import { API_CONFIG } from "@/constants/api";
+import React, { useCallback, useEffect, useState } from "react";
 // Define field types
 interface BaseField {
   id: string;
@@ -53,7 +51,7 @@ interface DocumentValidationFormProps {
   title: string;
   apiEndpoint: string;
   fields: FormField[];
-  onSuccess?: (data: DocumentResponse) => void;
+  onSuccess?: (data: DocumentResponse) => React.ReactNode;
   onError?: (error: Error) => void;
 }
 
@@ -80,9 +78,8 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [success, setSuccess] = useState<boolean>(false);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isFormValid, setIsFormValid] = useState<boolean>(false);
-  const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
 
   // Define validateForm before it's used in useEffect
   const validateForm = useCallback(
@@ -119,6 +116,7 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
   const handleClearForm = () => {
     setFormData(initialFormData);
     setFieldErrors({});
+    setError(null);
     setIsFormValid(false);
   };
 
@@ -217,12 +215,11 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
         JSON.stringify(payload)
       );
       if (data.error) {
-        setError(`{data.message}\n${data.error}`);
+        setError(`${data.message}: ${data.error}`);
         return;
       }
-      setSuccess(true);
+      setSuccess(data.message || "Processing successful");
       //Close the form as show a success dialoge asking user if they want to view the details
-      setShowSuccessDialog(false);
       if (onSuccess) onSuccess(data);
     } catch (err: unknown) {
       const errorMessage =
@@ -297,32 +294,32 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
     <SpaceBetween size={"s"}>
       <Header variant="h2">{title}</Header>
       {error && <Alert type="error">{error}</Alert>}
-        {success && (
-          <Alert type="success">Document processed successfully!</Alert>
-        )}
+      {success && (
+        <Alert type="success">{success}. You may now close this window.</Alert>
+      )}
       <Form
-          actions={
-            <SpaceBetween direction="horizontal" size="xs">
-              <Button
-                key="clear-button"
-                variant="icon"
-                onClick={handleClearForm}
-                iconName="remove"
-                ariaLabel="Clear form"
-              />
-              <Button
-                key="submit-button"
-                variant="primary"
-                onClick={handleSubmit}
-                loading={isLoading}
-                disabled={!isFormValid}
-              >
-                Validate Document
-              </Button>
-            </SpaceBetween>
-          }
-        >
-      <Container>
+        actions={
+          <SpaceBetween direction="horizontal" size="xs">
+            <Button
+              key="clear-button"
+              variant="icon"
+              onClick={handleClearForm}
+              iconName="remove"
+              ariaLabel="Clear form"
+            />
+            <Button
+              key="submit-button"
+              variant="primary"
+              onClick={handleSubmit}
+              loading={isLoading}
+              disabled={!isFormValid}
+            >
+              Submit
+            </Button>
+          </SpaceBetween>
+        }
+      >
+        <Container>
           <SpaceBetween size="l">
             <ColumnLayout columns={3} variant="text-grid" borders="horizontal">
               {fields
@@ -360,30 +357,7 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
                 </FormField>
               ))}
           </SpaceBetween>
-        
-        <Modal
-          onDismiss={() => setShowSuccessDialog(false)}
-          visible={showSuccessDialog}
-          header="Document Validation Successful!"
-          closeAriaLabel="Close dialog"
-          footer={
-            <Box float="right">
-              <SpaceBetween direction="horizontal" size="xs">
-                <Button
-                  onClick={() => setShowSuccessDialog(false)}
-                  //TODO: Close parent modal
-                  variant="link"
-                >
-                  Close
-                </Button>
-                {/* You might want a button to view details */}
-              </SpaceBetween>
-            </Box>
-          }
-        >
-          <p>Processsing Successful</p>
-        </Modal>
-      </Container>
+        </Container>
       </Form>
     </SpaceBetween>
   );
