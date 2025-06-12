@@ -9,6 +9,11 @@ Parameters:
     Default: amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
     Description: Name of the Amplify S3 bucket where KYC documents are upload into by portal
 
+  AmplifyCognigoUserPoolId:
+    Type: String
+    Default: arn:aws:cognito-idp:eu-west-1:842206816107:userpool/eu-west-1_eMNIDFsxx
+    Description: Cognito User Pool ID for Amplify
+
   JubileeESBAPICredentials:
     Type: String
     Default: '{"username":"your-username","password":"your-password","business":"your-business","baseurl":"https://example.com"}'
@@ -56,7 +61,7 @@ Resources:
       EndpointConfiguration: REGIONAL
       TracingEnabled: true
       Cors:
-        AllowOrigin: '''https://main.d2896e60a8d7f8.amplifyapp.com'''
+        AllowOrigin: '''*'''
         AllowHeaders: '''Content-Type, Authorization, X-Api-Key, X-Amz-Date,
           X-Amz-Security-Token'''
         AllowMethods: '''POST, OPTIONS'''

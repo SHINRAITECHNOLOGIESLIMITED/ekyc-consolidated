@@ -105,6 +105,7 @@ const IndividualAgentForm: React.FC = () => (
         id: "idNumber",
         label: "ID Number",
         type: "text",
+        required: true,
         placeholder: "23667272",
       },
       {
