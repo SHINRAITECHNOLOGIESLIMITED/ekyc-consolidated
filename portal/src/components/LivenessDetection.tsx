@@ -129,6 +129,9 @@ const LivenessDetection = () => {
                         <FaceLivenessDetector
                             sessionId={sessionId ?? ""}
                             region={API_CONFIG.REGION}
+                            onError={(error) => {
+                                console.error(error);
+                            }}
                             onAnalysisComplete={handleAnalysisComplete}
                         />
                     </Container>
