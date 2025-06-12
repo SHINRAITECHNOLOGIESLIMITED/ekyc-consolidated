@@ -65,11 +65,6 @@ export const eKYCApi = {
             headers,
             body: payload
         });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
         return response.json();
     },
 
