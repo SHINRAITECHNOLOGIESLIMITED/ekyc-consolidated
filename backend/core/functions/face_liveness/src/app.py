@@ -109,11 +109,13 @@ def get_face_liveness_results(event, context):
             confidence = float(confidence)
         # Determine if the liveness check passed based on confidence threshold
         is_live = confidence >= FACE_LIVENESS_CONFIDENCE_THRESHOLD if confidence is not None else False
-        liveness_document = dict(session_id=session_id,
+        liveness_document = dict(
+            sessionId=session_id,
+            request_id=context.aws_request_id,
             confidence=confidence,
             status=status,
             is_live=is_live,
-            request_id=context.aws_request_id)
+            )
         logger.info(f"Face liveness results for session {session_id}: Confidence: {confidence}, Status: {status}")
         
         # Extract ReferenceImage and AuditImages if available and save them to S3 bucket
