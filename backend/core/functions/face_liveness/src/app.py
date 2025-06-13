@@ -15,8 +15,10 @@ assert FACELIVENESSRESULTS_TABLE_NAME is not None, 'FACELIVENESSRESULTS_TABLE_NA
 LIVENESSCAPTUREBUCKET_BUCKET_NAME= os.getenv('LIVENESSCAPTUREBUCKET_BUCKET_NAME', None)
 assert LIVENESSCAPTUREBUCKET_BUCKET_NAME is not None, 'LIVENESSCAPTUREBUCKET_BUCKET_NAME env variable is missing'
 
-FACE_LIVENESS_CONFIDENCE_THRESHOLD = os.getenv('FACE_LIVENESS_CONFIDENCE_THRESHOLD',90)  # Adjust this threshold as needed
-
+FACE_LIVENESS_CONFIDENCE_THRESHOLD = os.getenv('FACE_LIVENESS_CONFIDENCE_THRESHOLD',90.0)  # Adjust this threshold as needed
+if isinstance(FACE_LIVENESS_CONFIDENCE_THRESHOLD, str):
+    FACE_LIVENESS_CONFIDENCE_THRESHOLD = float(FACE_LIVENESS_CONFIDENCE_THRESHOLD)
+    
 logger = Logger()
 tracer = Tracer()
 portal = Portal()
@@ -49,6 +51,7 @@ def create_face_liveness_session(event, context):
             'session_id': session_id,
             'status': 'CREATED',
             'timestamp': datetime.datetime.now().isoformat(),
+            'expiry_time': (datetime.datetime.now() + datetime.timedelta(hours=1)).isoformat(),
             'request_id_create': context.aws_request_id
         }
         put_response = table.put_item(Item=item)
@@ -102,6 +105,10 @@ def get_face_liveness_results(event, context):
         # Extract relevant information
         confidence = response.get('Confidence')
         status = response.get('Status')
+        if isinstance(confidence, str):
+            confidence = float(confidence)
+        # Determine if the liveness check passed based on confidence threshold
+        is_live = confidence >= FACE_LIVENESS_CONFIDENCE_THRESHOLD if confidence is not None else False
         liveness_document = dict(session_id=session_id,
             confidence=confidence,
             status=status,
@@ -141,34 +148,7 @@ def get_face_liveness_results(event, context):
                 logger.info(f"Saved {len(audit_image_keys)} audit images to S3")
         
         logger.info(f"Full response: {liveness_document}")
-        # Update session results in DynamoDB
-        # Prepare update expression and attributes for DynamoDB
-        update_expression = 'SET confidence = :conf, status = :stat, updated_at = :time'
-        expression_attr_values = {
-            ':conf': Decimal(confidence) if confidence is not None else None,
-            ':stat': status,
-            ':time': datetime.datetime.now().isoformat(),
-            ':request_id_results': context.aws_request_id
-        }
         
-        # Add image paths to DynamoDB if available
-        if reference_image_key or audit_image_keys:
-            update_expression += ', images = :images'
-            expression_attr_values[':images'] = {
-                'reference_image': reference_image_key,
-                'audit_images': audit_image_keys
-            }
-            
-        update_response = table.update_item(
-            Key={'session_id': session_id},
-            UpdateExpression=update_expression,
-            ExpressionAttributeValues=expression_attr_values,
-            ReturnValues='ALL_NEW'
-        )
-        logger.info(f"DynamoDB update_item response: {update_response}")
-
-        # Determine if the liveness check passed based on confidence threshold
-        is_live = confidence >= FACE_LIVENESS_CONFIDENCE_THRESHOLD if confidence is not None else False
         portal.capture_face_liveness(
             liveness_document
         )

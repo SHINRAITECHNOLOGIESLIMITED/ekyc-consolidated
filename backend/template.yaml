@@ -428,6 +428,9 @@ Resources:
           KeyType: HASH
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
+      TimeToLiveSpecification:
+        AttributeName: expiry_time
+        Enabled: true
   FaceLivenessCaptureBucket:
     Type: AWS::S3::Bucket
     Properties:
