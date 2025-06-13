@@ -121,7 +121,7 @@ class Portal:
                 return None
 
         except Exception as e:
-            logger.error(f"Error creating agent registration: {str(e)}")
+            logger.error(f"Portal: Error creating agent registration: {str(e)}")
             return None
     
     def capture_customer_registration(self, customer):
@@ -195,10 +195,8 @@ class Portal:
                 return None
 
         except Exception as e:
-            logger.error(f"Error creating customer registration: {str(e)}")
+            logger.error(f"Portal: Error creating customer registration: {str(e)}")
             return None
-        
-        
     def capture_background_check(self, backgroud_check):
         """
         Create a new background check record in the portal using Amplify GraphQL API.
@@ -269,9 +267,65 @@ class Portal:
                 return None
 
         except Exception as e:
-            logger.error(f"Error creating background check: {str(e)}")
+            logger.error(f"Portal: Error creating background check: {str(e)}")
             return None
+    def capture_face_liveness(self, face_liveness):
+        """
+        Create a new face liveness record in the portal using Amplify GraphQL API.
+        
+        Args:
+            face_liveness: Dictionary containing face liveness data
+            
+        Returns:
+            The created face liveness record or None if there was an error
+        """
+        try:
+            # Create a new face liveness session
+            create_mutation = """
+                mutation CreateLivenessSession($input: CreateLivenessSessionInput!) {
+                    createLivenessSession(input: $input) {
+                        sessionId
+                        confidence
+                        status
+                    }
+                }
+            """
+            
+            # Prepare input with required fields from schema
+            session_id = face_liveness.get("sessionId") or str(uuid.uuid4())
+            
+            create_variables = {
+                "input": face_liveness
+            }
+            
+            # Prepare the create request body
+            create_payload = {
+                'query': create_mutation,
+                'variables': create_variables
+            }
+            
+            # Make the create request to AppSync
+            create_response = requests.post(
+                self.PORTAL_GRAPHQL_URL,
+                headers=self.headers,
+                json=create_payload
+            )
+            
+            # Check if create was successful
+            if create_response.status_code == 200:
+                create_result = create_response.json()
+                if 'errors' in create_result:
+                    logger.error(f"GraphQL Errors during create: {create_result['errors']}")
+                    return None
+                logger.info(f"Face liveness session created successfully: {session_id}")
+                return create_result['data']['createLivenessSession']
+            else:
+                logger.error(f"HTTP Error during create: {create_response.status_code}")
+                return None
 
+        except Exception as e:
+            logger.error(f"Portal: Error creating face liveness session: {str(e)}")
+            return None
         
     def capture_doc_validation(self, documentType, s3Path, documentIdentifier, matchResults, keywords_checks,
                                validation_accuracy,processing_accuracy,overall_confidence):
@@ -346,7 +400,7 @@ class Portal:
                 return None
 
         except Exception as e:
-            logger.error(f"Error creating document validation: {str(e)}")
+            logger.error(f"Portal: Error creating document validation: {str(e)}")
             return None
     def capture_doc_verification(self, documentType,documentIdentifier, matchResults,validation_accuracy,processing_accuracy):
         """
@@ -415,7 +469,7 @@ class Portal:
                 return None
 
         except Exception as e:
-            logger.error(f"Error creating document verification: {str(e)}")
+            logger.error(f"Portal: Error creating document verification: {str(e)}")
             return None
         pass
         

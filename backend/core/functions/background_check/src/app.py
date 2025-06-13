@@ -91,12 +91,25 @@ def handle_background_check(data):
                                                 sourceName=sourceName)
         
         response = validator.lexisnexis.search_record(lexis_nexis_input)
-        if response.status_code >= 500:
-            logger.error(f"Received status code: {response.status_code}: {response.json()}")
-            return make_response(response.status_code, response.json())
-        elif response.status_code >= 400:
-            logger.warning(f"Received status code: {response.status_code}: {response.json()}")
-            return make_response(response.status_code, response.json())
+        if response.status_code >= 400:
+            error_message = 'Error in API response'
+            try:
+                error_object = response.json()
+                if 'errors' in error_object['error']:
+                    if 'errorMessage' in error_object['error']['errors']:
+                        error_message = error_object['error']['errors']['errorMessage']
+                elif 'message' in error_object:
+                    error_message = f"{response.status_code}: {error_object['message']}"
+                else:
+                    error_message = f'{response.status_code}: Error in API response'
+            except Exception as e:
+                error_message = f'{response.status_code}: Error in API response'
+            if response.status_code >= 500:
+                logger.error(f"Received status code: {response.status_code}; {error_message} :{response.json()}")
+                return make_response(response.status_code,dict(message="Error in API response", error=error_message))
+            elif response.status_code >= 400:
+                logger.warning(f"Received status code: {response.status_code}; {error_message} :{response.json()}")
+                return make_response(response.status_code, dict(message="Error in API response", error=error_message))
         else:
             api_result = response.json()
             logger.info(api_result)

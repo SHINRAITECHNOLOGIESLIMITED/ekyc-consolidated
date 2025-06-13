@@ -356,6 +356,9 @@ Resources:
           FACELIVENESSRESULTS_TABLE_NAME: !Ref FaceLivenessResults
           FACELIVENESSRESULTS_TABLE_ARN: !GetAtt FaceLivenessResults.Arn
           FACE_LIVENESS_CONFIDENCE_THRESHOLD: 95
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+          LIVENESSCAPTUREBUCKET_BUCKET_NAME: !Ref FaceLivenessCaptureBucket
+          LIVENESSCAPTUREBUCKET_BUCKET_ARN: !GetAtt FaceLivenessCaptureBucket.Arn
       Policies:
         - Statement:
             - Effect: Allow
@@ -371,6 +374,32 @@ Resources:
                 - rekognition:CreateFaceLivenessSession
                 - rekognition:GetFaceLivenessSessionResults
               Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:GetObjectAcl
+                - s3:GetObjectLegalHold
+                - s3:GetObjectRetention
+                - s3:GetObjectTorrent
+                - s3:GetObjectVersion
+                - s3:GetObjectVersionAcl
+                - s3:GetObjectVersionForReplication
+                - s3:GetObjectVersionTorrent
+                - s3:ListBucket
+                - s3:ListBucketMultipartUploads
+                - s3:ListBucketVersions
+                - s3:ListMultipartUploadParts
+                - s3:AbortMultipartUpload
+                - s3:DeleteObject
+                - s3:DeleteObjectVersion
+                - s3:PutObject
+                - s3:PutObjectLegalHold
+                - s3:PutObjectRetention
+                - s3:RestoreObject
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::${FaceLivenessCaptureBucket}
+                - !Sub arn:${AWS::Partition}:s3:::${FaceLivenessCaptureBucket}/*
       Layers:
         - !Ref PortalProjectionLayer
       Events:
@@ -399,6 +428,18 @@ Resources:
           KeyType: HASH
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
+  FaceLivenessCaptureBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-bucket-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+      PublicAccessBlockConfiguration:
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
   DocumentTextractLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -695,7 +736,6 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: expiry_time
         Enabled: true
-
 Metadata:
   AWS::Composer::Groups:
     Group2:
@@ -710,6 +750,7 @@ Metadata:
         - CustomerRegistrationSM
         - AgentRegistrationSM
         - JubileeApiCache
+        - FaceLivenessCaptureBucket
 Outputs:
   ApiGatewayUrl:
     Description: API Gateway Production URL

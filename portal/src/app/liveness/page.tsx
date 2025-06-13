@@ -13,11 +13,6 @@ const columnDefinitions =
             cell: (item: LivenessSession) => item.sessionId
         },
         {
-            id: "userId",
-            header: "User Id",
-            cell: (item: LivenessSession) => item.userId
-        },
-        {
             id: "status",
             header: "Status",
             cell: (item: LivenessSession) => item.status?.toString() ?? "-"
@@ -26,6 +21,16 @@ const columnDefinitions =
             id: "confidence",
             header: "Confidence",
             cell: (item: LivenessSession) => item.confidence?.toString() ?? "-"
+        },
+        {
+            id: "isLive",
+            header: "Live",
+            cell: (item: LivenessSession) => item.is_live ? "Yes" : "No"
+        },
+        {
+            id: "referenceImage",
+            header: "Reference Image",
+            cell: (item: LivenessSession) => item.reference_image?.toString() ?? "-"
         }
     ];
 

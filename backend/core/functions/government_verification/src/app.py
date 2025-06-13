@@ -200,10 +200,9 @@ def verify_nationalid(event_data):
             error_message = 'Error in API response'
             try:
                 error_object = response.json()
-                if 'error' in error_object:
-                    if 'errors' in error_object['error']:
-                        if 'errorMessage' in error_object['error']['errors']:
-                            error_message = error_object['error']['errors']['errorMessage']
+                if 'errors' in error_object['error']:
+                    if 'errorMessage' in error_object['error']['errors']:
+                        error_message = error_object['error']['errors']['errorMessage']
                 elif 'message' in error_object:
                     error_message = f"{response.status_code}: {error_object['message']}"
                 else:
@@ -313,10 +312,9 @@ def verify_passport(event_data):
             error_message = 'Error in API response'
             try:
                 error_object = response.json()
-                if 'error' in error_object:
-                    if 'errors' in error_object['error']:
-                        if 'errorMessage' in error_object['error']['errors']:
-                            error_message = error_object['error']['errors']['errorMessage']
+                if 'errors' in error_object['error']:
+                    if 'errorMessage' in error_object['error']['errors']:
+                        error_message = error_object['error']['errors']['errorMessage']
                 elif 'message' in error_object:
                     error_message = f"{response.status_code}: {error_object['message']}"
                 else:
@@ -381,6 +379,7 @@ def verify_passport(event_data):
                 logger.info(f"Match results: {matchResults}")
                 return make_response(200, dict(message="Verification Sucessful",results=matchResults))
             else:
+                logger.error(f"Missing 'data' field in returned data: {api_result}")
                 return make_response(400, {'message': 'Missing \'data\' field in returned data', 'error': "Data missing in API response"})
     except Exception as e:
         error_message = str(e)
@@ -422,10 +421,9 @@ def verify_taxpayerinfo(event_data):
             error_message = 'Error in API response'
             try:
                 error_object = response.json()
-                if 'error' in error_object:
-                    if 'errors' in error_object['error']:
-                        if 'errorMessage' in error_object['error']['errors']:
-                            error_message = error_object['error']['errors']['errorMessage']
+                if 'errors' in error_object['error']:
+                    if 'errorMessage' in error_object['error']['errors']:
+                        error_message = error_object['error']['errors']['errorMessage']
                 elif 'message' in error_object:
                     error_message = f"{response.status_code}: {error_object['message']}"
                 else:

@@ -4,9 +4,12 @@ const schema = a.schema({
   LivenessSession: a
     .model({
       sessionId: a.string().required(),
-      userId: a.string().required(),
+      request_id: a.string(),
       confidence: a.float(),
       status: a.string(),
+      is_live: a.boolean(),
+      reference_image: a.string(),
+      audit_images: a.json(),
     })
     .authorization((authorize) => [
       authorize.authenticated().to(["read"]),
