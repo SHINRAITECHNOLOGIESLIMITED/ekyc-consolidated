@@ -80,6 +80,7 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState<string | null>(null);
   const [isFormValid, setIsFormValid] = useState<boolean>(false);
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
 
   // Define validateForm before it's used in useEffect
   const validateForm = useCallback(
@@ -219,6 +220,8 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
         return;
       }
       setSuccess(data.message || "Processing successful");
+      setIsSubmitted(true); // Set form as submitted on success
+      handleClearForm(); // Reset the form fields
       //Close the form as show a success dialoge asking user if they want to view the details
       if (onSuccess) onSuccess(data);
     } catch (err: unknown) {
@@ -290,6 +293,17 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
     }
   };
 
+  // Add a handler for closing the form
+  const handleCloseForm = () => {
+    if (onSuccess && success) {
+      // If there's a parent component handling success, call it again to close
+      onSuccess({
+        message: success,
+        close: true
+      } as DocumentResponse);
+    }
+  };
+
   return (
     <SpaceBetween size={"s"}>
       <Header variant="h2">{title}</Header>
@@ -299,65 +313,76 @@ const DocumentForm: React.FC<DocumentValidationFormProps> = ({
       )}
       <Form
         actions={
-          <SpaceBetween direction="horizontal" size="xs">
+          isSubmitted ? (
             <Button
-              key="clear-button"
-              variant="icon"
-              onClick={handleClearForm}
-              iconName="remove"
-              ariaLabel="Clear form"
-            />
-            <Button
-              key="submit-button"
+              key="close-button"
               variant="primary"
-              onClick={handleSubmit}
-              loading={isLoading}
-              disabled={!isFormValid}
+              onClick={handleCloseForm}
             >
-              Submit
+              Close
             </Button>
-          </SpaceBetween>
+          ) : (
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button
+                key="clear-button"
+                variant="icon"
+                onClick={handleClearForm}
+                iconName="remove"
+                ariaLabel="Clear form"
+              />
+              <Button
+                key="submit-button"
+                variant="primary"
+                onClick={handleSubmit}
+                loading={isLoading}
+                disabled={!isFormValid}
+              >
+                Submit
+              </Button>
+            </SpaceBetween>
+          )
         }
       >
-        <Container>
-          <SpaceBetween size="l">
-            <ColumnLayout columns={3} variant="text-grid" borders="horizontal">
+          {!isSubmitted && (<Container>
+            <SpaceBetween size="l">
+              <ColumnLayout columns={3} variant="text-grid" borders="horizontal">
+                {fields
+                  .filter((field) => field.type !== "document")
+                  .map((field) => (
+                    <FormField
+                      key={field.id}
+                      label={field.required ? `${field.label} *` : field.label}
+                      errorText={fieldErrors[field.id]}
+                    >
+                      {renderField(field)}
+                    </FormField>
+                  ))}
+              </ColumnLayout>
+
               {fields
-                .filter((field) => field.type !== "document")
+                .filter((field) => field.type === "document")
                 .map((field) => (
                   <FormField
                     key={field.id}
                     label={field.required ? `${field.label} *` : field.label}
+                    description={
+                      field.type === "document"
+                        ? (field as DocumentField).description
+                        : undefined
+                    }
+                    constraintText={
+                      field.type === "document"
+                        ? (field as DocumentField).constraintText
+                        : undefined
+                    }
                     errorText={fieldErrors[field.id]}
                   >
                     {renderField(field)}
                   </FormField>
                 ))}
-            </ColumnLayout>
-
-            {fields
-              .filter((field) => field.type === "document")
-              .map((field) => (
-                <FormField
-                  key={field.id}
-                  label={field.required ? `${field.label} *` : field.label}
-                  description={
-                    field.type === "document"
-                      ? (field as DocumentField).description
-                      : undefined
-                  }
-                  constraintText={
-                    field.type === "document"
-                      ? (field as DocumentField).constraintText
-                      : undefined
-                  }
-                  errorText={fieldErrors[field.id]}
-                >
-                  {renderField(field)}
-                </FormField>
-              ))}
-          </SpaceBetween>
-        </Container>
+            </SpaceBetween>
+          </Container>)}
+        
       </Form>
     </SpaceBetween>
   );
