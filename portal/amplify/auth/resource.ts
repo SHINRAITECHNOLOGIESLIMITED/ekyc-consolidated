@@ -14,6 +14,20 @@ Shinrai Team`,
         },
     },
 
-    userAttributes: {}
+    userAttributes: {},
+    
+    // Add permissions for Rekognition FaceLiveness services
+    identityPoolAuthenticated: {
+        policyStatements: [
+            {
+                effect: 'Allow',
+                actions: [
+                    'rekognition:StartFaceLivenessSession',
+                    'rekognition:GetFaceLivenessSessionResults'
+                ],
+                resources: ['*']
+            }
+        ]
+    }
 });
 
