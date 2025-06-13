@@ -1,5 +1,4 @@
 import {defineAuth} from '@aws-amplify/backend';
-
 export const auth = defineAuth({
     loginWith: {
         email: {
@@ -14,20 +13,7 @@ Shinrai Team`,
         },
     },
 
-    userAttributes: {},
-    
-    // Add permissions for Rekognition FaceLiveness services
-    identityPoolAuthenticated: {
-        policyStatements: [
-            {
-                effect: 'Allow',
-                actions: [
-                    'rekognition:StartFaceLivenessSession',
-                    'rekognition:GetFaceLivenessSessionResults'
-                ],
-                resources: ['*']
-            }
-        ]
-    }
+    userAttributes: {}
 });
+
 
