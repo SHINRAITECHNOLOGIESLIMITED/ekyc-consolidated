@@ -70,7 +70,7 @@ const schema = a.schema({
       name: a.string().required(),
       pinNumber: a.string().required(),
       idNumber: a.string(),
-      passportPhotoUrl: a.string().required(),
+      passportPhotoUrl: a.string(),
       nationalIdCardUrl: a.string(),
       companyCertificateUrl: a.string(),
       dateOfBirth: a.string(),

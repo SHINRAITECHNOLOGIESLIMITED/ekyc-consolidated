@@ -6,7 +6,7 @@ from e2e.tests.config import *
 
 class TestBackgroundCheck(unittest.TestCase):
     URL=f"{APIGW_URL}/backgroundcheck"
-    def test_valid_background_check_effie(self):
+    def test_EFFIE(self):
         payload = {
             "firstName": "Effie",
             "middleName": "Njoki",
@@ -22,7 +22,7 @@ class TestBackgroundCheck(unittest.TestCase):
 
         
 
-    def test_valid_background_check_joseph(self):
+    def test_JOSEPH(self):
         payload = {
             "firstName": "Joseph",
             "middleName": "",
@@ -37,7 +37,7 @@ class TestBackgroundCheck(unittest.TestCase):
                       payload=payload)
         
 
-    def test_valid_background_check_timothy(self):
+    def test_TIMOTHY(self):
         payload = {
             "firstName": "Timothy",
             "middleName": "",

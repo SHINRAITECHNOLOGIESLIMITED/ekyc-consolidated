@@ -89,7 +89,7 @@ const BackGroundCheckForm: React.FC = () => (
       { id: "lastName", label: "Last Name", type: "text", required: true, placeholder: "Maina" },
       { id: "gender", label: "Gender", type: "text", required: true, placeholder: "Female" },
       { id: "dateOfBirth", label: "Date of Birth", type: "date", required: true, placeholder: "1985-01-01" },
-      { id: "nationalIdentificationNumber", label: "ID Number", type: "text", required: true, placeholder: "23667272" },
+      { id: "nationalIdentificationNumber", label: "ID Number", type: "text", placeholder: "23667272" },
     ]}
   />
 );

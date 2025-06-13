@@ -3,7 +3,7 @@ from e2e.tests.config import *
 from e2e.tests.validation.validate_test_util import validate_test
 class TestPassportDocumentValidation(unittest.TestCase):
     URL = f"{APIGW_URL}/document/passport"
-    def test_passportnumber_DK9038(self):
+    def test_DK9038_GEORGE(self):
         payload ={"uploadedDocumentUrl": f"s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_PASSPORT-001sample.jpg",
             "documentType":"P",
             "countryCode":"KEN",
@@ -23,7 +23,7 @@ class TestPassportDocumentValidation(unittest.TestCase):
                       url= self.URL,
                       payload=payload)
 
-    def test_passportnumber_A168105(self):
+    def test_A168105_STEPHEN_OLD(self):
         #old kenyan passport is not supported
         return
         payload ={"uploadedDocumentUrl": f"s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_PASSPORT-002-sample.jpg",
@@ -46,7 +46,7 @@ class TestPassportDocumentValidation(unittest.TestCase):
                       url= self.URL,
                       payload=payload)
 
-    def test_passportnumber_AK1577133(self):
+    def test_AK1577133_STEPHEN_NEW(self):
         #skewed passport is not supported currently - wating for adapter configrations to adapt it
         return
         payload ={"uploadedDocumentUrl": 

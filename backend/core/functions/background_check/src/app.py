@@ -56,7 +56,7 @@ def handle_background_check(data):
             "dateOfBirth": {"type": "string", "format": "date"},
             "nationalIdentificationNumber": {"type": "string"}
         },
-        "required": ["firstName", "lastName","gender", "dateOfBirth","nationalIdentificationNumber"],
+        "required": ["firstName", "lastName","gender", "dateOfBirth"],
         "additionalProperties": False
     }
     

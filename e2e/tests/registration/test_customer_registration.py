@@ -4,7 +4,7 @@ from e2e.tests.registration.register_test_util import register_200_test
 
 class TestCustomerRegistration(unittest.TestCase):
     URL=f"{APIGW_URL}/customer-registration"
-    def test_valid_customer_registration_effie(self):
+    def test_EFFIE(self):
         payload = {
             "name": "Effie Njoki",
             "pinNumber":"A008279496S",

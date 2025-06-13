@@ -5,7 +5,7 @@ from e2e.tests.registration.register_test_util import register_200_test
 
 class TestAgentRegistration(unittest.TestCase):
     URL = f"{APIGW_URL}/agent-registration"
-    def test_valid_agent_registration_njoki(self):
+    def test_INDIVIDUAL_EFFIE(self):
         payload = {
             "agentType": "Individual",
             "name": "Effie Njoki",
@@ -19,7 +19,7 @@ class TestAgentRegistration(unittest.TestCase):
                       url= self.URL,
                       payload=payload)
 
-    def test_valid_agent_registration_roy(self):
+    def test_INDIVIDUAL_ROY(self):
         payload = {
             "agentType": "Individual",
             "name": "Roy Githara",
@@ -33,7 +33,7 @@ class TestAgentRegistration(unittest.TestCase):
                       url= self.URL,
                       payload=payload)
 
-    def test_valid_agent_registration_pato(self):
+    def test_INDIVIDUAL_24106259_PATRICK(self):
         payload = {
             "agentType": "Individual",
             "name": "Patrick odhiambo",
@@ -46,7 +46,7 @@ class TestAgentRegistration(unittest.TestCase):
         register_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
-    def test_valid_agent_registration_BN987654321(self):
+    def test_COMPANY_BN987654321_ABC(self):
         payload = {
             "agentType": "Business",
             "name": "ABC Incoporated",
@@ -57,6 +57,18 @@ class TestAgentRegistration(unittest.TestCase):
         register_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
+    def test_COMPANY_PVTRXUMYGVQ_DETALI(self):
+        payload = {
+            "agentType": "Business",
+            "name": "DETALI INSURANCE AGENCY LIMITED",
+            "pinNumber": "PVT-RXUMYGVQ",
+            "companyCertificateUrl": "https://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/CERTIFICATE_OF_INCORPORATION-003Sample.jpg",
+            "businessNumber": "PVT-RXUMYGVQ"
+        }
+        register_200_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
+    
 
 if __name__ == '__main__':
     unittest.main()

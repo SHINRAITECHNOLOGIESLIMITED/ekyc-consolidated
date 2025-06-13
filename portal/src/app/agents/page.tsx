@@ -141,7 +141,7 @@ const BusinessAgentForm: React.FC = () => (
         id: "agentType",
         label: "Agent Type",
         type: "text",
-        defaultValue: "Company",
+        defaultValue: "Business",
         disabled: true,
       },
       {
