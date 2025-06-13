@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useState} from "react";
-import {Alert, Box, Container, Header, SpaceBetween, StatusIndicator} from "@cloudscape-design/components";
+import {Alert, Box, Button, Container, Header, SpaceBetween, StatusIndicator} from "@cloudscape-design/components";
 import {FaceLivenessDetector} from "@aws-amplify/ui-react-liveness";
 
 
@@ -16,6 +16,7 @@ const LivenessDetection = () => {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [result, setResult] = useState<LivenessResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [showCamera, setShowCamera] = useState<boolean>(true);
 
     useEffect(() => {
         const createLivenessSession = async (): Promise<void> => {
@@ -47,8 +48,10 @@ const LivenessDetection = () => {
             const result: LivenessResponse = await livenessApi.getResults(sessionId);
             setResult(result);
 
-            // Optional: Handle specific result states
-            if (!result.isLive) {
+            // Hide camera when liveness check is successful
+            if (result.isLive) {
+                setShowCamera(false);
+            } else {
                 setError('Liveness check failed. Please try again.');
             }
 
@@ -93,6 +96,12 @@ const LivenessDetection = () => {
                             {result.message}
                         </Box>
                     )}
+                    
+                    {result.isLive && (
+                        <Button onClick={() => window.location.reload()}>
+                            Close
+                        </Button>
+                    )}
                 </SpaceBetween>
             </Container>
         );
@@ -126,14 +135,25 @@ const LivenessDetection = () => {
                 <LoadingSpinner message="Processing liveness check..."/>
             ) : (
                 <SpaceBetween size="l">
-                    <Container>
-                        <FaceLivenessDetector
-                            sessionId={sessionId ?? ""}
-                            region={API_CONFIG.REGION}
-                            onError={(error) => handleError(error.error)}
-                            onAnalysisComplete={handleAnalysisComplete}
-                        />
-                    </Container>
+                    {showCamera && (
+                        <Container>
+                            <FaceLivenessDetector
+                                sessionId={sessionId ?? ""}
+                                region={API_CONFIG.REGION}
+                                onError={(error) => handleError(error.error)}
+                                onAnalysisComplete={handleAnalysisComplete}
+                            />
+                        </Container>
+                    )}
+
+                    {result?.isLive && !showCamera && (
+                        <Alert
+                            type="success"
+                            header="Liveness Check Successful"
+                        >
+                            Your identity has been successfully verified.
+                        </Alert>
+                    )}
 
                     {renderResult()}
                 </SpaceBetween>

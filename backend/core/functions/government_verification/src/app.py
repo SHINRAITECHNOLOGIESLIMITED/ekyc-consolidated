@@ -318,7 +318,10 @@ def verify_passport(event_data):
                 elif 'message' in error_object:
                     error_message = f"{response.status_code}: {error_object['message']}"
                 else:
-                    error_message = f'{response.status_code}: Error in API response'
+                    if response.status_code == 417:
+                        error_message = f"Passport Number and ID Number do not match (same individual)"
+                    else:
+                        error_message = f'{response.status_code}: Error in API response'
             except Exception as e:
                 error_message = f'{response.status_code}: Error in API response'
             if response.status_code >= 500:

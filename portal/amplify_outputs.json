@@ -47,11 +47,11 @@
               "isRequired": true,
               "attributes": []
             },
-            "userId": {
-              "name": "userId",
+            "request_id": {
+              "name": "request_id",
               "isArray": false,
               "type": "String",
-              "isRequired": true,
+              "isRequired": false,
               "attributes": []
             },
             "confidence": {
@@ -65,6 +65,27 @@
               "name": "status",
               "isArray": false,
               "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "is_live": {
+              "name": "is_live",
+              "isArray": false,
+              "type": "Boolean",
+              "isRequired": false,
+              "attributes": []
+            },
+            "reference_image": {
+              "name": "reference_image",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "audit_images": {
+              "name": "audit_images",
+              "isArray": false,
+              "type": "AWSJSON",
               "isRequired": false,
               "attributes": []
             },
@@ -549,7 +570,7 @@
               "name": "passportPhotoUrl",
               "isArray": false,
               "type": "String",
-              "isRequired": true,
+              "isRequired": false,
               "attributes": []
             },
             "nationalIdCardUrl": {

@@ -266,7 +266,7 @@ export const Listing = <T,>({
       {modal && (
         <Modal
           visible={isModalVisible}
-          onDismiss={() => setIsModalVisible(false)}
+          onDismiss={() => {setIsModalVisible(false); setModal(null);}}
           size="large"
         >
           {modal}

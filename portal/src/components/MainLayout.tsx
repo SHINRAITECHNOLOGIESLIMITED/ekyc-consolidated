@@ -91,12 +91,7 @@ const Navigation = () => {
             {
               type: "link",
               text: "Face Liveness Sessions",
-              href: "/liveness",
-              info: (
-                <Badge color="red" size="small">
-                  WIP
-                </Badge>
-              ),
+              href: "/liveness"
             },
             {
               type: "link",
