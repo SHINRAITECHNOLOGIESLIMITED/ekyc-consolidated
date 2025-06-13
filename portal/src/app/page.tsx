@@ -241,8 +241,6 @@ const Dashboard: React.FC = () => {
           <Header variant="h2">System Performance</Header>
           <Box
             padding="m"
-            borderRadius="default"
-            backgroundColor="background-container-content"
           >
             <SpaceBetween size="s">
               <Header variant="h3">API Performance</Header>
