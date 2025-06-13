@@ -57,6 +57,18 @@ class TestAgentRegistration(unittest.TestCase):
         register_200_test(tester= self, 
                       url= self.URL,
                       payload=payload)
+    def test_COMPANY_PVTRXUMYGVQ_DETALI(self):
+        payload = {
+            "agentType": "Business",
+            "name": "DETALI INSURANCE AGENCY LIMITED",
+            "pinNumber": "PVT-RXUMYGVQ",
+            "companyCertificateUrl": "https://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/CERTIFICATE_OF_INCORPORATION-003Sample.jpg",
+            "businessNumber": "PVT-RXUMYGVQ"
+        }
+        register_200_test(tester= self, 
+                      url= self.URL,
+                      payload=payload)
+    
 
 if __name__ == '__main__':
     unittest.main()
