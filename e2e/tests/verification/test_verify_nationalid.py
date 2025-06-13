@@ -4,7 +4,7 @@ from e2e.tests.config import *
 from e2e.tests.verification.verify_test_util import verifity_200_test
 class TestNationalIDDocumentVerification(unittest.TestCase):
     URL =f"{APIGW_URL}/government/nationalid"
-    def test_idnumber_23667272(self):
+    def test_23667272_JANE_SAMPLE(self):
         payload ={"serialNumber":"217934147",
             "idNumber":"23667272",
             "fullNames":"JANE WAIRIMU MAINA",
@@ -16,7 +16,7 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
         verifity_200_test(tester= self,
                       url= self.URL,
                       payload=payload)
-    def test_idnumber_32140017(self):
+    def test_32140017_EFFIE(self):
         payload ={"serialNumber":"702945559",
             "idNumber":"32140017",
             "fullNames":"EFFIE NJOKI NYAMBURA",
@@ -29,7 +29,7 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
                       url= self.URL,
                       payload=payload)
 
-    def test_idnumber_36296352(self):
+    def test_36296352_JOEL(self):
         payload ={"serialNumber":"244772451",
             "idNumber":"36296352",
             "fullNames":"JOEL MUUO",
@@ -42,7 +42,7 @@ class TestNationalIDDocumentVerification(unittest.TestCase):
                       url= self.URL,
                       payload=payload)
 
-    def test_idnumber_23224868(self):
+    def test_23224868_STEPEHN(self):
         payload ={"serialNumber":"229769449",
             "idNumber":"23224868",
             "fullNames":"STEPHEN BIKO NYAMAI",

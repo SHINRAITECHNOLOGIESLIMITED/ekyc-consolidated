@@ -5,7 +5,7 @@ from e2e.tests.verification.verify_test_util import verifity_200_test
 
 class TestPassportDocumentVerification(unittest.TestCase):
     URL=f"{APIGW_URL}/government/passport"
-    def test_passportnumber_AK1515374(self):
+    def test_AK1515374_EFFIE_NEW(self):
         payload ={
             "idNumber": "32140017",
             "passportNumber":"AK1515374",
@@ -20,7 +20,7 @@ class TestPassportDocumentVerification(unittest.TestCase):
         self.assertEqual(post_with_auth(self.URL, json=payload).status_code, 417)
         # verifity_test should not be used here as it is not a valid passport number
 
-    def test_passportnumber_A2312084_old(self):
+    def test_A2312084_EFFIE_OLD(self):
             payload ={
                 "idNumber": "32140017",
                 "passportNumber":"A2312084",
@@ -38,7 +38,7 @@ class TestPassportDocumentVerification(unittest.TestCase):
             # self.assertEqual(post_with_auth(self.URL, json=payload).status_code, 417)
 
 
-    def test_passportnumber_AK1370344(self):
+    def test_AK1370344_TIMOTHY(self):
         payload ={
             "idNumber": "26465570",
             "passportNumber":"AK1370344",
@@ -54,7 +54,7 @@ class TestPassportDocumentVerification(unittest.TestCase):
                       url= self.URL,
                       payload=payload)
 
-    def test_passportnumber_A168105_old(self):
+    def test_A168105_STEPHEN_OLD(self):
         payload ={
             "idNumber": "23224868",
             "passportNumber":"A168105",
@@ -70,7 +70,7 @@ class TestPassportDocumentVerification(unittest.TestCase):
                       url= self.URL,
                       payload=payload)
 
-    def test_passportnumber_AK1577133_new(self):
+    def test_AK1577133_STEPHEN_NEW(self):
         payload ={
             "idNumber":"23224868",
             "passportNumber":"AK1577133",
