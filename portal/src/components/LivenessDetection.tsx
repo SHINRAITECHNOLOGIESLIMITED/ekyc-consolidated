@@ -60,11 +60,11 @@ const LivenessDetection = () => {
         }
     };
 
-    // const handleError = (error: Error): void => {
-    //     setError(error.message);
-    //     console.error("Liveness detection error:", error);
-    //     setProcessing(false);
-    // };
+    const handleError = (error: Error): void => {
+        setError(error.message);
+        console.error("Liveness detection error:", error);
+        setProcessing(false);
+    };
 
     const renderResult = () => {
         if (!result) return null;
@@ -113,6 +113,7 @@ const LivenessDetection = () => {
                     type="error"
                     header="Error"
                     dismissible
+                    
                     onDismiss={() => setError(null)}
                 >
                     {error}
@@ -129,9 +130,7 @@ const LivenessDetection = () => {
                         <FaceLivenessDetector
                             sessionId={sessionId ?? ""}
                             region={API_CONFIG.REGION}
-                            onError={(error) => {
-                                console.error(error);
-                            }}
+                            onError={(error) => handleError(error.error)}
                             onAnalysisComplete={handleAnalysisComplete}
                         />
                     </Container>

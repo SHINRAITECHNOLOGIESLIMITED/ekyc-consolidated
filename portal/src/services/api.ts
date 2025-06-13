@@ -22,7 +22,7 @@ const getAuthHeaders = async () => {
 
 export const livenessApi = {
     createSession: async (): Promise<SessionResponse> => {
-        const headers = await getAuthHeaders();
+        const headers = {'Content-Type': 'application/json'};// await getAuthHeaders();
         const response = await fetch(API_CONFIG.API_ENDPOINTS.CREATE_SESSION, {
             method: 'POST',
             headers,
