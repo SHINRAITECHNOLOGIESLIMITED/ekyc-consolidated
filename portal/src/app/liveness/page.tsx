@@ -26,18 +26,13 @@ const columnDefinitions = [
   {
     id: "isLive",
     header: "Live",
-    cell: (item: LivenessSession) => (item.is_live ? "Yes" : "No"),
+    cell: (item: LivenessSession) => (item.is_live ? "Live" : "Not Live"),
   },
   {
-    id: "isLive",
-    header: "Live",
+    id: "updatedAt",
+    header: "Time",
     cell: (item: LivenessSession) => formatDateTime(item.updatedAt),
-  },
-  {
-    id: "referenceImage",
-    header: "Reference Image",
-    cell: (item: LivenessSession) => item.reference_image?.toString() ?? "-",
-  },
+  }
 ];
 
 const listingProps: ListingProps<LivenessSession> = {

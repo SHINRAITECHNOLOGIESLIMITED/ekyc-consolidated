@@ -31,6 +31,8 @@ const LivenessSessionDetails = ( session : LivenessSession) => {
               <Box variant="awsui-key-label">Time</Box>
               <div>{formatDateTime(session.updatedAt)}</div>
             </div>
+          </SpaceBetween>
+          <SpaceBetween size="l">
             <div>
               <Box variant="awsui-key-label">Confidence</Box>
               <div>{formatPercentage(session.confidence)}</div>
@@ -39,22 +41,8 @@ const LivenessSessionDetails = ( session : LivenessSession) => {
             <div>
               <Box variant="awsui-key-label">Status</Box>
               <StatusIndicator type={session.is_live ? "success" : "error"}>
-                {session.status}
-              </StatusIndicator>
-            </div>
-          </SpaceBetween>
-          
-          <SpaceBetween size="l">
-            <div>
-              <Box variant="awsui-key-label">Liveness Result</Box>
-              <StatusIndicator type={session.is_live ? "success" : "error"}>
                 {session.is_live ? "Live" : "Not Live"}
               </StatusIndicator>
-            </div>
-            
-            <div>
-              <Box variant="awsui-key-label">Confidence</Box>
-              <div>{(session.confidence * 100).toFixed(2)}%</div>
             </div>
           </SpaceBetween>
         </ColumnLayout>
