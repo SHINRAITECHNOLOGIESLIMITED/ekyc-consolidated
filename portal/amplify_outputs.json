@@ -58,21 +58,21 @@
               "name": "confidence",
               "isArray": false,
               "type": "Float",
-              "isRequired": false,
+              "isRequired": true,
               "attributes": []
             },
             "status": {
               "name": "status",
               "isArray": false,
               "type": "String",
-              "isRequired": false,
+              "isRequired": true,
               "attributes": []
             },
             "is_live": {
               "name": "is_live",
               "isArray": false,
               "type": "Boolean",
-              "isRequired": false,
+              "isRequired": true,
               "attributes": []
             },
             "reference_image": {

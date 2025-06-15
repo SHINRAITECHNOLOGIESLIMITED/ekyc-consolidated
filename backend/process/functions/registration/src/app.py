@@ -26,11 +26,9 @@ def handler(event, context):
     if http_method == 'POST':
         try:
             data = event.get('body', {})
-
             while isinstance(data, str):
                 data = json.loads(data)
             logger.info(f"Request Data (body): {data}")
-
             match path:
                 case '/agent-registration':
                     return register_agent(data)
@@ -39,7 +37,6 @@ def handler(event, context):
                 case _:
                     logger.error(f"Path Not Found: {path}")
                     return make_response(404, {'message': 'Path Not Found','error': 'Invalid path'})
-
         except json.JSONDecodeError:
             logger.error("Error decoding JSON body")
             return make_response(400, {'message': 'Invalid JSON body'})

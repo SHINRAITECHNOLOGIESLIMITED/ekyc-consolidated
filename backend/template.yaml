@@ -9,11 +9,6 @@ Parameters:
     Default: amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
     Description: Name of the Amplify S3 bucket where KYC documents are upload into by portal
 
-  AmplifyCognigoUserPoolId:
-    Type: String
-    Default: arn:aws:cognito-idp:eu-west-1:842206816107:userpool/eu-west-1_eMNIDFsxx
-    Description: Cognito User Pool ID for Amplify
-
   JubileeESBAPICredentials:
     Type: String
     Default: '{"username":"your-username","password":"your-password","business":"your-business","baseurl":"https://example.com"}'
@@ -500,150 +495,6 @@ Resources:
   CustomerRegistrationSM:
     Type: AWS::Serverless::StateMachine
     Properties:
-      Definition:
-        StartAt: Parallel
-        States:
-          Parallel:
-            Type: Parallel
-            Branches:
-              - StartAt: ID or Passport Provided
-                States:
-                  ID or Passport Provided:
-                    Type: Choice
-                    Choices:
-                      - Variable: $.idNumber
-                        IsPresent: true
-                        Next: National ID Document Validation
-                    Default: Passport Document Validation
-                  National ID Document Validation:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${DocumentValidation}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    Next: ID Verification
-                  ID Verification:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${GovernmentVerification}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    End: true
-                  Passport Document Validation:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${DocumentValidation}
-                    Next: Passport Verification
-                  Passport Verification:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${GovernmentVerification}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    End: true
-              - StartAt: KRA Pin Certificate Validation
-                States:
-                  KRA Pin Certificate Validation:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${DocumentValidation}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    Next: TaxPayer Verification
-                  TaxPayer Verification:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${GovernmentVerification}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    End: true
-            Next: Background Check
-          Background Check:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            OutputPath: $.Payload
-            Parameters:
-              Payload.$: $
-              FunctionName: ${BackgroundChecks}
-            Retry:
-              - ErrorEquals:
-                  - Lambda.ServiceException
-                  - Lambda.AWSLambdaException
-                  - Lambda.SdkClientException
-                  - Lambda.TooManyRequestsException
-                IntervalSeconds: 1
-                MaxAttempts: 3
-                BackoffRate: 2
-            Next: Certify and Persist
-          Certify and Persist:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            OutputPath: $.Payload
-            Parameters:
-              Payload.$: $
-              FunctionName: ${Certification}
-            Retry:
-              - ErrorEquals:
-                  - Lambda.ServiceException
-                  - Lambda.AWSLambdaException
-                  - Lambda.SdkClientException
-                  - Lambda.TooManyRequestsException
-                IntervalSeconds: 1
-                MaxAttempts: 3
-                BackoffRate: 2
-            End: true
       Logging:
         Level: ALL
         IncludeExecutionData: true
@@ -672,6 +523,7 @@ Resources:
         GovernmentVerification: !Ref GovernmentVerificationFn
         BackgroundChecks: !Ref BackgroundChecksFn
         Certification: !Ref CertificationFn
+      DefinitionUri: process/state_machines/customer_registration.yaml
   CustomerRegistrationSMLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
