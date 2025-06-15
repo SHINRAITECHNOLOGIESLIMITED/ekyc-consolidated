@@ -9,11 +9,6 @@ Parameters:
     Default: amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
     Description: Name of the Amplify S3 bucket where KYC documents are upload into by portal
 
-  AmplifyCognigoUserPoolId:
-    Type: String
-    Default: arn:aws:cognito-idp:eu-west-1:842206816107:userpool/eu-west-1_eMNIDFsxx
-    Description: Cognito User Pool ID for Amplify
-
   JubileeESBAPICredentials:
     Type: String
     Default: '{"username":"your-username","password":"your-password","business":"your-business","baseurl":"https://example.com"}'
@@ -127,32 +122,6 @@ Resources:
     UpdateReplacePolicy: Retain
     Properties:
       LogGroupName: !Sub /aws/lambda/${RegistrationFn}
-      RetentionInDays: 30
-  CertificationFn:
-    Type: AWS::Serverless::Function
-    Properties:
-      Description: Create KYC Certificates
-      CodeUri: process/functions/certification/src
-      Handler: app.handler
-      Environment:
-        Variables:
-          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource:
-                - !Ref PortalGraphQLSecret
-      Layers:
-        - !Ref PortalProjectionLayer
-  CertificationFnLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${CertificationFn}
       RetentionInDays: 30
   DocumentValidationFn:
     Type: AWS::Serverless::Function
@@ -346,6 +315,73 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${BackgroundChecksFn}
       RetentionInDays: 30
+  CertificationBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub certification-bucket-${AWS::StackName}-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: alias/aws/s3
+      PublicAccessBlockConfiguration:
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  CertificationFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Created PDF KYC certificates
+      CodeUri: core/functions/certification/src
+      Handler: app.handler
+      Environment:
+        Variables:
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+          CERTIFICATION_BUCKET_NAME: !Ref CertificationBucket
+          CERTIFICATION_BUCKET_ARN: !GetAtt CertificationBucket.Arn
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref PortalGraphQLSecret
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:GetObjectAcl
+                - s3:GetObjectLegalHold
+                - s3:GetObjectRetention
+                - s3:GetObjectTorrent
+                - s3:GetObjectVersion
+                - s3:GetObjectVersionAcl
+                - s3:GetObjectVersionForReplication
+                - s3:GetObjectVersionTorrent
+                - s3:ListBucket
+                - s3:ListBucketMultipartUploads
+                - s3:ListBucketVersions
+                - s3:ListMultipartUploadParts
+                - s3:AbortMultipartUpload
+                - s3:DeleteObject
+                - s3:DeleteObjectVersion
+                - s3:PutObject
+                - s3:PutObjectLegalHold
+                - s3:PutObjectRetention
+                - s3:RestoreObject
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::${CertificationBucket}
+                - !Sub arn:${AWS::Partition}:s3:::${CertificationBucket}/*
+      
+      Layers:
+        - !Ref PortalProjectionLayer
+  CertificationFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${CertificationFn}
   FaceLivenessFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -435,7 +471,7 @@ Resources:
   FaceLivenessCaptureBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ${AWS::StackName}-bucket-${AWS::AccountId}
+      BucketName: !Sub faceliveness-captures-${AWS::StackName}-${AWS::AccountId}
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -471,7 +507,7 @@ Resources:
   KYCDocumentsBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ${AWS::StackName}-kycdocume-${AWS::AccountId}
+      BucketName: !Sub kyc-raw-documents-${AWS::StackName}-${AWS::AccountId}
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -500,150 +536,6 @@ Resources:
   CustomerRegistrationSM:
     Type: AWS::Serverless::StateMachine
     Properties:
-      Definition:
-        StartAt: Parallel
-        States:
-          Parallel:
-            Type: Parallel
-            Branches:
-              - StartAt: ID or Passport Provided
-                States:
-                  ID or Passport Provided:
-                    Type: Choice
-                    Choices:
-                      - Variable: $.idNumber
-                        IsPresent: true
-                        Next: National ID Document Validation
-                    Default: Passport Document Validation
-                  National ID Document Validation:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${DocumentValidation}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    Next: ID Verification
-                  ID Verification:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${GovernmentVerification}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    End: true
-                  Passport Document Validation:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${DocumentValidation}
-                    Next: Passport Verification
-                  Passport Verification:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${GovernmentVerification}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    End: true
-              - StartAt: KRA Pin Certificate Validation
-                States:
-                  KRA Pin Certificate Validation:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${DocumentValidation}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    Next: TaxPayer Verification
-                  TaxPayer Verification:
-                    Type: Task
-                    Resource: arn:aws:states:::lambda:invoke
-                    OutputPath: $.Payload
-                    Parameters:
-                      Payload.$: $
-                      FunctionName: ${GovernmentVerification}
-                    Retry:
-                      - ErrorEquals:
-                          - Lambda.ServiceException
-                          - Lambda.AWSLambdaException
-                          - Lambda.SdkClientException
-                          - Lambda.TooManyRequestsException
-                        IntervalSeconds: 1
-                        MaxAttempts: 3
-                        BackoffRate: 2
-                    End: true
-            Next: Background Check
-          Background Check:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            OutputPath: $.Payload
-            Parameters:
-              Payload.$: $
-              FunctionName: ${BackgroundChecks}
-            Retry:
-              - ErrorEquals:
-                  - Lambda.ServiceException
-                  - Lambda.AWSLambdaException
-                  - Lambda.SdkClientException
-                  - Lambda.TooManyRequestsException
-                IntervalSeconds: 1
-                MaxAttempts: 3
-                BackoffRate: 2
-            Next: Certify and Persist
-          Certify and Persist:
-            Type: Task
-            Resource: arn:aws:states:::lambda:invoke
-            OutputPath: $.Payload
-            Parameters:
-              Payload.$: $
-              FunctionName: ${Certification}
-            Retry:
-              - ErrorEquals:
-                  - Lambda.ServiceException
-                  - Lambda.AWSLambdaException
-                  - Lambda.SdkClientException
-                  - Lambda.TooManyRequestsException
-                IntervalSeconds: 1
-                MaxAttempts: 3
-                BackoffRate: 2
-            End: true
       Logging:
         Level: ALL
         IncludeExecutionData: true
@@ -664,6 +556,15 @@ Resources:
                 - logs:DescribeResourcePolicies
                 - logs:DescribeLogGroups
               Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource:
+                - !GetAtt DocumentValidationFn.Arn
+                - !GetAtt GovernmentVerificationFn.Arn
+                - !GetAtt BackgroundChecksFn.Arn
+                - !GetAtt CertificationFn.Arn
       Tracing:
         Enabled: true
       Type: STANDARD
@@ -672,8 +573,11 @@ Resources:
         GovernmentVerification: !Ref GovernmentVerificationFn
         BackgroundChecks: !Ref BackgroundChecksFn
         Certification: !Ref CertificationFn
+      DefinitionUri: process/state_machines/customer_registration.yaml
   CustomerRegistrationSMLogGroup:
     Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       LogGroupName: !Sub
         - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
@@ -711,6 +615,15 @@ Resources:
                 - logs:DescribeResourcePolicies
                 - logs:DescribeLogGroups
               Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource:
+                - !GetAtt DocumentValidationFn.Arn
+                - !GetAtt GovernmentVerificationFn.Arn
+                - !GetAtt BackgroundChecksFn.Arn
+                - !GetAtt CertificationFn.Arn
       Tracing:
         Enabled: true
       Type: STANDARD
@@ -721,11 +634,12 @@ Resources:
         Certification: !Ref CertificationFn
   AgentRegistrationSMLogGroup:
     Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       LogGroupName: !Sub
         - /aws/vendedlogs/states/${AWS::StackName}-${ResourceId}-Logs
         - ResourceId: AgentRegistrationSM
-
   JubileeApiCache:
     Type: AWS::DynamoDB::Table
     Properties:

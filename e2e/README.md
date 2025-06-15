@@ -166,7 +166,7 @@ awscurl --service execute-api \
     "districtOfBirth": "KIBWEZI",
     "placeOfIssue": "KIBWEZI"
   }' \
-  https://bh3t48yqvk.execute-api.eu-west-1.amazonaws.com/Stage/document/nationalid
+  https://65mz46ka57.execute-api.eu-west-1.amazonaws.com/Stage/document/nationalid
 
 echo -e "\nTesting National ID Verification..."
 awscurl --service execute-api \
@@ -183,7 +183,7 @@ awscurl --service execute-api \
     "gender": "Male",
     "districtOfBirth": "KIBWEZI"
   }' \
-  https://bh3t48yqvk.execute-api.eu-west-1.amazonaws.com/Stage/government/nationalid
+  https://65mz46ka57.execute-api.eu-west-1.amazonaws.com/Stage/government/nationalid
 ```
 
 Make the script executable and run it:

@@ -1,0 +1,133 @@
+QueryLanguage: JSONata
+StartAt: National ID Document Validation
+States:
+  National ID Document Validation:
+    Type: Task
+    QueryLanguage: JSONata
+    Resource: arn:aws:states:::lambda:invoke
+    Arguments:
+      FunctionName: ${DocumentValidation}
+      Payload: |
+        {
+          "httpMethod": "POST",
+          "path": "/document/nationalid",
+          "body": {
+            "uploadedDocumentUrl": $.nationalIdCardUrl,
+            "idNumber": $.idNumber,
+            "fullNames": $.name,
+            "dateOfBirth": $.dateOfBirth,
+            "gender": $.gender
+          }
+        }
+    Output: $
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Next: ID Verification
+  ID Verification:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    QueryLanguage: JSONata
+    Arguments:
+      FunctionName: ${GovernmentVerification}
+      Payload: |
+        {
+          "httpMethod": "POST",
+          "path": "/government/nationalid",
+          "body": {
+            "idNumber": $.idNumber,
+            "fullNames": $.name,
+            "dateOfBirth": $.dateOfBirth,
+            "gender": $.gender
+          }
+        }
+    Output: $
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Next: TaxPayer Verification
+  TaxPayer Verification:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    QueryLanguage: JSONata
+    Arguments:
+      FunctionName: ${GovernmentVerification}
+      Payload: |
+        {
+          "httpMethod": "POST",
+          "path": "/government/kra",
+          "body": {
+            "idNumber": $.idNumber,
+            "pin": $.pinNumber,
+            "taxPayerName": $.name
+          }
+        }
+    Output: $
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Next: Background Check
+  Background Check:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    QueryLanguage: JSONata
+    Arguments:
+      FunctionName: ${BackgroundChecks}
+      Payload: |
+        {
+          "httpMethod": "POST",
+          "body": {
+            "firstName": $.name,
+            "lastName": $.name,
+            "gender": $.gender,
+            "dateOfBirth": $.dateOfBirth,
+            "nationalIdentificationNumber": $.idNumber
+          }
+        }
+    Output: $
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Next: Certify and Persist
+  Certify and Persist:
+    Type: Task
+    QueryLanguage: JSONata
+    Resource: arn:aws:states:::lambda:invoke
+    Arguments:
+      FunctionName: ${Certification}
+      Payload: $
+    Output: $
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    End: true
