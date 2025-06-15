@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://bh3t48yqvk.execute-api.eu-west-1.amazonaws.com/Prod';
+const API_BASE_URL = 'https://65mz46ka57.execute-api.eu-west-1.amazonaws.com/Prod';
 const VALIDATED_DOCS_BASE_S3_PATH = 's3://jubilee-ekyc-backend-kycdocume-842206816107';
 const UPLOADED_DOCS_BASE_S3_PATH = 's3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq';
 const API_HEADERS = {
