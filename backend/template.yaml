@@ -8,7 +8,10 @@ Parameters:
     Type: String
     Default: amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
     Description: Name of the Amplify S3 bucket where KYC documents are upload into by portal
-
+  AmplifyCognitoUserPoolId:
+    Type: String
+    Default: eu-west-1_eMNIDFsxx
+    Description: Cognito userpool id
   JubileeESBAPICredentials:
     Type: String
     Default: '{"username":"your-username","password":"your-password","business":"your-business","baseurl":"https://example.com"}'
@@ -45,10 +48,17 @@ Resources:
   ApiGateway:
     Type: AWS::Serverless::Api
     Properties:
-      Name: !Sub
-        - ${ResourceName} From Stack ${AWS::StackName}
-        - ResourceName: ApiGateway
+      Name: APIGateway-jubilee-eKYC
       StageName: Prod
+      Description: API Gateway for Jubilee eKYC
+      # Auth:
+      #   DefaultAuthorizer: CognitoAuthorizer
+      #   Authorizers:
+      #     CognitoAuthorizer:
+      #       UserPoolArn: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${AmplifyCognitoUserPoolId}
+      #       Identity:
+      #         Header: Authorization
+        # AddDefaultAuthorizerToCorsPreflight: false
       DefinitionBody: !Transform
         Name: AWS::Include
         Parameters:
@@ -62,12 +72,33 @@ Resources:
         AllowMethods: '''POST, OPTIONS'''
         MaxAge: 60
       OpenApiVersion: 3.0.1
+  # Stage deployment without authorization
+  # ApiGatewayStage:
+  #   Type: AWS::ApiGateway::Stage
+  #   Properties:
+  #     StageName: Stage
+  #     Description: Stage environment without authorization
+  #     RestApiId: !Ref ApiGateway
+  #     DeploymentId: !Ref ApiGatewayDeployment
+  #     Variables:
+  #       Environment: stage
+
+  # ApiGatewayDeployment:
+  #   Type: AWS::ApiGateway::Deployment
+  #   Properties:
+  #     RestApiId: !Ref ApiGateway
+  #     Description: Deployment for Stage environment
+
   AuthorizerFn:
     Type: AWS::Serverless::Function
     Properties:
       Description: Lambda Authorizer Function
       CodeUri: shared/functions/authorizer/src
       Handler: app.handler
+      Environment:
+        Variables:
+          COGNITO_USER_POOL_ID: !Ref AmplifyCognitoUserPoolId
+
   AuthorizerFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -101,6 +132,7 @@ Resources:
             Path: /customer-registration
             Method: POST
             RestApiId: !Ref ApiGateway
+            
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -673,6 +705,9 @@ Outputs:
   ApiGatewayUrl:
     Description: API Gateway Production URL
     Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod
+  ApiGatewayStageUrl:
+    Description: API Gateway Stage URL (no auth)
+    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Stage
   FaceLivenessFnLogGroup:
     Description: Facelivess Logs
     Value: !Ref FaceLivenessFnLogGroup
