@@ -3,37 +3,27 @@ StartAt: National ID Document Validation
 States:
   National ID Document Validation:
     Type: Task
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Resource: arn:aws:states:::lambda:invoke
     Arguments:
       FunctionName: ${DocumentValidation}
-      Payload: |
-        {
-          "httpMethod": "POST",
-          "path": "/document/nationalid",
-          "body": {
-            "uploadedDocumentUrl": $.nationalIdCardUrl,
-            "idNumber": $.idNumber,
-            "fullNames": $.name,
-            "dateOfBirth": $.dateOfBirth,
-            "gender": $.gender
-          }
-        }
-    Output: $
-    Retry:
-      - ErrorEquals:
-          - Lambda.ServiceException
-          - Lambda.AWSLambdaException
-          - Lambda.SdkClientException
-          - Lambda.TooManyRequestsException
-        IntervalSeconds: 1
-        MaxAttempts: 3
-        BackoffRate: 2
+      Payload:
+        httpMethod: POST
+        path: /document/nationalid
+        body:
+          uploadedDocumentUrl: "{% $states.input.nationalIdCardUrl %}"
+          idNumber: "{% $states.input.idNumber %}"
+          fullNames: "{% $states.input.name %}"
+          dateOfBirth: "{% $states.input.dateOfBirth %}"
+          gender: "{% $states.input.gender %}"
+    Assign:
+      registration: "{% $states.input %}"
+      nationalIdValidation: "{% $parse($states.result.Payload.body) %}"
     Next: ID Verification
   ID Verification:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       FunctionName: ${GovernmentVerification}
       Payload: |
@@ -41,22 +31,12 @@ States:
           "httpMethod": "POST",
           "path": "/government/nationalid",
           "body": {
-            "idNumber": $.idNumber,
-            "fullNames": $.name,
-            "dateOfBirth": $.dateOfBirth,
-            "gender": $.gender
+            "idNumber": "{% $states.input.idNumber %}",
+            "fullNames": "{% $states.input.name %}",
+            "dateOfBirth": "{% $states.input.dateOfBirth %}",
+            "gender": "{% $states.input.gender %}"
           }
         }
-    Output: $
-    Retry:
-      - ErrorEquals:
-          - Lambda.ServiceException
-          - Lambda.AWSLambdaException
-          - Lambda.SdkClientException
-          - Lambda.TooManyRequestsException
-        IntervalSeconds: 1
-        MaxAttempts: 3
-        BackoffRate: 2
     Next: TaxPayer Verification
   TaxPayer Verification:
     Type: Task
@@ -69,21 +49,11 @@ States:
           "httpMethod": "POST",
           "path": "/government/kra",
           "body": {
-            "idNumber": $.idNumber,
-            "pin": $.pinNumber,
-            "taxPayerName": $.name
+            "idNumber": "{% $states.input.idNumber %}",
+            "pin": "{% $states.input.pinNumber %}",
+            "taxPayerName": "{% $states.input.name %}"
           }
         }
-    Output: $
-    Retry:
-      - ErrorEquals:
-          - Lambda.ServiceException
-          - Lambda.AWSLambdaException
-          - Lambda.SdkClientException
-          - Lambda.TooManyRequestsException
-        IntervalSeconds: 1
-        MaxAttempts: 3
-        BackoffRate: 2
     Next: Background Check
   Background Check:
     Type: Task
@@ -95,23 +65,13 @@ States:
         {
           "httpMethod": "POST",
           "body": {
-            "firstName": $.name,
-            "lastName": $.name,
-            "gender": $.gender,
-            "dateOfBirth": $.dateOfBirth,
-            "nationalIdentificationNumber": $.idNumber
+            "firstName": "{% $states.input.name %}",
+            "lastName": "{% $states.input.name %}",
+            "gender": "{% $states.input.gender %}",
+            "dateOfBirth": "{% $states.input.dateOfBirth %}",
+            "nationalIdentificationNumber": "{% $states.input.idNumber %}"
           }
         }
-    Output: $
-    Retry:
-      - ErrorEquals:
-          - Lambda.ServiceException
-          - Lambda.AWSLambdaException
-          - Lambda.SdkClientException
-          - Lambda.TooManyRequestsException
-        IntervalSeconds: 1
-        MaxAttempts: 3
-        BackoffRate: 2
     Next: Certify and Persist
   Certify and Persist:
     Type: Task
@@ -120,7 +80,6 @@ States:
     Arguments:
       FunctionName: ${Certification}
       Payload: $
-    Output: $
     Retry:
       - ErrorEquals:
           - Lambda.ServiceException
