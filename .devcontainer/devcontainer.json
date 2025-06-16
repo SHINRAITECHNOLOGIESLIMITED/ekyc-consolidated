@@ -18,7 +18,8 @@
 				"dbaeumer.vscode-eslint",
 				"esbenp.prettier-vscode",
 				"amazonwebservices.aws-toolkit-vscode",
-				"redhat.vscode-yaml"
+				"redhat.vscode-yaml",
+				"amazonwebservices.amazonq"
 			],
 			"settings": {
 				"python.linting.enabled": true,
@@ -27,6 +28,6 @@
 			}
 		}
 	},
-	"postCreateCommand": "pip install -r requirements-dev.txt && cd portal && npm install && gh extension install https://github.com/github/gh-models",
+	"postCreateCommand": "pip install -r requirements-dev.txt && gh extension install https://github.com/github/gh-models",
 	"remoteUser": "vscode"
 }
