@@ -1,7 +1,32 @@
 {
-	"image": "mcr.microsoft.com/devcontainers/universal:2",
+	"name": "Jubilee eKYC Development",
+	"image": "mcr.microsoft.com/devcontainers/python:3.11",
 	"features": {
 		"ghcr.io/devcontainers/features/aws-cli:1": {},
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "lts"
+		},
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {},
 		"ghcr.io/audacioustux/devcontainers/aws-sam-cli:1": {}
-	}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"dbaeumer.vscode-eslint",
+				"esbenp.prettier-vscode",
+				"amazonwebservices.aws-toolkit-vscode",
+				"redhat.vscode-yaml"
+			],
+			"settings": {
+				"python.linting.enabled": true,
+				"python.linting.pylintEnabled": true,
+				"editor.formatOnSave": true
+			}
+		}
+	},
+	"postCreateCommand": "pip install -r requirements-dev.txt && cd portal && npm install && gh extension install https://github.com/github/gh-models",
+	"remoteUser": "vscode"
 }
