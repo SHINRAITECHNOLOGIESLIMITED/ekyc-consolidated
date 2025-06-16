@@ -125,13 +125,6 @@ def create_customer_certificate(data):
             ContentType='application/pdf'
         )
         
-        # Update portal with certificate information
-        portal.update_document(
-            id_number=id_number,
-            document_type=DOCUMENT_TYPE.KYC_CERTIFICATE,
-            s3_path=s3_key
-        )
-        
         return make_response(200, {
             'message': 'KYC Certificate created successfully',
             's3Path': s3_key
