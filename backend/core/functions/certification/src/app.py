@@ -14,10 +14,8 @@ from datetime import datetime
 
 from portal import Portal,DOCUMENT_TYPE
 
-KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
-assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
-
-SETTING_NATIONAL_ID_USE_ADAPTER = False
+CERTIFICATION_BUCKET_NAME = os.environ.get('CERTIFICATION_BUCKET_NAME', None)
+assert CERTIFICATION_BUCKET_NAME is not None, "CERTIFICATION_BUCKET_NAME is not set"
 
 logger = Logger()
 tracer = Tracer()
@@ -119,7 +117,7 @@ def create_customer_certificate(data):
         
         # Upload to S3
         s3_client.put_object(
-            Bucket=KYCDOCUMENTSBUCKET_NAME,
+            Bucket=CERTIFICATION_BUCKET_NAME,
             Key=s3_key,
             Body=pdf_buffer.getvalue(),
             ContentType='application/pdf'
