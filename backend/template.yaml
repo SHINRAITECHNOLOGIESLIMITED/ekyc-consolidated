@@ -52,12 +52,16 @@ Resources:
       StageName: Prod
       Description: API Gateway for Jubilee eKYC
       # Auth:
-      #   DefaultAuthorizer: CognitoAuthorizer
+      #   DefaultAuthorizer: AWS_IAM
       #   Authorizers:
       #     CognitoAuthorizer:
       #       UserPoolArn: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${AmplifyCognitoUserPoolId}
       #       Identity:
       #         Header: Authorization
+      #     LambdaAuthorizer:
+      #       FunctionArn: !GetAtt AuthorizerFn.Arn
+      #       IdentitySource: method.request.header.Authorization
+      #       Name: LambdaAuthorizer
         # AddDefaultAuthorizerToCorsPreflight: false
       DefinitionBody: !Transform
         Name: AWS::Include
