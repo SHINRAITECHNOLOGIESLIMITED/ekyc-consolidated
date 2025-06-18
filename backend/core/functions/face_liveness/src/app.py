@@ -108,8 +108,9 @@ def get_face_liveness_results(event, context):
         if isinstance(confidence, str):
             confidence = float(confidence)
         # Determine if the liveness check passed based on confidence threshold
-        if confidence is not None:
+        if confidence is None:
             status = "Confidence could not be determined"
+            is_live = False
         else:
             if confidence >= FACE_LIVENESS_CONFIDENCE_THRESHOLD :
                 status = f"PASS. Confidence ({confidence:.1f})%) is above required threshold ({FACE_LIVENESS_CONFIDENCE_THRESHOLD:.1f}%)"
