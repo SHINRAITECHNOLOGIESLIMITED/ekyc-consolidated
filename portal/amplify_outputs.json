@@ -61,6 +61,13 @@
               "isRequired": true,
               "attributes": []
             },
+            "threshold": {
+              "name": "threshold",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": true,
+              "attributes": []
+            },
             "status": {
               "name": "status",
               "isArray": false,
@@ -608,6 +615,13 @@
               "isRequired": true,
               "attributes": []
             },
+            "kycCertificateS3Path": {
+              "name": "kycCertificateS3Path",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "createdAt": {
               "name": "createdAt",
               "isArray": false,
@@ -755,6 +769,13 @@
               "isArray": false,
               "type": "String",
               "isRequired": true,
+              "attributes": []
+            },
+            "kycCertificateS3Path": {
+              "name": "kycCertificateS3Path",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
               "attributes": []
             },
             "createdAt": {
