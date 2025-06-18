@@ -7,13 +7,25 @@ MAGIC_CHOICE_NAME = "*ALL*"
             
 session = boto3.Session(profile_name='shinrai.devpost')
 dynamodb_client = session.client('dynamodb')
+logs_client = session.client('logs')
+
+def getLambdaLogGroups():
+    response = logs_client.describe_log_groups()
+    log_group_names = [lg['logGroupName'] for lg in response['logGroups'] if lg['logGroupName'].startswith('/aws/lambda/')]
+    return log_group_names
 
 def getDynamoDBTables():
     response = dynamodb_client.list_tables()
     table_names = response['TableNames']
     return [t for t in table_names if 'jubileeapicache' not in t.lower()]
 
-
+def deleteLogGroup(log_group_name):
+    try:
+        response = logs_client.delete_log_group(logGroupName=log_group_name)
+        print(f"Deleted log group: {log_group_name}")
+    except ClientError as e:
+        print(f"Error deleting log group {log_group_name}: {e.response['Error']['Message']}")
+        raise
 def getUserTruncateConfirmation(tablename):
     while True:
         response = input(f"Do you want to truncate all items in {tablename} default=yes? (yes/no)/(y/n): ").lower().strip()
@@ -56,13 +68,14 @@ def get_table_keys(table_name):
         raise
 
 
-def truncateDynamoDBTable(table_name):
+def truncateDynamoDBTable(table_name,verbose=True):
     # Create a session with the specified profile
 
     BATCH_SIZE = 25
     try:
         key_attributes = get_table_keys(table_name)
-        print(f"Table keys: {key_attributes}")
+        if verbose:
+            print(f"Table keys: {key_attributes}")
         LastEvaluatedKey = None
         deleted = 0
         while True:
@@ -76,7 +89,7 @@ def truncateDynamoDBTable(table_name):
 
             items = scan_response['Items']
 
-            for i in tqdm(range(0, len(items), BATCH_SIZE)):
+            for i in range(0, len(items), BATCH_SIZE):
                 batch_items = items[i:i + BATCH_SIZE]
                 request_items = {
                     table_name: [
@@ -98,9 +111,11 @@ def truncateDynamoDBTable(table_name):
                 LastEvaluatedKey = scan_response['LastEvaluatedKey']
             else:
                 break
-        print(f"Deleted {deleted} items from {table_name}")
+        if verbose:
+            print(f"Deleted {deleted} items from {table_name}")
     except ClientError as e:
-        print(f"Error truncating table: {e.response['Error']['Message']}")
+        if verbose:
+            print(f"Error truncating table: {e.response['Error']['Message']}")
         raise
 
 
@@ -121,7 +136,12 @@ if __name__ == '__main__':
             print("Operation cancelled.")
         elif choice  and table_name == MAGIC_CHOICE_NAME:
             for table_name2 in table_names:
-                truncateDynamoDBTable(table_name2)    
+                truncateDynamoDBTable(table_name2, verbose=False)
+            print(f"Deleted all items from {len(table_names)} tables.")
+            log_group_names = getLambdaLogGroups()
+            for log_group_name in log_group_names:
+                deleteLogGroup(log_group_name)   
+            print(f"Deleted all logs {len(log_group_names)} groups.")
         else:  # truncate
             print(f"Deleting all items from {table_name}...")
             truncateDynamoDBTable(table_name)

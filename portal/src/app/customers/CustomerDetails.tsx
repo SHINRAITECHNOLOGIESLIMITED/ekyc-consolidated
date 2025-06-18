@@ -62,6 +62,10 @@ const CustomerDetails = (customer: Customer) => (
         <Box variant="awsui-key-label">KYC Status</Box>
         <Box>{customer.kycStatus}</Box>
       </SpaceBetween>
+      <SpaceBetween size="xs">
+        <Box variant="awsui-key-label">KYC Certificate Path</Box>
+        <Box>{customer.kycCertificateS3Path ?? "-"}</Box>
+      </SpaceBetween>
     </ColumnLayout>
   </SpaceBetween>
 );

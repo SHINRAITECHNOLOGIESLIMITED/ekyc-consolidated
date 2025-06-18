@@ -8,6 +8,14 @@ Parameters:
     Type: String
     Default: amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
     Description: Name of the Amplify S3 bucket where KYC documents are upload into by portal
+  AmplifyDynamoDBCustomerRegistrationTable:
+    Type: String
+    Default: Customer-y45h6ljj7rd6te7pyigqschiyy-NONE
+    Description: Name of the Amplify DynamoDb Table with customer registrations
+  AmplifyDynamoDBAgentRegistrationTable:
+    Type: String
+    Default: Agent-y45h6ljj7rd6te7pyigqschiyy-NONE
+    Description: Name of the Amplify DynamoDb Table with agent registrations
   AmplifyCognitoUserPoolId:
     Type: String
     Default: eu-west-1_eMNIDFsxx
@@ -52,13 +60,17 @@ Resources:
       StageName: Prod
       Description: API Gateway for Jubilee eKYC
       # Auth:
-      #   DefaultAuthorizer: CognitoAuthorizer
+      #   DefaultAuthorizer: AWS_IAM
       #   Authorizers:
       #     CognitoAuthorizer:
       #       UserPoolArn: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${AmplifyCognitoUserPoolId}
       #       Identity:
       #         Header: Authorization
-        # AddDefaultAuthorizerToCorsPreflight: false
+      #     LambdaAuthorizer:
+      #       FunctionArn: !GetAtt AuthorizerFn.Arn
+      #       IdentitySource: method.request.header.Authorization
+      #       Name: LambdaAuthorizer
+      # AddDefaultAuthorizerToCorsPreflight: false
       DefinitionBody: !Transform
         Name: AWS::Include
         Parameters:
@@ -132,7 +144,7 @@ Resources:
             Path: /customer-registration
             Method: POST
             RestApiId: !Ref ApiGateway
-            
+
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -405,7 +417,7 @@ Resources:
               Resource:
                 - !Sub arn:${AWS::Partition}:s3:::${CertificationBucket}
                 - !Sub arn:${AWS::Partition}:s3:::${CertificationBucket}/*
-      
+
       Layers:
         - !Ref PortalProjectionLayer
   CertificationFnLogGroup:
@@ -423,7 +435,7 @@ Resources:
         Variables:
           FACELIVENESSRESULTS_TABLE_NAME: !Ref FaceLivenessResults
           FACELIVENESSRESULTS_TABLE_ARN: !GetAtt FaceLivenessResults.Arn
-          FACE_LIVENESS_CONFIDENCE_THRESHOLD: 95
+          FACE_LIVENESS_CONFIDENCE_THRESHOLD: 90.0
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
           LIVENESSCAPTUREBUCKET_BUCKET_NAME: !Ref FaceLivenessCaptureBucket
           LIVENESSCAPTUREBUCKET_BUCKET_ARN: !GetAtt FaceLivenessCaptureBucket.Arn
@@ -597,6 +609,8 @@ Resources:
                 - !GetAtt GovernmentVerificationFn.Arn
                 - !GetAtt BackgroundChecksFn.Arn
                 - !GetAtt CertificationFn.Arn
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AmplifyDynamoDBCustomerRegistrationTable
       Tracing:
         Enabled: true
       Type: STANDARD
@@ -605,6 +619,7 @@ Resources:
         GovernmentVerification: !Ref GovernmentVerificationFn
         BackgroundChecks: !Ref BackgroundChecksFn
         Certification: !Ref CertificationFn
+        CustomerRegitrationTable: !Ref AmplifyDynamoDBCustomerRegistrationTable
       DefinitionUri: process/state_machines/customer_registration.yaml
   CustomerRegistrationSMLogGroup:
     Type: AWS::Logs::LogGroup
@@ -656,6 +671,8 @@ Resources:
                 - !GetAtt GovernmentVerificationFn.Arn
                 - !GetAtt BackgroundChecksFn.Arn
                 - !GetAtt CertificationFn.Arn
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AmplifyDynamoDBAgentRegistrationTable
       Tracing:
         Enabled: true
       Type: STANDARD
@@ -664,6 +681,7 @@ Resources:
         GovernmentVerification: !Ref GovernmentVerificationFn
         BackgroundChecks: !Ref BackgroundChecksFn
         Certification: !Ref CertificationFn
+        AgentRegitrationTable: !Ref AmplifyDynamoDBAgentRegistrationTable
   AgentRegistrationSMLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
