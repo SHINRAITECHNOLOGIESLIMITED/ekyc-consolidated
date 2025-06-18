@@ -6,6 +6,7 @@ import { fetchLivenessSessions } from "@/services/DataService";
 import type { LivenessSession } from "@/types/models";
 import { formatDateTime, formatPercentage } from "@/utils/formatters";
 import LivenessSessionDetails from "./LivenessDetails";
+import { StatusIndicator } from "@cloudscape-design/components";
 
 const columnDefinitions = [
   {
@@ -14,25 +15,28 @@ const columnDefinitions = [
     cell: (item: LivenessSession) => item.sessionId,
   },
   {
-    id: "status",
-    header: "Status",
-    cell: (item: LivenessSession) => item.status?.toString() ?? "-",
-  },
-  {
     id: "confidence",
     header: "Confidence",
     cell: (item: LivenessSession) => formatPercentage(item.confidence ?? 0),
   },
   {
-    id: "isLive",
-    header: "Live",
-    cell: (item: LivenessSession) => (item.is_live ? "Live" : "Not Live"),
+    id: "threshhold",
+    header: "Confidence Thresshold",
+    cell: (item: LivenessSession) => formatPercentage(item.threshold ?? 0),
   },
   {
     id: "updatedAt",
     header: "Time",
     cell: (item: LivenessSession) => formatDateTime(item.updatedAt),
-  }
+  },
+  {
+    id: "isLive",
+    header: "Status",
+    cell: (item: LivenessSession) => (<StatusIndicator type={item.is_live ? "success" : "error"}>
+                    {item.is_live ? "Live" : "Not Live"}
+                  </StatusIndicator>),
+  },
+
 ];
 
 const listingProps: ListingProps<LivenessSession> = {

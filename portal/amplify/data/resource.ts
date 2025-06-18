@@ -6,6 +6,7 @@ const schema = a.schema({
       sessionId: a.string().required(),
       request_id: a.string(),
       confidence: a.float().required(),
+      threshold: a.float().required(),
       status: a.string().required(),
       is_live: a.boolean().required(),
       reference_image: a.string(),

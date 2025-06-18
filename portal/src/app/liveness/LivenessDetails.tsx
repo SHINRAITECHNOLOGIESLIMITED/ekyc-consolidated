@@ -37,7 +37,10 @@ const LivenessSessionDetails = ( session : LivenessSession) => {
               <Box variant="awsui-key-label">Confidence</Box>
               <div>{formatPercentage(session.confidence)}</div>
             </div>
-            
+            <div>
+              <Box variant="awsui-key-label">Confidence Threshold</Box>
+              <div>{formatPercentage(session.threshold)}</div>
+            </div>
             <div>
               <Box variant="awsui-key-label">Status</Box>
               <StatusIndicator type={session.is_live ? "success" : "error"}>
