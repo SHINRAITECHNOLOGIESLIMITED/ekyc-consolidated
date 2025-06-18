@@ -3,124 +3,89 @@ StartAt: National ID Document Validation
 States:
   National ID Document Validation:
     Type: Task
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Resource: arn:aws:states:::lambda:invoke
     Arguments:
       FunctionName: ${DocumentValidation}
-      Payload: |
-        {
-          "httpMethod": "POST",
-          "path": "/document/nationalid",
-          "body": {
-            "uploadedDocumentUrl": $.nationalIdCardUrl,
-            "idNumber": $.idNumber,
-            "fullNames": $.name,
-            "dateOfBirth": $.dateOfBirth,
-            "gender": $.gender
-          }
-        }
-    Output: $
-    Retry:
-      - ErrorEquals:
-          - Lambda.ServiceException
-          - Lambda.AWSLambdaException
-          - Lambda.SdkClientException
-          - Lambda.TooManyRequestsException
-        IntervalSeconds: 1
-        MaxAttempts: 3
-        BackoffRate: 2
+      Payload:
+        httpMethod: POST
+        path: /document/nationalid
+        body:
+          uploadedDocumentUrl: "{% $states.input.nationalIdCardUrl %}"
+          idNumber: "{% $states.input.idNumber %}"
+          fullNames: "{% $states.input.name %}"
+          dateOfBirth: "{% $states.input.dateOfBirth %}"
+          gender: "{% $states.input.gender %}"
+    Assign:
+      registration: "{% $states.input %}"
+      nationalIdValidation: "{% $parse($states.result.Payload.body) %}"
     Next: ID Verification
   ID Verification:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       FunctionName: ${GovernmentVerification}
-      Payload: |
-        {
-          "httpMethod": "POST",
-          "path": "/government/nationalid",
-          "body": {
-            "idNumber": $.idNumber,
-            "fullNames": $.name,
-            "dateOfBirth": $.dateOfBirth,
-            "gender": $.gender
-          }
-        }
-    Output: $
-    Retry:
-      - ErrorEquals:
-          - Lambda.ServiceException
-          - Lambda.AWSLambdaException
-          - Lambda.SdkClientException
-          - Lambda.TooManyRequestsException
-        IntervalSeconds: 1
-        MaxAttempts: 3
-        BackoffRate: 2
+      Payload:
+        httpMethod: POST
+        path: /government/nationalid
+        body:
+          idNumber: "{% $registration.idNumber %}"
+          fullNames: "{% $registration.name %}"
+          dateOfBirth: "{% $registration.dateOfBirth %}"
+          gender: "{% $registration.gender %}"
+    Assign:
+      idVerification: "{% $parse($states.result.Payload.body) %}"
     Next: TaxPayer Verification
   TaxPayer Verification:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       FunctionName: ${GovernmentVerification}
-      Payload: |
-        {
-          "httpMethod": "POST",
-          "path": "/government/kra",
-          "body": {
-            "idNumber": $.idNumber,
-            "pin": $.pinNumber,
-            "taxPayerName": $.name
-          }
-        }
-    Output: $
-    Retry:
-      - ErrorEquals:
-          - Lambda.ServiceException
-          - Lambda.AWSLambdaException
-          - Lambda.SdkClientException
-          - Lambda.TooManyRequestsException
-        IntervalSeconds: 1
-        MaxAttempts: 3
-        BackoffRate: 2
+      Payload:
+        httpMethod: POST
+        path: /government/kra
+        body:
+          idNumber: "{% $registration.idNumber %}"
+          pin: "{% $registration.pinNumber %}"
+          taxPayerName: "{% $registration.name %}"
+    Assign:
+      taxPayerVerification: "{% $parse($states.result.Payload.body) %}"
     Next: Background Check
   Background Check:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       FunctionName: ${BackgroundChecks}
-      Payload: |
-        {
-          "httpMethod": "POST",
-          "body": {
-            "firstName": $.name,
-            "lastName": $.name,
-            "gender": $.gender,
-            "dateOfBirth": $.dateOfBirth,
-            "nationalIdentificationNumber": $.idNumber
-          }
-        }
-    Output: $
-    Retry:
-      - ErrorEquals:
-          - Lambda.ServiceException
-          - Lambda.AWSLambdaException
-          - Lambda.SdkClientException
-          - Lambda.TooManyRequestsException
-        IntervalSeconds: 1
-        MaxAttempts: 3
-        BackoffRate: 2
+      Payload:
+        httpMethod: POST
+        body:
+          firstName: "{% $split($registration.name, ' ')[0] %}"
+          lastName: "{% $split($registration.name, ' ')[-1] %}"
+          gender: "{% $registration.gender %}"
+          dateOfBirth: "{% $registration.dateOfBirth %}"
+          nationalIdentificationNumber: "{% $registration.idNumber %}"
+    Assign:
+      backgroundCheck: "{% $parse($states.result.Payload.body) %}"
     Next: Certify and Persist
   Certify and Persist:
     Type: Task
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Resource: arn:aws:states:::lambda:invoke
     Arguments:
       FunctionName: ${Certification}
-      Payload: $
-    Output: $
+      Payload:
+        httpMethod: POST
+        body:
+          registration: "{% $registration %}"
+          nationalIdValidation: "{% $nationalIdValidation %}"
+          idVerification: "{% $idVerification %}"
+          taxPayerVerification: "{% $taxPayerVerification %}"
+          backgroundCheck: "{% $backgroundCheck %}"
+    Assign:
+      certification: "{% $parse($states.result.Payload.body) %}"
     Retry:
       - ErrorEquals:
           - Lambda.ServiceException
