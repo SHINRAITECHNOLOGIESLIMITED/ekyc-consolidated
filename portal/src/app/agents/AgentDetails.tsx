@@ -60,6 +60,10 @@ const AgentDetails = (agent: Agent) => (
         <Box variant="awsui-key-label">KYC Status</Box>
         <Box>{agent.kycStatus}</Box>
       </SpaceBetween>
+      <SpaceBetween size="xs">
+        <Box variant="awsui-key-label">KYC Certificate Path</Box>
+        <Box>{agent.kycCertificateS3Path ?? "-"}</Box>
+      </SpaceBetween>
     </ColumnLayout>
   </SpaceBetween>
 );

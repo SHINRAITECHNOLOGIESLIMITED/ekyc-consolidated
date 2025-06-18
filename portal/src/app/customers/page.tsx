@@ -42,6 +42,11 @@ const columnDefinitions = [
     header: "KYC Status",
     cell: (item: Customer) => item.kycStatus,
   },
+   {
+    id: "kycCertificate",
+    header: "KYC Certificate",
+    cell: (item: Customer) => item.kycCertificateS3Path
+  },
 ];
 
 const listingProps: ListingProps<Customer> = {

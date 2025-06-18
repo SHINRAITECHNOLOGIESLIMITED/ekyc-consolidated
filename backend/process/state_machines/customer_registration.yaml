@@ -3,7 +3,7 @@ StartAt: National ID Document Validation
 States:
   National ID Document Validation:
     Type: Task
-    QueryLanguage: "JSONata"
+    QueryLanguage: JSONata
     Resource: arn:aws:states:::lambda:invoke
     Arguments:
       FunctionName: ${DocumentValidation}
@@ -11,81 +11,133 @@ States:
         httpMethod: POST
         path: /document/nationalid
         body:
-          uploadedDocumentUrl: "{% $states.input.nationalIdCardUrl %}"
-          idNumber: "{% $states.input.idNumber %}"
-          fullNames: "{% $states.input.name %}"
-          dateOfBirth: "{% $states.input.dateOfBirth %}"
-          gender: "{% $states.input.gender %}"
+          uploadedDocumentUrl: '{% $states.input.nationalIdCardUrl %}'
+          idNumber: '{% $states.input.idNumber %}'
+          fullNames: '{% $states.input.name %}'
+          dateOfBirth: '{% $states.input.dateOfBirth %}'
+          gender: '{% $states.input.gender %}'
     Assign:
-      registration: "{% $states.input %}"
-      nationalIdValidation: "{% $parse($states.result.Payload.body) %}"
+      registration: '{% $states.input %}'
+      nationalIdValidation: '{% $parse($states.result.Payload.body) %}'
+    Next: UpdateNationalIDValidated
+  UpdateNationalIDValidated:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    Parameters:
+      TableName: ${CustomerRegitrationTable}
+      Key:
+        Column:
+          S: customerId
+      UpdateExpression: SET MyKey = :{% $registration.customerId %}
+      ExpressionAttributeValues:
+        ':kycStatus':
+          S: 'National ID Doc Validated'
     Next: ID Verification
   ID Verification:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: "JSONata"
+    QueryLanguage: JSONata
     Arguments:
       FunctionName: ${GovernmentVerification}
       Payload:
         httpMethod: POST
         path: /government/nationalid
         body:
-          idNumber: "{% $registration.idNumber %}"
-          fullNames: "{% $registration.name %}"
-          dateOfBirth: "{% $registration.dateOfBirth %}"
-          gender: "{% $registration.gender %}"
+          idNumber: '{% $registration.idNumber %}'
+          fullNames: '{% $registration.name %}'
+          dateOfBirth: '{% $registration.dateOfBirth %}'
+          gender: '{% $registration.gender %}'
     Assign:
-      idVerification: "{% $parse($states.result.Payload.body) %}"
+      idVerification: '{% $parse($states.result.Payload.body) %}'
+    Next: UpdateNationalIDVerified
+  UpdateNationalIDVerified:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    Parameters:
+      TableName: ${CustomerRegitrationTable}
+      Key:
+        Column:
+          S: customerId
+      UpdateExpression: SET MyKey = :{% $registration.customerId %}
+      ExpressionAttributeValues:
+        ':kycStatus':
+          S: 'National ID Verified'
     Next: TaxPayer Verification
   TaxPayer Verification:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: "JSONata"
+    QueryLanguage: JSONata
     Arguments:
       FunctionName: ${GovernmentVerification}
       Payload:
         httpMethod: POST
         path: /government/kra
         body:
-          idNumber: "{% $registration.idNumber %}"
-          pin: "{% $registration.pinNumber %}"
-          taxPayerName: "{% $registration.name %}"
+          idNumber: '{% $registration.idNumber %}'
+          pin: '{% $registration.pinNumber %}'
+          taxPayerName: '{% $registration.name %}'
     Assign:
-      taxPayerVerification: "{% $parse($states.result.Payload.body) %}"
+      taxPayerVerification: '{% $parse($states.result.Payload.body) %}'
+    Next: UpdateTaxPayerInfoVerified
+  UpdateTaxPayerInfoVerified:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    Parameters:
+      TableName: ${CustomerRegitrationTable}
+      Key:
+        Column:
+          S: customerId
+      UpdateExpression: SET MyKey = :{% $registration.customerId %}
+      ExpressionAttributeValues:
+        ':kycStatus':
+          S: 'Tax Payer Info Verified'
     Next: Background Check
   Background Check:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: "JSONata"
+    QueryLanguage: JSONata
     Arguments:
       FunctionName: ${BackgroundChecks}
       Payload:
         httpMethod: POST
         body:
-          firstName: "{% $split($registration.name, ' ')[0] %}"
-          lastName: "{% $split($registration.name, ' ')[-1] %}"
-          gender: "{% $registration.gender %}"
-          dateOfBirth: "{% $registration.dateOfBirth %}"
-          nationalIdentificationNumber: "{% $registration.idNumber %}"
+          firstName: '{% $split($registration.name, '' '')[0] %}'
+          lastName: '{% $split($registration.name, '' '')[-1] %}'
+          gender: '{% $registration.gender %}'
+          dateOfBirth: '{% $registration.dateOfBirth %}'
+          nationalIdentificationNumber: '{% $registration.idNumber %}'
     Assign:
-      backgroundCheck: "{% $parse($states.result.Payload.body) %}"
+      backgroundCheck: '{% $parse($states.result.Payload.body) %}'
+    Next: UpdateBackGroundCheckDone
+  UpdateBackGroundCheckDone:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    Parameters:
+      TableName: ${CustomerRegitrationTable}
+      Key:
+        Column:
+          S: customerId
+      UpdateExpression: SET MyKey = :{% $registration.customerId %}
+      ExpressionAttributeValues:
+        ':kycStatus':
+          S: 'Background Check Completed'
     Next: Certify and Persist
   Certify and Persist:
     Type: Task
-    QueryLanguage: "JSONata"
+    QueryLanguage: JSONata
     Resource: arn:aws:states:::lambda:invoke
     Arguments:
       FunctionName: ${Certification}
       Payload:
         httpMethod: POST
         body:
-          registration: "{% $registration %}"
-          nationalIdValidation: "{% $nationalIdValidation %}"
-          idVerification: "{% $idVerification %}"
-          taxPayerVerification: "{% $taxPayerVerification %}"
-          backgroundCheck: "{% $backgroundCheck %}"
+          registration: '{% $registration %}'
+          nationalIdValidation: '{% $nationalIdValidation %}'
+          idVerification: '{% $idVerification %}'
+          taxPayerVerification: '{% $taxPayerVerification %}'
+          backgroundCheck: '{% $backgroundCheck %}'
     Assign:
-      certification: "{% $parse($states.result.Payload.body) %}"
+      certification: '{% $parse($states.result.Payload.body) %}'
     Retry:
       - ErrorEquals:
           - Lambda.ServiceException
@@ -95,4 +147,19 @@ States:
         IntervalSeconds: 1
         MaxAttempts: 3
         BackoffRate: 2
+    Next: UpdateCustomerCertificateCreated
+  UpdateCustomerCertificateCreated:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    Parameters:
+      TableName: ${CustomerRegitrationTable}
+      Key:
+        Column:
+          S: customerId
+      UpdateExpression: SET MyKey = :{% $registration.customerId %}
+      ExpressionAttributeValues:
+        ':kycStatus':
+          S: 'Customer Certificate Created'
+        ':kycCertificateS3Path':
+          S: '{% $certification.s3Path %}'
     End: true

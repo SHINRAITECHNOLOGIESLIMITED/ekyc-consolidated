@@ -79,6 +79,7 @@ const schema = a.schema({
       dateOfBirth: a.string(),
       businessNumber: a.string(),
       kycStatus: a.string().required(),
+      kycCertificateS3Path: a.string()
     })
     .authorization((authorize) => [
       authorize.authenticated().to(["read"]),
@@ -98,7 +99,8 @@ const schema = a.schema({
       nationalIdCardUrl: a.string().required(),
       passportUrl: a.string(),
       kraPinCardUrl: a.string().required(),
-      kycStatus: a.string().required()
+      kycStatus: a.string().required(),
+      kycCertificateS3Path: a.string()
     })
     .authorization((authorize) => [
       authorize.authenticated().to(["read"]),
