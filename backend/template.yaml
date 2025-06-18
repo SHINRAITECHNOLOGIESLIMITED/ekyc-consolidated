@@ -435,7 +435,7 @@ Resources:
         Variables:
           FACELIVENESSRESULTS_TABLE_NAME: !Ref FaceLivenessResults
           FACELIVENESSRESULTS_TABLE_ARN: !GetAtt FaceLivenessResults.Arn
-          FACE_LIVENESS_CONFIDENCE_THRESHOLD: 90.0
+          FACE_LIVENESS_CONFIDENCE_THRESHOLD: 85.0
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
           LIVENESSCAPTUREBUCKET_BUCKET_NAME: !Ref FaceLivenessCaptureBucket
           LIVENESSCAPTUREBUCKET_BUCKET_ARN: !GetAtt FaceLivenessCaptureBucket.Arn
