@@ -1,9 +1,9 @@
-QueryLanguage: JSONata
+QueryLanguage: "JSONata"
 StartAt: National ID Document Validation
 States:
   National ID Document Validation:
     Type: Task
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Resource: arn:aws:states:::lambda:invoke
     Arguments:
       FunctionName: ${DocumentValidation}
@@ -23,20 +23,21 @@ States:
   UpdateNationalIDValidated:
     Type: Task
     Resource: arn:aws:states:::dynamodb:updateItem
-    Parameters:
+    QueryLanguage: "JSONata"
+    Arguments:
       TableName: ${CustomerRegitrationTable}
       Key:
-        Column:
-          S: customerId
-      UpdateExpression: SET MyKey = :{% $registration.customerId %}
+        customerId: 
+          S: '{% $registration.customerId %}'
+      UpdateExpression: "SET kycStatus = :kycStatus"
       ExpressionAttributeValues:
-        ':kycStatus':
-          S: 'National ID Doc Validated'
+        ":kycStatus":
+          S: "National ID Doc Validated"
     Next: ID Verification
   ID Verification:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       FunctionName: ${GovernmentVerification}
       Payload:
@@ -53,20 +54,21 @@ States:
   UpdateNationalIDVerified:
     Type: Task
     Resource: arn:aws:states:::dynamodb:updateItem
-    Parameters:
+    QueryLanguage: "JSONata"
+    Arguments:
       TableName: ${CustomerRegitrationTable}
       Key:
-        Column:
-          S: customerId
-      UpdateExpression: SET MyKey = :{% $registration.customerId %}
+        customerId: 
+          S: '{% $registration.customerId %}'
+      UpdateExpression: "SET kycStatus = :kycStatus"
       ExpressionAttributeValues:
-        ':kycStatus':
-          S: 'National ID Verified'
+        ":kycStatus":
+          S: "National ID Verified"
     Next: TaxPayer Verification
   TaxPayer Verification:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       FunctionName: ${GovernmentVerification}
       Payload:
@@ -82,27 +84,28 @@ States:
   UpdateTaxPayerInfoVerified:
     Type: Task
     Resource: arn:aws:states:::dynamodb:updateItem
-    Parameters:
+    QueryLanguage: "JSONata"
+    Arguments:
       TableName: ${CustomerRegitrationTable}
       Key:
-        Column:
-          S: customerId
-      UpdateExpression: SET MyKey = :{% $registration.customerId %}
+        customerId: 
+          S: '{% $registration.customerId %}'
+      UpdateExpression: "SET kycStatus = :kycStatus"
       ExpressionAttributeValues:
-        ':kycStatus':
-          S: 'Tax Payer Info Verified'
+        ":kycStatus":
+          S: "Tax Payer Info Verified"
     Next: Background Check
   Background Check:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       FunctionName: ${BackgroundChecks}
       Payload:
         httpMethod: POST
         body:
-          firstName: '{% $split($registration.name, '' '')[0] %}'
-          lastName: '{% $split($registration.name, '' '')[-1] %}'
+          firstName: '{% $split($registration.name, " ")[0] %}'
+          lastName: '{% $split($registration.name, " ")[-1] %}'
           gender: '{% $registration.gender %}'
           dateOfBirth: '{% $registration.dateOfBirth %}'
           nationalIdentificationNumber: '{% $registration.idNumber %}'
@@ -112,19 +115,20 @@ States:
   UpdateBackGroundCheckDone:
     Type: Task
     Resource: arn:aws:states:::dynamodb:updateItem
-    Parameters:
+    QueryLanguage: "JSONata"
+    Arguments:
       TableName: ${CustomerRegitrationTable}
       Key:
-        Column:
-          S: customerId
-      UpdateExpression: SET MyKey = :{% $registration.customerId %}
+        customerId: 
+          S: '{% $registration.customerId %}'
+      UpdateExpression: "SET kycStatus = :kycStatus"
       ExpressionAttributeValues:
-        ':kycStatus':
-          S: 'Background Check Completed'
+        ":kycStatus":
+          S: "Background Check Completed"
     Next: Certify and Persist
   Certify and Persist:
     Type: Task
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Resource: arn:aws:states:::lambda:invoke
     Arguments:
       FunctionName: ${Certification}
@@ -151,15 +155,16 @@ States:
   UpdateCustomerCertificateCreated:
     Type: Task
     Resource: arn:aws:states:::dynamodb:updateItem
-    Parameters:
+    QueryLanguage: "JSONata"
+    Arguments:
       TableName: ${CustomerRegitrationTable}
       Key:
-        Column:
-          S: customerId
-      UpdateExpression: SET MyKey = :{% $registration.customerId %}
+        customerId: 
+          S: '{% $registration.customerId %}'
+      UpdateExpression: "SET kycStatus = :kycStatus, kycCertificateS3Path = :kycCertificateS3Path"
       ExpressionAttributeValues:
-        ':kycStatus':
-          S: 'Customer Certificate Created'
-        ':kycCertificateS3Path':
+        ":kycStatus":
+          S: "Customer Certificate Created"
+        ":kycCertificateS3Path":
           S: '{% $certification.s3Path %}'
     End: true
