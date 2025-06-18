@@ -1,16 +1,18 @@
-QueryLanguage: JSONata
+QueryLanguage: "JSONata"
 StartAt: Choice
 States:
   Choice:
     Type: Choice
+    QueryLanguage: "JSONata"
     Choices:
-      - Variable: $state.input.agentType
-        StringEquals: Business
+      - Condition: '{% $state.input.agentType = "Individual" %}'
+        Next: National ID Document Validation
+      - Condition: '{% $state.input.agentType = "Business" %}'
         Next: CR12 Document Validation
     Default: National ID Document Validation
   CR12 Document Validation:
     Type: Task
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Resource: arn:aws:states:::lambda:invoke
     Arguments:
       FunctionName: ${DocumentValidation}
@@ -25,11 +27,11 @@ States:
     Assign:
       registration: '{% $states.input %}'
       nationalIdValidation: '{% $parse($states.result.Payload.body) %}'
-    Next: UpdateXR12Validated
-  UpdateXR12Validated:
+    Next: UpdateCR12Validated
+  UpdateCR12Validated:
     Type: Task
     Resource: arn:aws:states:::dynamodb:updateItem
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       TableName: ${AgentRegitrationTable}
       Key:
@@ -42,7 +44,7 @@ States:
     Next: Certify and Persist Business Agent
   Certify and Persist Business Agent:
     Type: Task
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Resource: arn:aws:states:::lambda:invoke
     Arguments:
       FunctionName: ${Certification}
@@ -69,7 +71,7 @@ States:
   UpdateBusinessAgentCertificateCreated:
     Type: Task
     Resource: arn:aws:states:::dynamodb:updateItem
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       TableName: ${AgentRegitrationTable}
       Key:
@@ -84,7 +86,7 @@ States:
     End: true
   National ID Document Validation:
     Type: Task
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Resource: arn:aws:states:::lambda:invoke
     Arguments:
       FunctionName: ${DocumentValidation}
@@ -103,7 +105,7 @@ States:
   UpdateNationalIDValidated:
     Type: Task
     Resource: arn:aws:states:::dynamodb:updateItem
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       TableName: ${AgentRegitrationTable}
       Key:
@@ -117,7 +119,7 @@ States:
   ID Verification:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       FunctionName: ${GovernmentVerification}
       Payload:
@@ -133,7 +135,7 @@ States:
   UpdateNationalIDVerified:
     Type: Task
     Resource: arn:aws:states:::dynamodb:updateItem
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       TableName: ${AgentRegitrationTable}
       Key:
@@ -147,7 +149,7 @@ States:
   TaxPayer Verification:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       FunctionName: ${GovernmentVerification}
       Payload:
@@ -163,7 +165,7 @@ States:
   UpdateTaxPayerInfoVerified:
     Type: Task
     Resource: arn:aws:states:::dynamodb:updateItem
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       TableName: ${AgentRegitrationTable}
       Key:
@@ -177,7 +179,7 @@ States:
   Background Check:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       FunctionName: ${BackgroundChecks}
       Payload:
@@ -193,7 +195,7 @@ States:
   UpdateBackGroundCheckDone:
     Type: Task
     Resource: arn:aws:states:::dynamodb:updateItem
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       TableName: ${AgentRegitrationTable}
       Key:
@@ -206,7 +208,7 @@ States:
     Next: Certify and Persist Individual Agent
   Certify and Persist Individual Agent:
     Type: Task
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Resource: arn:aws:states:::lambda:invoke
     Arguments:
       FunctionName: ${Certification}
@@ -233,7 +235,7 @@ States:
   UpdateIndividualAgentCertificateCreated:
     Type: Task
     Resource: arn:aws:states:::dynamodb:updateItem
-    QueryLanguage: JSONata
+    QueryLanguage: "JSONata"
     Arguments:
       TableName: ${AgentRegitrationTable}
       Key:
