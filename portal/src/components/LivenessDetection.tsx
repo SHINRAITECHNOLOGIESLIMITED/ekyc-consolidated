@@ -54,12 +54,8 @@ const LivenessDetection = () => {
     try {
       const result: LivenessResponse = await livenessApi.getResults(sessionId);
       setResult(result);
-
-      // Hide camera when liveness check is successful
+      // Hide camera when liveness check is completed
       setShowCamera(false);
-      if (!result.isLive) {
-        setError("Liveness check failed. Please try again.");
-      }
     } catch (err) {
       setError(handleApiError(err));
       console.error("Error getting liveness results:", err);
