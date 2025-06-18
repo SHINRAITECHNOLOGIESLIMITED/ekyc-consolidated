@@ -49,9 +49,8 @@ const LivenessDetection = () => {
             setResult(result);
 
             // Hide camera when liveness check is successful
-            if (result.isLive) {
-                setShowCamera(false);
-            } else {
+            setShowCamera(false);
+            if(!result.isLive) {
                 setError('Liveness check failed. Please try again.');
             }
 
