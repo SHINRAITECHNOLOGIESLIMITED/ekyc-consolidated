@@ -118,7 +118,9 @@ def register_agent(event_data):
         # Call portal to capture agent registration
         event_data["kycStatus"] = "New"
         agent = portal.capture_agent_registration(event_data)
-        logger.info(f"Agent: {agent}")
+        agentId = agent['agentId']
+        event_data['agentId'] = agentId
+        logger.info(f"Agent: {agentId} registration process started")
         # Launch the step-function to execute the process
         sfn_response = sfn_client.start_execution(
             stateMachineArn=AGENTREGISTRATIONSM_ARN,

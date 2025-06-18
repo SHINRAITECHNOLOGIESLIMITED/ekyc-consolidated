@@ -1,0 +1,248 @@
+QueryLanguage: JSONata
+StartAt: Choice
+States:
+  Choice:
+    Type: Choice
+    Choices:
+      - Variable: $state.input.agentType
+        StringEquals: Business
+        Next: CR12 Document Validation
+    Default: National ID Document Validation
+  CR12 Document Validation:
+    Type: Task
+    QueryLanguage: JSONata
+    Resource: arn:aws:states:::lambda:invoke
+    Arguments:
+      FunctionName: ${DocumentValidation}
+      Payload:
+        httpMethod: POST
+        path: /document/nationalid
+        body:
+          uploadedDocumentUrl: '{% $states.input.nationalIdCardUrl %}'
+          idNumber: '{% $states.input.idNumber %}'
+          fullNames: '{% $states.input.name %}'
+          dateOfBirth: '{% $states.input.dateOfBirth %}'
+    Assign:
+      registration: '{% $states.input %}'
+      nationalIdValidation: '{% $parse($states.result.Payload.body) %}'
+    Next: UpdateXR12Validated
+  UpdateXR12Validated:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    QueryLanguage: JSONata
+    Arguments:
+      TableName: ${AgentRegitrationTable}
+      Key:
+        agentId:
+          S: '{% $registration.agentId %}'
+      UpdateExpression: SET kycStatus = :kycStatus
+      ExpressionAttributeValues:
+        ':kycStatus':
+          S: National ID Doc Validated
+    Next: Certify and Persist Business Agent
+  Certify and Persist Business Agent:
+    Type: Task
+    QueryLanguage: JSONata
+    Resource: arn:aws:states:::lambda:invoke
+    Arguments:
+      FunctionName: ${Certification}
+      Payload:
+        httpMethod: POST
+        body:
+          registration: '{% $registration %}'
+          nationalIdValidation: '{% $nationalIdValidation %}'
+          idVerification: '{% $idVerification %}'
+          taxPayerVerification: '{% $taxPayerVerification %}'
+          backgroundCheck: '{% $backgroundCheck %}'
+    Assign:
+      certification: '{% $parse($states.result.Payload.body) %}'
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Next: UpdateBusinessAgentCertificateCreated
+  UpdateBusinessAgentCertificateCreated:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    QueryLanguage: JSONata
+    Arguments:
+      TableName: ${AgentRegitrationTable}
+      Key:
+        agentId:
+          S: '{% $registration.agentId %}'
+      UpdateExpression: SET kycStatus = :kycStatus, kycCertificateS3Path = :kycCertificateS3Path
+      ExpressionAttributeValues:
+        ':kycStatus':
+          S: Agent Certificate Created
+        ':kycCertificateS3Path':
+          S: '{% $certification.s3Path %}'
+    End: true
+  National ID Document Validation:
+    Type: Task
+    QueryLanguage: JSONata
+    Resource: arn:aws:states:::lambda:invoke
+    Arguments:
+      FunctionName: ${DocumentValidation}
+      Payload:
+        httpMethod: POST
+        path: /document/nationalid
+        body:
+          uploadedDocumentUrl: '{% $states.input.nationalIdCardUrl %}'
+          idNumber: '{% $states.input.idNumber %}'
+          fullNames: '{% $states.input.name %}'
+          dateOfBirth: '{% $states.input.dateOfBirth %}'
+    Assign:
+      registration: '{% $states.input %}'
+      nationalIdValidation: '{% $parse($states.result.Payload.body) %}'
+    Next: UpdateNationalIDValidated
+  UpdateNationalIDValidated:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    QueryLanguage: JSONata
+    Arguments:
+      TableName: ${AgentRegitrationTable}
+      Key:
+        agentId:
+          S: '{% $registration.agentId %}'
+      UpdateExpression: SET kycStatus = :kycStatus
+      ExpressionAttributeValues:
+        ':kycStatus':
+          S: National ID Doc Validated
+    Next: ID Verification
+  ID Verification:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    QueryLanguage: JSONata
+    Arguments:
+      FunctionName: ${GovernmentVerification}
+      Payload:
+        httpMethod: POST
+        path: /government/nationalid
+        body:
+          idNumber: '{% $registration.idNumber %}'
+          fullNames: '{% $registration.name %}'
+          dateOfBirth: '{% $registration.dateOfBirth %}'
+    Assign:
+      idVerification: '{% $parse($states.result.Payload.body) %}'
+    Next: UpdateNationalIDVerified
+  UpdateNationalIDVerified:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    QueryLanguage: JSONata
+    Arguments:
+      TableName: ${AgentRegitrationTable}
+      Key:
+        agentId:
+          S: '{% $registration.agentId %}'
+      UpdateExpression: SET kycStatus = :kycStatus
+      ExpressionAttributeValues:
+        ':kycStatus':
+          S: National ID Verified
+    Next: TaxPayer Verification
+  TaxPayer Verification:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    QueryLanguage: JSONata
+    Arguments:
+      FunctionName: ${GovernmentVerification}
+      Payload:
+        httpMethod: POST
+        path: /government/kra
+        body:
+          idNumber: '{% $registration.idNumber %}'
+          pin: '{% $registration.pinNumber %}'
+          taxPayerName: '{% $registration.name %}'
+    Assign:
+      taxPayerVerification: '{% $parse($states.result.Payload.body) %}'
+    Next: UpdateTaxPayerInfoVerified
+  UpdateTaxPayerInfoVerified:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    QueryLanguage: JSONata
+    Arguments:
+      TableName: ${AgentRegitrationTable}
+      Key:
+        agentId:
+          S: '{% $registration.agentId %}'
+      UpdateExpression: SET kycStatus = :kycStatus
+      ExpressionAttributeValues:
+        ':kycStatus':
+          S: Tax Payer Info Verified
+    Next: Background Check
+  Background Check:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    QueryLanguage: JSONata
+    Arguments:
+      FunctionName: ${BackgroundChecks}
+      Payload:
+        httpMethod: POST
+        body:
+          firstName: '{% $split($registration.name, " ")[0] %}'
+          lastName: '{% $split($registration.name, " ")[-1] %}'
+          dateOfBirth: '{% $registration.dateOfBirth %}'
+          nationalIdentificationNumber: '{% $registration.idNumber %}'
+    Assign:
+      backgroundCheck: '{% $parse($states.result.Payload.body) %}'
+    Next: UpdateBackGroundCheckDone
+  UpdateBackGroundCheckDone:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    QueryLanguage: JSONata
+    Arguments:
+      TableName: ${AgentRegitrationTable}
+      Key:
+        agentId:
+          S: '{% $registration.agentId %}'
+      UpdateExpression: SET kycStatus = :kycStatus
+      ExpressionAttributeValues:
+        ':kycStatus':
+          S: Background Check Completed
+    Next: Certify and Persist Individual Agent
+  Certify and Persist Individual Agent:
+    Type: Task
+    QueryLanguage: JSONata
+    Resource: arn:aws:states:::lambda:invoke
+    Arguments:
+      FunctionName: ${Certification}
+      Payload:
+        httpMethod: POST
+        body:
+          registration: '{% $registration %}'
+          nationalIdValidation: '{% $nationalIdValidation %}'
+          idVerification: '{% $idVerification %}'
+          taxPayerVerification: '{% $taxPayerVerification %}'
+          backgroundCheck: '{% $backgroundCheck %}'
+    Assign:
+      certification: '{% $parse($states.result.Payload.body) %}'
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Next: UpdateIndividualAgentCertificateCreated
+  UpdateIndividualAgentCertificateCreated:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    QueryLanguage: JSONata
+    Arguments:
+      TableName: ${AgentRegitrationTable}
+      Key:
+        agentId:
+          S: '{% $registration.agentId %}'
+      UpdateExpression: SET kycStatus = :kycStatus, kycCertificateS3Path = :kycCertificateS3Path
+      ExpressionAttributeValues:
+        ':kycStatus':
+          S: Agent Certificate Created
+        ':kycCertificateS3Path':
+          S: '{% $certification.s3Path %}'
+    End: true

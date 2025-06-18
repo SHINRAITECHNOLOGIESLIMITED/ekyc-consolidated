@@ -19,8 +19,8 @@ const CustomerDetails = (customer: Customer) => {
 
   return (
     <SpaceBetween size="l">
-      <Header variant="h1">Customer Details</Header>
-      
+      <Header variant="h1">Customer Registration Details</Header>
+      <Header variant="h3">{customer.customerId}</Header>
       <Container header={<Header variant="h2">Personal Information</Header>}>
         <ColumnLayout columns={3} variant="text-grid">
           <SpaceBetween size="xs">
