@@ -104,11 +104,19 @@ def get_face_liveness_results(event, context):
 
         # Extract relevant information
         confidence = response.get('Confidence')
-        status = response.get('Status')
+        
         if isinstance(confidence, str):
             confidence = float(confidence)
         # Determine if the liveness check passed based on confidence threshold
-        is_live = confidence >= FACE_LIVENESS_CONFIDENCE_THRESHOLD if confidence is not None else False
+        if confidence is not None:
+            status = "Confidence could not be determined"
+        else:
+            if confidence >= FACE_LIVENESS_CONFIDENCE_THRESHOLD :
+                status = f"PASS. Confidence ({confidence:.1f})%) is above required threshold ({FACE_LIVENESS_CONFIDENCE_THRESHOLD:.1f}%)"
+                is_live = True
+            else:
+                status = f"FAIL. Confidence ({confidence:.1f})%) is below required threshold ({FACE_LIVENESS_CONFIDENCE_THRESHOLD:.1f}%)"
+                is_live = False
         liveness_document = dict(
             sessionId=session_id,
             request_id=context.aws_request_id,
