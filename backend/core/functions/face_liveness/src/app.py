@@ -113,6 +113,7 @@ def get_face_liveness_results(event, context):
             sessionId=session_id,
             request_id=context.aws_request_id,
             confidence=confidence,
+            threshold=FACE_LIVENESS_CONFIDENCE_THRESHOLD,
             status=status,
             is_live=is_live,
             )

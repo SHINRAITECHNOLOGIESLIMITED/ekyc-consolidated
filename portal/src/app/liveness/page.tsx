@@ -21,8 +21,8 @@ const columnDefinitions = [
   },
   {
     id: "threshhold",
-    header: "Confidence Thresshold",
-    cell: (item: LivenessSession) => formatPercentage(item.threshold ?? 0),
+    header: "Threshold",
+    cell: (item: LivenessSession) => formatPercentage(item.threshold ?? 85.0),
   },
   {
     id: "updatedAt",
