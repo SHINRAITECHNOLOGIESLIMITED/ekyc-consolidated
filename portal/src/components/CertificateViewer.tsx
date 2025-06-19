@@ -5,24 +5,25 @@ import { Box, Spinner } from "@cloudscape-design/components";
 import { useEffect, useState } from "react";
 
 interface CertificateViewerProps {
-  certificateKey: string;
+  objectKey: string;
+  bucketType: string;
 }
 
-const CertificateViewer: React.FC<CertificateViewerProps> = ({ certificateKey }) => {
+const DocumentViewer: React.FC<CertificateViewerProps> = ({ objectKey: objectKey,bucketType: bucketType }) => {
   const [certificateUrl, setCertificateUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCertificateUrl = async () => {
-      if (!certificateKey) {
+      if (!objectKey) {
         setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
       try {
-        const url = await documentStreamingApi.getSignedUrl("certification", certificateKey);
+        const url = await documentStreamingApi.getSignedUrl(bucketType, objectKey);
         setCertificateUrl(url);
       } catch (err) {
         console.error('Failed to get certificate URL:', err);
@@ -33,7 +34,7 @@ const CertificateViewer: React.FC<CertificateViewerProps> = ({ certificateKey })
     };
 
     fetchCertificateUrl();
-  }, [certificateKey]);
+  }, [objectKey]);
 
   if (isLoading) {
     return (
@@ -64,4 +65,4 @@ const CertificateViewer: React.FC<CertificateViewerProps> = ({ certificateKey })
   );
 };
 
-export default CertificateViewer;
+export default DocumentViewer;

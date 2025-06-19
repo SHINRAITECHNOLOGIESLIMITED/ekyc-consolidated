@@ -1,7 +1,7 @@
 "use client";
 
 import { Agent } from "@/types/models";
-import CertificateViewer from "@/components/CertificateViewer";
+import DocumentViewer from "@/components/CertificateViewer";
 import {
   Box,
   ColumnLayout,
@@ -114,8 +114,9 @@ const BusinessAgentDetails = (agent: Agent) => {
                   <Container
                     header={<Header variant="h2">KYC Certificate</Header>}
                   >
-                    <CertificateViewer
-                      certificateKey={agent.kycCertificateS3Path}
+                    <DocumentViewer
+                      objectKey={agent.kycCertificateS3Path}
+                      bucketType={"certification"}
                     />
                   </Container>
                 )}
