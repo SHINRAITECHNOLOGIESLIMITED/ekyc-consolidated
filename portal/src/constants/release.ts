@@ -1,2 +1,2 @@
-const RELEASE_VERSION = '0.0.120';
+const RELEASE_VERSION = '0.0.121';
 export default RELEASE_VERSION;
