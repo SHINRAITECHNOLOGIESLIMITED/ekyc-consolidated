@@ -432,6 +432,57 @@ paths:
         httpMethod: POST
         contentHandling: CONVERT_TO_TEXT
         type: aws_proxy
+        
+  /stream/{bucketType}/{documentKey+}:
+    get:
+      summary: Stream a document directly from S3
+      description: Retrieves and streams a document directly from S3 through API Gateway
+      parameters:
+        - name: bucketType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [kyc, liveness, certification]
+          description: Type of bucket (kyc, liveness, or certification)
+        - name: documentKey
+          in: path
+          required: true
+          schema:
+            type: string
+          description: S3 key of the document
+      responses:
+        '200':
+          description: Document streamed successfully
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/tiff:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Bad request
+        '404':
+          description: Document not found
+        '500':
+          description: Internal server error
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentStreamingFn.Arn}/invocations"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        type: aws_proxy
       requestBody:
         required: true
         content:
