@@ -11,7 +11,6 @@ import {
   StatusIndicator,
 } from "@cloudscape-design/components";
 import { FaceLivenessDetector } from "@aws-amplify/ui-react-liveness";
-import Image from 'next/image';
 
 import { livenessApi } from "@/services/api";
 import { handleApiError } from "@/utils/error";
@@ -25,7 +24,6 @@ const LivenessDetection = () => {
   const [result, setResult] = useState<LivenessResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState<boolean>(true);
-  const [imageError, setImageError] = useState<boolean>(false);
 
   useEffect(() => {
     const createLivenessSession = async (): Promise<void> => {
@@ -72,10 +70,6 @@ const LivenessDetection = () => {
     setProcessing(false);
   };
 
-  // Generate streaming API URL for liveness images
-  const getLivenessImageUrl = (sessionId: string): string => {
-    return `${API_CONFIG.API_BASE_URL}/stream/liveness/${sessionId}/reference.jpg`;
-  };
 
   const renderResult = () => {
     if (!result) return null;
@@ -94,30 +88,6 @@ const LivenessDetection = () => {
           <Box variant="p">Status: {result.status}</Box>
 
           {result.message && <Box variant="p">{result.message}</Box>}
-
-          {/* Display liveness image using the streaming API */}
-          {result.sessionId && result.isLive && !imageError && (
-            <Box>
-              <Box variant="h4">Liveness Reference Image</Box>
-              <div style={{ marginTop: '10px', marginBottom: '10px', position: 'relative', width: '300px', height: '300px' }}>
-                <Image
-                  src={getLivenessImageUrl(result.sessionId)}
-                  alt="Liveness reference"
-                  fill
-                  style={{ 
-                    objectFit: 'contain',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px'
-                  }}
-                  onError={() => {
-                    console.error("Error loading liveness image");
-                    setImageError(true);
-                  }}
-                />
-              </div>
-            </Box>
-          )}
-
           <Button onClick={() => window.location.reload()}>Close</Button>
         </SpaceBetween>
       </Container>

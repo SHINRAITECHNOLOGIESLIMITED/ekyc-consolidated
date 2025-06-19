@@ -46,7 +46,7 @@ const listingProps: ListingProps<LivenessSession> = {
   columnDefinitions,
   itemKey: (item: LivenessSession) => item.sessionId.toString(),
   itemDetailsLink: (item: LivenessSession) => `liveness/${item.sessionId}`,
-  renderItemDetails: (item: LivenessSession) => LivenessSessionDetails(item) ,
+  renderItemDetails: (item: LivenessSession) => <LivenessSessionDetails {...item} />,
   actions: [
     {
       id: "new-liveness",
