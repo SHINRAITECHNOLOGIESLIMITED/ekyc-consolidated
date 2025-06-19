@@ -2,7 +2,7 @@
 
 // import type { Metadata } from "next";
 import Auth from "@/components/Auth";
-import { Badge, useAuthenticator } from "@aws-amplify/ui-react";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 import {
   Box,
   BreadcrumbGroup,
@@ -17,7 +17,6 @@ import AppLayout from "@cloudscape-design/components/app-layout";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import PROJECT_VERSION from "@/constants/release";
-import { API_CONFIG } from "@/constants/api";
 
 const LoadingOverlay = () => (
   <div
@@ -130,27 +129,7 @@ const Navigation = () => {
             {
               type: "link",
               text: "System Settings",
-              href: "/settings",
-              info: (
-                <Badge color="red" size="small">
-                  WIP
-                </Badge>
-              ),
-            },
-          ],
-        },
-        { type: "divider" },
-        // Documentation Section
-        {
-          type: "section-group",
-          title: "Documentation",
-
-          items: [
-            {
-              type: "link",
-              text: "API (swagger)",
-              href: API_CONFIG.SWAGGER_UI_URL,
-              external: true,
+              href: "/settings"
             },
           ],
         },

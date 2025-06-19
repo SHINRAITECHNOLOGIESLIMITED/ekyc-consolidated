@@ -1,16 +1,22 @@
 "use client";
 
-import NotImplemented from "@/components/NotImplemented";
+import DocumentForm from "@/components/DocumentForm";
 
 
 const SystemSettings = () => {
     return (
-        <NotImplemented
-            title="System Settings"
-            description="System Settings is not implmented"
-        />
+        <SettingsForm/>
     );
 };
-
+const SettingsForm: React.FC = () => (
+  <DocumentForm
+    title="System Settings"
+    apiEndpoint="settings"
+    fields={[
+      { id: "livenessThreshold", label: "Liveness Threshold", type: "text", placeholder: "70.0 %" },
+      { id: "validationThreshold", label: "Validation Threshold", type: "text",  placeholder: "85.0 %"  }
+    ]}
+  />
+);
 
 export default SystemSettings;

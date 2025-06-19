@@ -7,18 +7,18 @@ import {
   ColumnLayout,
   Container,
   Header,
-  Link,
   SpaceBetween,
   StatusIndicator,
+  Tabs,
 } from "@cloudscape-design/components";
 
-const CustomerDetails = (customer: Customer) => (
-  <SpaceBetween size="l">
-    <Header variant="h1">Customer Details</Header>
-    <Header variant="h3">ID: {customer.customerId}</Header>
-    
-    {/* Personal Information */}
-    <Container header={<Header variant="h2">Personal Information</Header>}>
+const CustomerDetails = (customer: Customer) => {
+  const hasDocuments = customer.kycCertificateS3Path;
+  return (
+    <SpaceBetween size="l">
+      <Header variant="h1">Customer Registration</Header>
+      <Header variant="h3">ID: {customer.customerId}</Header>
+
       <ColumnLayout columns={3} variant="text-grid">
         <SpaceBetween size="xs">
           <Box variant="awsui-key-label">Name</Box>
@@ -35,117 +35,156 @@ const CustomerDetails = (customer: Customer) => (
           <Box>{customer.dateOfBirth}</Box>
         </SpaceBetween>
       </ColumnLayout>
-    </Container>
 
-    {/* Identification Details */}
-    <Container header={<Header variant="h2">Identification Details</Header>}>
-      <ColumnLayout columns={3} variant="text-grid">
-        <SpaceBetween size="xs">
-          <Box variant="awsui-key-label">PIN Number</Box>
-          <Box>{customer.pinNumber}</Box>
-        </SpaceBetween>
+      <Tabs
+        tabs={[
+          {
+            id: "details",
+            label: "Customer Details",
+            content: (
+              <SpaceBetween size="l">
+                {/* Identification Details */}
+                <Container
+                  header={<Header variant="h2">Identification Details</Header>}
+                >
+                  <ColumnLayout columns={3} variant="text-grid">
+                    <SpaceBetween size="xs">
+                      <Box variant="awsui-key-label">PIN Number</Box>
+                      <Box>{customer.pinNumber}</Box>
+                    </SpaceBetween>
 
-        <SpaceBetween size="xs">
-          <Box variant="awsui-key-label">ID Number</Box>
-          <Box>{customer.idNumber}</Box>
-        </SpaceBetween>
-        
-        <SpaceBetween size="xs">
-          <Box variant="awsui-key-label">Passport Number</Box>
-          <Box>{customer.passportNumber || "-"}</Box>
-        </SpaceBetween>
-      </ColumnLayout>
-    </Container>
+                    <SpaceBetween size="xs">
+                      <Box variant="awsui-key-label">ID Number</Box>
+                      <Box>{customer.idNumber}</Box>
+                    </SpaceBetween>
 
-    {/* Documents */}
-    <Container header={<Header variant="h2">Documents</Header>}>
-      <ColumnLayout columns={2} variant="text-grid">
-        <SpaceBetween size="xs">
-          <Box variant="awsui-key-label">Passport Photo</Box>
-          <Box>
-            {customer.passportPhotoUrl ? (
-              <Link external href={customer.passportPhotoUrl}>
-                View Photo
-              </Link>
-            ) : (
-              <StatusIndicator type="stopped">Not available</StatusIndicator>
-            )}
-          </Box>
-        </SpaceBetween>
+                    <SpaceBetween size="xs">
+                      <Box variant="awsui-key-label">Passport Number</Box>
+                      <Box>{customer.passportNumber || "-"}</Box>
+                    </SpaceBetween>
+                  </ColumnLayout>
+                </Container>
 
-        <SpaceBetween size="xs">
-          <Box variant="awsui-key-label">National ID Card</Box>
-          <Box>
-            {customer.nationalIdCardUrl ? (
-              <Link external href={customer.nationalIdCardUrl}>
-                View ID Card
-              </Link>
-            ) : (
-              <StatusIndicator type="stopped">Not available</StatusIndicator>
-            )}
-          </Box>
-        </SpaceBetween>
-        
-        <SpaceBetween size="xs">
-          <Box variant="awsui-key-label">Passport Document</Box>
-          <Box>
-            {customer.passportUrl ? (
-              <Link external href={customer.passportUrl}>
-                View Passport
-              </Link>
-            ) : (
-              <StatusIndicator type="stopped">Not available</StatusIndicator>
-            )}
-          </Box>
-        </SpaceBetween>
-        
-        <SpaceBetween size="xs">
-          <Box variant="awsui-key-label">KRA PIN Card</Box>
-          <Box>
-            {customer.kraPinCardUrl ? (
-              <Link external href={customer.kraPinCardUrl}>
-                View PIN Card
-              </Link>
-            ) : (
-              <StatusIndicator type="stopped">Not available</StatusIndicator>
-            )}
-          </Box>
-        </SpaceBetween>
-      </ColumnLayout>
-    </Container>
+                {/* Documents */}
+                <Container header={<Header variant="h2">Documents</Header>}>
+                  <ColumnLayout columns={2} variant="text-grid">
+                    <SpaceBetween size="xs">
+                      <Box variant="awsui-key-label">Passport Photo</Box>
+                      <Box>
+                        {customer.passportPhotoUrl ? (
+                          <div>Available</div>
+                        ) : (
+                          <StatusIndicator type="stopped">
+                            Not available
+                          </StatusIndicator>
+                        )}
+                      </Box>
+                    </SpaceBetween>
 
-    {/* KYC Information */}
-    <Container header={<Header variant="h2">KYC Information</Header>}>
-      <ColumnLayout columns={2} variant="text-grid">
-        <SpaceBetween size="xs">
-          <Box variant="awsui-key-label">KYC Status</Box>
-          <StatusIndicator type={customer.kycStatus === "VERIFIED" ? "success" : "pending"}>
-            {customer.kycStatus}
-          </StatusIndicator>
-        </SpaceBetween>
-        
-        <SpaceBetween size="xs">
-          <Box variant="awsui-key-label">KYC Certificate</Box>
-          <Box>
-            {customer.kycCertificateS3Path ? (
-              <Link external href={customer.kycCertificateS3Path}>
-                View Certificate
-              </Link>
-            ) : (
-              <StatusIndicator type="stopped">Not available</StatusIndicator>
-            )}
-          </Box>
-        </SpaceBetween>
-      </ColumnLayout>
-    </Container>
+                    <SpaceBetween size="xs">
+                      <Box variant="awsui-key-label">National ID Card</Box>
+                      <Box>
+                        {customer.nationalIdCardUrl ? (
+                          <div>Available</div>
+                        ) : (
+                          <StatusIndicator type="stopped">
+                            Not available
+                          </StatusIndicator>
+                        )}
+                      </Box>
+                    </SpaceBetween>
 
-    {/* Certificate Viewer */}
-    {customer.kycCertificateS3Path && (
-      <Container header={<Header variant="h2">KYC Certificate Preview</Header>}>
-        <CertificateViewer certificateKey={customer.kycCertificateS3Path} />
-      </Container>
-    )}
-  </SpaceBetween>
-);
+                    <SpaceBetween size="xs">
+                      <Box variant="awsui-key-label">Passport Document</Box>
+                      <Box>
+                        {customer.passportUrl ? (
+                          <div>Available</div>
+                        ) : (
+                          <StatusIndicator type="stopped">
+                            Not available
+                          </StatusIndicator>
+                        )}
+                      </Box>
+                    </SpaceBetween>
+
+                    <SpaceBetween size="xs">
+                      <Box variant="awsui-key-label">KRA PIN Card</Box>
+                      <Box>
+                        {customer.kraPinCardUrl ? (
+                          <div>Available</div>
+                        ) : (
+                          <StatusIndicator type="stopped">
+                            Not available
+                          </StatusIndicator>
+                        )}
+                      </Box>
+                    </SpaceBetween>
+                  </ColumnLayout>
+                </Container>
+
+                {/* KYC Information */}
+                <Container
+                  header={<Header variant="h2">KYC Information</Header>}
+                >
+                  <ColumnLayout columns={2} variant="text-grid">
+                    <SpaceBetween size="xs">
+                      <Box variant="awsui-key-label">KYC Status</Box>
+                      <StatusIndicator
+                        type={
+                          customer.kycStatus === "VERIFIED"
+                            ? "success"
+                            : "pending"
+                        }
+                      >
+                        {customer.kycStatus}
+                      </StatusIndicator>
+                    </SpaceBetween>
+
+                    <SpaceBetween size="xs">
+                      <Box variant="awsui-key-label">KYC Certificate</Box>
+                      <Box>
+                        {customer.kycCertificateS3Path ? (
+                          <div>Available</div>
+                        ) : (
+                          <StatusIndicator type="stopped">
+                            Not available
+                          </StatusIndicator>
+                        )}
+                      </Box>
+                    </SpaceBetween>
+                  </ColumnLayout>
+                </Container>
+              </SpaceBetween>
+            ),
+          },
+          {
+            id: "documents",
+            label: "KYC Certificate",
+            content: (
+              <SpaceBetween size="l">
+                {customer.kycCertificateS3Path && (
+                  <Container
+                    header={<Header variant="h2">KYC Certificate</Header>}
+                  >
+                    <CertificateViewer
+                      certificateKey={customer.kycCertificateS3Path}
+                    />
+                  </Container>
+                )}
+
+                {!hasDocuments && (
+                  <Box textAlign="center" padding="l">
+                    KYC Certificate not available this customer.
+                  </Box>
+                )}
+              </SpaceBetween>
+            ),
+            disabled: !hasDocuments,
+          },
+        ]}
+      />
+    </SpaceBetween>
+  );
+};
 
 export default CustomerDetails;
