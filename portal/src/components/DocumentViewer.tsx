@@ -4,26 +4,46 @@ import { documentStreamingApi } from "@/services/api";
 import { Box, Spinner } from "@cloudscape-design/components";
 import { useEffect, useState } from "react";
 
+// Cache for storing signed URLs
+const urlCache = new Map<string, { url: string; timestamp: number }>();
+const CACHE_EXPIRY_MS = 3600000; // 1 hour cache expiry
+
 interface CertificateViewerProps {
-  certificateKey: string;
+  objectKey: string;
+  bucketType: string;
 }
 
-const CertificateViewer: React.FC<CertificateViewerProps> = ({ certificateKey }) => {
+const DocumentViewer: React.FC<CertificateViewerProps> = ({ objectKey, bucketType }) => {
   const [certificateUrl, setCertificateUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const cacheKey = `${bucketType}:${objectKey}`;
 
   useEffect(() => {
     const fetchCertificateUrl = async () => {
-      if (!certificateKey) {
+      if (!objectKey) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if we have a valid cached URL
+      const cachedData = urlCache.get(cacheKey);
+      const now = Date.now();
+      
+      if (cachedData && (now - cachedData.timestamp) < CACHE_EXPIRY_MS) {
+        setCertificateUrl(cachedData.url);
         setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
       try {
-        const url = await documentStreamingApi.getSignedUrl("certification", certificateKey);
+        const url = await documentStreamingApi.getSignedUrl(bucketType, objectKey);
         setCertificateUrl(url);
+        
+        // Cache the URL with timestamp
+        urlCache.set(cacheKey, { url, timestamp: now });
       } catch (err) {
         console.error('Failed to get certificate URL:', err);
         setError('Failed to load certificate');
@@ -33,7 +53,7 @@ const CertificateViewer: React.FC<CertificateViewerProps> = ({ certificateKey })
     };
 
     fetchCertificateUrl();
-  }, [certificateKey]);
+  }, [objectKey, bucketType, cacheKey]);
 
   if (isLoading) {
     return (
@@ -64,4 +84,4 @@ const CertificateViewer: React.FC<CertificateViewerProps> = ({ certificateKey })
   );
 };
 
-export default CertificateViewer;
+export default DocumentViewer;

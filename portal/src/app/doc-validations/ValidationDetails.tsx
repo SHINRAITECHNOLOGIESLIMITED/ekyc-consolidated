@@ -1,5 +1,6 @@
 "use client";
 
+import DocumentViewer from "@/components/DocumentViewer";
 import CopyableValue from "@/components/CopyableValue";
 import KYCKeyWordsChecks, {
   KeyWordChecks,
@@ -13,8 +14,10 @@ import { formatDateTime, formatPercentage } from "@/utils/formatters";
 import {
   Box,
   ColumnLayout,
+  Container,
   Header,
   SpaceBetween,
+  Tabs,
 } from "@cloudscape-design/components";
 
 const ValidationDetails = (documentValidation: DocumentValidation) => (
@@ -31,21 +34,15 @@ const ValidationDetails = (documentValidation: DocumentValidation) => (
         <div>{documentValidation.documentIdentifier}</div>
       </div>
       <div>
-        <Box variant="awsui-key-label">
-          Processing Accuracy (%)
-        </Box>
+        <Box variant="awsui-key-label">Processing Accuracy (%)</Box>
         <div>{formatPercentage(documentValidation.processing_accuracy)}</div>
       </div>
       <div>
-        <Box variant="awsui-key-label">
-          Validation Accuracy (%)
-        </Box>
+        <Box variant="awsui-key-label">Validation Accuracy (%)</Box>
         <div>{formatPercentage(documentValidation.validation_accuracy)}</div>
       </div>
       <div>
-        <Box variant="awsui-key-label">
-          Confidence (%)
-        </Box>
+        <Box variant="awsui-key-label">Confidence (%)</Box>
         <div>{formatPercentage(documentValidation.overall_confidence)}</div>
       </div>
       <div>
@@ -57,6 +54,51 @@ const ValidationDetails = (documentValidation: DocumentValidation) => (
         <div>{documentValidation.validationId}</div>
       </div>
     </ColumnLayout>
+    <Tabs
+      tabs={[
+        {
+          id: "details",
+          label: "Validation Details",
+          content: (
+            <SpaceBetween size="l">
+              {documentValidation.keywords_checks && (
+                <div>
+                  <KYCKeyWordsChecks
+                    results={
+                      typeof documentValidation.keywords_checks === "string"
+                        ? JSON.parse(documentValidation.keywords_checks)
+                        : (documentValidation.keywords_checks as KeyWordChecks)
+                    }
+                  />
+                </div>
+              )}
+
+              {documentValidation.matchResults && (
+                <KYCValidationResults
+                  results={
+                    typeof documentValidation.matchResults === "string"
+                      ? JSON.parse(documentValidation.matchResults)
+                      : (documentValidation.matchResults as ValidationResults)
+                  }
+                />
+              )}
+            </SpaceBetween>
+          ),
+        },
+        {
+          id: "documents",
+          label: "Document",
+          content: (
+            <Container header={<Header variant="h2">KYC Certificate</Header>}>
+              <DocumentViewer
+                objectKey={documentValidation.s3Path}
+                bucketType={"kyc"}
+              />
+            </Container>
+          ),
+        },
+      ]}
+    />
     <div>
       <Box variant="awsui-key-label">S3 Path</Box>
       <SpaceBetween direction="horizontal" size="xs" alignItems="center">
@@ -66,28 +108,6 @@ const ValidationDetails = (documentValidation: DocumentValidation) => (
         />
       </SpaceBetween>
     </div>
-
-    {documentValidation.keywords_checks && (
-      <div>
-        <KYCKeyWordsChecks
-          results={
-            typeof documentValidation.keywords_checks === "string"
-              ? JSON.parse(documentValidation.keywords_checks)
-              : (documentValidation.keywords_checks as KeyWordChecks)
-          }
-        />
-      </div>
-    )}
-
-    {documentValidation.matchResults && (
-      <KYCValidationResults
-        results={
-          typeof documentValidation.matchResults === "string"
-            ? JSON.parse(documentValidation.matchResults)
-            : (documentValidation.matchResults as ValidationResults)
-        }
-      />
-    )}
   </SpaceBetween>
 );
 
