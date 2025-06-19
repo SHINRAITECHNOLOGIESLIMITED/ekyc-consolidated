@@ -1,6 +1,6 @@
 "use client";
 
-import DocumentViewer from "@/components/CertificateViewer";
+import DocumentViewer from "@/components/DocumentViewer";
 import CopyableValue from "@/components/CopyableValue";
 import KYCKeyWordsChecks, {
   KeyWordChecks,

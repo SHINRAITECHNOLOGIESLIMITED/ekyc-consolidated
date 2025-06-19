@@ -1,6 +1,6 @@
 "use client";
 
-import DocumentViewer from "@/components/CertificateViewer";
+import DocumentViewer from "@/components/DocumentViewer";
 import { Agent } from "@/types/models";
 import {
   Box,

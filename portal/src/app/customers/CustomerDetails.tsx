@@ -1,7 +1,7 @@
 "use client";
 
 import { Customer } from "@/types/models";
-import DocumentViewer from "@/components/CertificateViewer";
+import DocumentViewer from "@/components/DocumentViewer";
 import {
   Box,
   ColumnLayout,

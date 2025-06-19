@@ -4,15 +4,21 @@ import { documentStreamingApi } from "@/services/api";
 import { Box, Spinner } from "@cloudscape-design/components";
 import { useEffect, useState } from "react";
 
+// Cache for storing signed URLs
+const urlCache = new Map<string, { url: string; timestamp: number }>();
+const CACHE_EXPIRY_MS = 3600000; // 1 hour cache expiry
+
 interface CertificateViewerProps {
   objectKey: string;
   bucketType: string;
 }
 
-const DocumentViewer: React.FC<CertificateViewerProps> = ({ objectKey: objectKey,bucketType: bucketType }) => {
+const DocumentViewer: React.FC<CertificateViewerProps> = ({ objectKey, bucketType }) => {
   const [certificateUrl, setCertificateUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const cacheKey = `${bucketType}:${objectKey}`;
 
   useEffect(() => {
     const fetchCertificateUrl = async () => {
@@ -21,10 +27,23 @@ const DocumentViewer: React.FC<CertificateViewerProps> = ({ objectKey: objectKey
         return;
       }
 
+      // Check if we have a valid cached URL
+      const cachedData = urlCache.get(cacheKey);
+      const now = Date.now();
+      
+      if (cachedData && (now - cachedData.timestamp) < CACHE_EXPIRY_MS) {
+        setCertificateUrl(cachedData.url);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
         const url = await documentStreamingApi.getSignedUrl(bucketType, objectKey);
         setCertificateUrl(url);
+        
+        // Cache the URL with timestamp
+        urlCache.set(cacheKey, { url, timestamp: now });
       } catch (err) {
         console.error('Failed to get certificate URL:', err);
         setError('Failed to load certificate');
@@ -34,7 +53,7 @@ const DocumentViewer: React.FC<CertificateViewerProps> = ({ objectKey: objectKey
     };
 
     fetchCertificateUrl();
-  }, [objectKey]);
+  }, [objectKey, bucketType, cacheKey]);
 
   if (isLoading) {
     return (
