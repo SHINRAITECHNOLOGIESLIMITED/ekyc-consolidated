@@ -6,7 +6,8 @@ import { Agent } from "@/types/models";
 import { Alert } from "@cloudscape-design/components";
 import { useParams } from "next/navigation";
 import React from "react";
-import AgentDetails from "../AgentDetails";
+import BusinessAgentDetails from "../BusinessAgentDetails";
+import IndividualAgentDetails from "../IndividualAgentDetails";
 
 const AgentDetailsPage: React.FC = () => {
   const params = useParams();
@@ -25,7 +26,8 @@ const AgentDetailsPage: React.FC = () => {
     title: "Agent",
     primaryKey: agentId,
     fetcher: (agentId: string) => fetchAgent(agentId),
-    itemDetails: AgentDetails,
+    itemDetails:(item: Agent) => {if (item.agentType == "Business") return BusinessAgentDetails(item);
+    return IndividualAgentDetails(item)},
   };
 
   return <Details {...detailsParams} />;

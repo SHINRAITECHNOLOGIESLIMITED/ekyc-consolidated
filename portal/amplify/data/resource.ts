@@ -77,6 +77,7 @@ const schema = a.schema({
       passportPhotoUrl: a.string(),
       nationalIdCardUrl: a.string(),
       companyCertificateUrl: a.string(),
+      gender: a.string(),
       dateOfBirth: a.string(),
       businessNumber: a.string(),
       kycStatus: a.string().required(),

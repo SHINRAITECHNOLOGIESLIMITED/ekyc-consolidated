@@ -18,6 +18,7 @@ States:
           gender: '{% $states.input.gender %}'
     Assign:
       registration: '{% $states.input %}'
+      idValidation: '{% $parse($states.result.Payload.body) %}'
       nationalIdValidation: '{% $parse($states.result.Payload.body) %}'
     Next: UpdateNationalIDValidated
   UpdateNationalIDValidated:
@@ -134,6 +135,7 @@ States:
       FunctionName: ${Certification}
       Payload:
         httpMethod: POST
+        path: /certification/customer_registration
         body:
           registration: '{% $registration %}'
           nationalIdValidation: '{% $nationalIdValidation %}'

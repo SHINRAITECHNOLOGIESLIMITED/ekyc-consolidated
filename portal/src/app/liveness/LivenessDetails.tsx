@@ -10,7 +10,7 @@ import {
   SpaceBetween,
   StatusIndicator,
 } from "@cloudscape-design/components";
-import Image from "next/image";
+import { StorageImage } from "@aws-amplify/ui-react-storage";
 
 const LivenessSessionDetails = ( session : LivenessSession) => {
   // Parse audit images from JSON string
@@ -58,14 +58,11 @@ const LivenessSessionDetails = ( session : LivenessSession) => {
           <div>
             <Box variant="awsui-key-label">Reference Image</Box>
             <Box padding="s">
-              <div style={{ position: "relative", width: "300px", height: "300px" }}>
-                <Image 
-                  src={session.reference_image} 
-                  alt="Reference" 
-                  fill
-                  style={{ objectFit: "contain" }}
-                />
-              </div>
+              <StorageImage 
+                path={session.reference_image}
+                alt="Reference"
+                style={{ width: "300px", height: "300px", objectFit: "contain" }}
+              />
             </Box>
           </div>
         )}
@@ -76,17 +73,12 @@ const LivenessSessionDetails = ( session : LivenessSession) => {
             <Box padding="s">
               <SpaceBetween size="s" direction="horizontal">
                 {auditImages.map((imageUrl: string, index: number) => (
-                  <div 
-                    key={index} 
-                    style={{ position: "relative", width: "150px", height: "150px", margin: "5px" }}
-                  >
-                    <Image 
-                      src={imageUrl} 
-                      alt={`Audit image ${index + 1}`} 
-                      fill
-                      style={{ objectFit: "contain" }}
-                    />
-                  </div>
+                  <StorageImage 
+                    key={index}
+                    path={imageUrl}
+                    alt={`Audit image ${index + 1}`}
+                    style={{ width: "150px", height: "150px", objectFit: "contain", margin: "5px" }}
+                  />
                 ))}
               </SpaceBetween>
             </Box>
