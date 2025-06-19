@@ -1,6 +1,7 @@
 "use client";
 
 import { Customer } from "@/types/models";
+import CertificateViewer from "@/components/CertificateViewer";
 import {
   Box,
   ColumnLayout,
@@ -137,6 +138,13 @@ const CustomerDetails = (customer: Customer) => (
         </SpaceBetween>
       </ColumnLayout>
     </Container>
+
+    {/* Certificate Viewer */}
+    {customer.kycCertificateS3Path && (
+      <Container header={<Header variant="h2">KYC Certificate Preview</Header>}>
+        <CertificateViewer certificateKey={customer.kycCertificateS3Path} />
+      </Container>
+    )}
   </SpaceBetween>
 );
 

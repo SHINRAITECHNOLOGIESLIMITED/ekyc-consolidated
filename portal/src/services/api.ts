@@ -67,7 +67,32 @@ export const eKYCApi = {
         });
         return response.json();
     },
-
-    
 };
+class DocumentStreamingApi {
+    private headers: Promise<Record<string, string>>;
 
+    constructor() {
+        this.headers = getAuthHeaders();
+    }
+
+    async getSignedUrl(bucketType: string, documentKey: string): Promise<string> {
+        const headers = await this.headers;
+        const response = await fetch(`${API_CONFIG.API_BASE_URL}/stream/${bucketType}/${documentKey}`, {
+            method: 'GET',
+            headers
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (!data.presignedUrl) {
+            throw new Error('Presigned URL not found in response');
+        }
+        
+        return data.presignedUrl;
+    }
+}
+
+export const documentStreamingApi = new DocumentStreamingApi();

@@ -1,16 +1,16 @@
 import json
 import os
 import logging
-import base64
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 # Configure logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize S3 client
-s3_client = boto3.client('s3')
+# Initialize S3 client with Signature Version 4
+s3_client = boto3.client('s3', config=Config(signature_version='s3v4'))
 
 # Get bucket names from environment variables
 KYC_DOCUMENTS_BUCKET = os.environ.get('KYCDOCUMENTSBUCKET_NAME')
@@ -23,21 +23,6 @@ BUCKET_MAPPING = {
     'liveness': FACE_LIVENESS_BUCKET,
     'certification': CERTIFICATION_BUCKET
 }
-
-# MIME type mapping
-MIME_TYPES = {
-    '.pdf': 'application/pdf',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.tiff': 'image/tiff',
-    '.tif': 'image/tiff'
-}
-
-def get_mime_type(file_path):
-    """Determine MIME type based on file extension"""
-    file_ext = os.path.splitext(file_path.lower())[1]
-    return MIME_TYPES.get(file_ext, 'application/octet-stream')
 
 def make_error_response(status_code, message, error=None):
     """Create a standardized error response"""
@@ -80,27 +65,34 @@ def handler(event, context):
         bucket_name = BUCKET_MAPPING[bucket_type]
         
         try:
-            # Get the object from S3
-            response = s3_client.get_object(Bucket=bucket_name, Key=document_key)
+            # Check if object exists
+            s3_client.head_object(Bucket=bucket_name, Key=document_key)
             
-            # Read the content
-            content = response['Body'].read()
+            # Generate presigned URL with Signature Version 4 (expires in 1 hour)
+            presigned_url = s3_client.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': bucket_name, 
+                    'Key': document_key
+                },
+                ExpiresIn=3600
+            )
             
-            # Determine content type
-            content_type = get_mime_type(document_key)
+            logger.info(f"Generated presigned URL for {bucket_name}/{document_key}")
             
-            # Return binary response
+            # Return presigned URL
             return {
                 'statusCode': 200,
                 'headers': {
-                    'Content-Type': content_type,
-                    'Content-Disposition': f'inline; filename="{os.path.basename(document_key)}"',
+                    'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
                     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
                     'Access-Control-Allow-Methods': 'GET,OPTIONS'
                 },
-                'body': base64.b64encode(content).decode('utf-8'),
-                'isBase64Encoded': True
+                'body': json.dumps({
+                    'presignedUrl': presigned_url,
+                    'expiresIn': 3600
+                })
             }
             
         except ClientError as e:

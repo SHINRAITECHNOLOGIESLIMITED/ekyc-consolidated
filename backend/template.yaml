@@ -83,29 +83,7 @@ Resources:
           X-Amz-Security-Token'''
         AllowMethods: '''GET, POST, OPTIONS'''
         MaxAge: 60
-      BinaryMediaTypes:
-        - 'application/pdf'
-        - 'image/jpeg'
-        - 'image/png'
-        - 'image/tiff'
-        - '*/*'
       OpenApiVersion: 3.0.1
-  # Stage deployment without authorization
-  # ApiGatewayStage:
-  #   Type: AWS::ApiGateway::Stage
-  #   Properties:
-  #     StageName: Stage
-  #     Description: Stage environment without authorization
-  #     RestApiId: !Ref ApiGateway
-  #     DeploymentId: !Ref ApiGatewayDeployment
-  #     Variables:
-  #       Environment: stage
-
-  # ApiGatewayDeployment:
-  #   Type: AWS::ApiGateway::Deployment
-  #   Properties:
-  #     RestApiId: !Ref ApiGateway
-  #     Description: Deployment for Stage environment
 
   AuthorizerFn:
     Type: AWS::Serverless::Function

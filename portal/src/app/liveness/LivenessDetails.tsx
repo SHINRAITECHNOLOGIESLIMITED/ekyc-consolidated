@@ -1,7 +1,9 @@
 "use client";
 
+import { documentStreamingApi } from "@/services/api";
 import { LivenessSession } from "@/types/models";
 import { formatDateTime, formatPercentage } from "@/utils/formatters";
+import Image from "next/image";
 import {
   Box,
   ColumnLayout,
@@ -9,18 +11,53 @@ import {
   Header,
   SpaceBetween,
   StatusIndicator,
+  Spinner,
 } from "@cloudscape-design/components";
-import { StorageImage } from "@aws-amplify/ui-react-storage";
+import { useEffect, useState } from "react";
 
-const LivenessSessionDetails = ( session : LivenessSession) => {
-  // Parse audit images from JSON string
-  const auditImages = session.audit_images ? JSON.parse(session.audit_images as string) : [];
+const getSignedUrl = async (objectkey: string): Promise<string> => {
+  try {
+    return await documentStreamingApi.getSignedUrl("liveness", objectkey);
+  } catch (error) {
+    console.error('Failed to get signed URL:', error);
+    return '';
+  }
+};
+
+const LivenessSessionDetails = (session: LivenessSession) => {
+  const [referenceImageUrl, setReferenceImageUrl] = useState<string>('');
+  const [auditImageUrls, setAuditImageUrls] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+
+
+  useEffect(() => {
+    const fetchUrls = async () => {
+      setIsLoading(true);
+      if (session.reference_image) {
+        const refUrl = await getSignedUrl(session.reference_image);
+        setReferenceImageUrl(refUrl);
+      }
+      
+      if (session.audit_images) {
+        const auditImages = JSON.parse(session.audit_images as string);
+        if (auditImages.length > 0) {
+          const auditUrls = await Promise.all(auditImages.map(getSignedUrl));
+          setAuditImageUrls(auditUrls);
+        }
+      }
+      
+      setIsLoading(false);
+    };
+    
+    fetchUrls();
+  }, [session.reference_image, session.audit_images]);
 
   return (
     <Container>
       <SpaceBetween size="l">
         <Header variant="h1">Liveness Session Details</Header>
-        
+
         <ColumnLayout columns={2} variant="text-grid">
           <SpaceBetween size="l">
             <div>
@@ -53,36 +90,56 @@ const LivenessSessionDetails = ( session : LivenessSession) => {
             </div>
           </SpaceBetween>
         </ColumnLayout>
-        
-        {session.reference_image && (
-          <div>
-            <Box variant="awsui-key-label">Reference Image</Box>
-            <Box padding="s">
-              <StorageImage 
-                path={session.reference_image}
-                alt="Reference"
-                style={{ width: "300px", height: "300px", objectFit: "contain" }}
-              />
-            </Box>
-          </div>
-        )}
-        
-        {auditImages.length > 0 && (
-          <div>
-            <Box variant="awsui-key-label">Audit Images</Box>
-            <Box padding="s">
-              <SpaceBetween size="s" direction="horizontal">
-                {auditImages.map((imageUrl: string, index: number) => (
-                  <StorageImage 
-                    key={index}
-                    path={imageUrl}
-                    alt={`Audit image ${index + 1}`}
-                    style={{ width: "150px", height: "150px", objectFit: "contain", margin: "5px" }}
+
+        {isLoading ? (
+          <Box textAlign="center">
+            <Spinner size="large" />
+          </Box>
+        ) : (
+          <>
+            {referenceImageUrl && (
+              <div>
+                <Box variant="awsui-key-label">Reference Image</Box>
+                <Box padding="s">
+                  <Image 
+                    src={referenceImageUrl} 
+                    alt="Reference" 
+                    width={300}
+                    height={200}
+                    style={{ objectFit: "contain" }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                    unoptimized
                   />
-                ))}
-              </SpaceBetween>
-            </Box>
-          </div>
+                </Box>
+              </div>
+            )}
+            
+            {auditImageUrls.length > 0 && (
+              <div>
+                <Box variant="awsui-key-label">Audit Images</Box>
+                <Box padding="s">
+                  <SpaceBetween size="s" direction="horizontal">
+                    {auditImageUrls.map((imageUrl: string, index: number) => (
+                      <Image 
+                        key={index}
+                        src={imageUrl} 
+                        alt={`Audit image ${index + 1}`} 
+                        width={150}
+                        height={100}
+                        style={{ objectFit: "contain", margin: "5px" }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                        unoptimized
+                      />
+                    ))}
+                  </SpaceBetween>
+                </Box>
+              </div>
+            )}
+          </>
         )}
       </SpaceBetween>
     </Container>
