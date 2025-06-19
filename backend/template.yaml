@@ -502,6 +502,46 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${FaceLivenessFn}
       RetentionInDays: 30
+  DocumentStreamingFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Streams documents directly from S3 through API Gateway
+      CodeUri: core/functions/document_streaming/src
+      Handler: app.handler
+      Environment:
+        Variables:
+          KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
+          LIVENESSCAPTUREBUCKET_BUCKET_NAME: !Ref FaceLivenessCaptureBucket
+          CERTIFICATION_BUCKET_NAME: !Ref CertificationBucket
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:ListBucket
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}
+                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
+                - !Sub arn:${AWS::Partition}:s3:::${FaceLivenessCaptureBucket}
+                - !Sub arn:${AWS::Partition}:s3:::${FaceLivenessCaptureBucket}/*
+                - !Sub arn:${AWS::Partition}:s3:::${CertificationBucket}
+                - !Sub arn:${AWS::Partition}:s3:::${CertificationBucket}/*
+      Events:
+        ApiGatewayPOSTfaceliveness:
+          Type: Api
+          Properties:
+            Path: /stream/{bucketType}/{documentKey+}
+            Method: GET
+            RestApiId: !Ref ApiGateway
+
+  DocumentStreamingFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${DocumentStreamingFn}
+      RetentionInDays: 30
   FaceLivenessResults:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -701,42 +741,6 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: expiry_time
         Enabled: true
-        
-  DocumentStreamingFn:
-    Type: AWS::Serverless::Function
-    Properties:
-      Description: Streams documents directly from S3 through API Gateway
-      CodeUri: core/functions/document_streaming/src
-      Handler: app.handler
-      Environment:
-        Variables:
-          KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
-          LIVENESSCAPTUREBUCKET_BUCKET_NAME: !Ref FaceLivenessCaptureBucket
-          CERTIFICATION_BUCKET_NAME: !Ref CertificationBucket
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - Statement:
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-                - s3:ListBucket
-              Resource:
-                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}
-                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
-                - !Sub arn:${AWS::Partition}:s3:::${FaceLivenessCaptureBucket}
-                - !Sub arn:${AWS::Partition}:s3:::${FaceLivenessCaptureBucket}/*
-                - !Sub arn:${AWS::Partition}:s3:::${CertificationBucket}
-                - !Sub arn:${AWS::Partition}:s3:::${CertificationBucket}/*
-      Layers:
-        - !Ref PortalProjectionLayer
-
-  DocumentStreamingFnLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${DocumentStreamingFn}
-      RetentionInDays: 30
 Metadata:
   AWS::Composer::Groups:
     Group2:
