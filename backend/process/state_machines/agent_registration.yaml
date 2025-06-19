@@ -5,11 +5,15 @@ States:
     Type: Choice
     QueryLanguage: "JSONata"
     Choices:
-      - Condition: '{% $state.input.agentType = "Individual" %}'
+      - Condition: '{% $states.input.agentType = "Individual" %}'
         Next: National ID Document Validation
-      - Condition: '{% $state.input.agentType = "Business" %}'
+      - Condition: '{% $states.input.agentType = "Business" %}'
         Next: CR12 Document Validation
-    Default: National ID Document Validation
+    Default: Unknown Agent Type Failure
+  Unknown Agent Type Failure:
+    Type: Fail
+    Error: UnknownAgentType
+    Cause: unknown agentType
   CR12 Document Validation:
     Type: Task
     QueryLanguage: "JSONata"
@@ -20,14 +24,12 @@ States:
         httpMethod: POST
         path: /document/nationalid
         body:
-          uploadedDocumentUrl: '{% $states.input.nationalIdCardUrl %}'
-          idNumber: '{% $states.input.idNumber %}'
-          fullNames: '{% $states.input.name %}'
-          dateOfBirth: '{% $states.input.dateOfBirth %}'
+          uploadedDocumentUrl: '{% $states.input.companyCertificateUrl %}'
+          businessNumber: '{% $states.input.businessNumber %}'
+          businessName: '{% $states.input.name %}'
     Assign:
       registration: '{% $states.input %}'
       cr12Validation: '{% $parse($states.result.Payload.body) %}'
-      nationalIdValidation: '{% $parse($states.result.Payload.body) %}'
     Next: UpdateCR12Validated
   UpdateCR12Validated:
     Type: Task
@@ -54,10 +56,8 @@ States:
         path: /certification/business_agent_registration
         body:
           registration: '{% $registration %}'
-          nationalIdValidation: '{% $nationalIdValidation %}'
-          idVerification: '{% $idVerification %}'
-          taxPayerVerification: '{% $taxPayerVerification %}'
-          backgroundCheck: '{% $backgroundCheck %}'
+          cr12Validation: '{% $cr12Validation %}'
+          
     Assign:
       certification: '{% $parse($states.result.Payload.body) %}'
     Retry:

@@ -285,7 +285,16 @@ def create_business_agent_certificate(data):
                     "businessNumber": {"type": "string"},
                     "pinNumber": {"type": "string"}
                 },
-                "required": ["name", "idNumber"]
+                "required": ["name", "businessNumber"]
+            },
+            "cr12Validation": {
+                "type": "object",
+                "properties": {
+                    "message": {"type": "string"},
+                    "error": {"type": "string"},
+                    "results": {"type": "object"}
+                },
+                "required": ["message"]
             },
 
         },
@@ -302,12 +311,12 @@ def create_business_agent_certificate(data):
         identifier = registration["agentId"]
         # Create PDF certificate
         pdf_buffer = generate_business_kyc_certificate("Business Agent", identifier,
-                                                       registration, cr12Validation=cr12Validation)
+                                                       registration, cr12Validation)
 
         # Generate S3 path for the certificate
-        id_number = registration['idNumber']
+        businessNumber = registration['businessNumber']
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        s3_key = f"business_agents_ekyc_certificates/{id_number}/{identifier}_{timestamp}_certificate.pdf"
+        s3_key = f"business_agents_ekyc_certificates/{businessNumber}/{identifier}_{timestamp}_certificate.pdf"
 
         # Upload to S3
         s3_client.put_object(
@@ -548,17 +557,10 @@ def generate_business_kyc_certificate(certificateType, identifier, registration,
             70, y_position, f"Name: {registration.get('name', 'N/A')}")
         y_position -= 20
         pdf.drawString(
-            70, y_position, f"ID Number: {registration.get('idNumber', 'N/A')}")
+            70, y_position, f"Business Number: {registration.get('businessNumber', 'N/A')}")
         y_position -= 20
         pdf.drawString(
             70, y_position, f"PIN Number: {registration.get('pinNumber', 'N/A')}")
-        y_position -= 20
-        if 'gender' in registration:
-            pdf.drawString(
-                70, y_position, f"Gender: {registration.get('gender', 'N/A')}")
-            y_position -= 20
-        pdf.drawString(
-            70, y_position, f"Date of Birth: {registration.get('dateOfBirth', 'N/A')}")
 
         # Add verification results
         y_position -= 40
