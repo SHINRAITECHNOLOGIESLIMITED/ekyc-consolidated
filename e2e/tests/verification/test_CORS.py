@@ -7,7 +7,7 @@ expected_headers = {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Api-Key, X-Amz-Date, X-Amz-Security-Token',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
         }
 
 class TestCORSVerification(unittest.TestCase):
