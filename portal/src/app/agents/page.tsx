@@ -4,7 +4,8 @@ import DocumentForm from "@/components/DocumentForm";
 import Listing, { ListingProps } from "@/components/Listing";
 import { fetchAgents } from "@/services/DataService";
 import type { Agent } from "@/types/models";
-import AgentDetails from "./AgentDetails";
+import IndividualAgentDetails from "./IndividualAgentDetails";
+import BusinessAgentDetails from "./BusinessAgentDetails";
 
 const columnDefinitions = [
   {
@@ -31,6 +32,11 @@ const columnDefinitions = [
     id: "idNumber",
     header: "ID Number",
     cell: (item: Agent) => item.idNumber || "-",
+  },
+   {
+    id: "gender",
+    header: "Gender",
+    cell: (item: Agent) => item.gender,
   },
   {
     id: "dateOfBirth",
@@ -61,7 +67,9 @@ const listingProps: ListingProps<Agent> = {
   columnDefinitions,
   itemKey: (item: Agent) => item.agentId.toString(),
   itemDetailsLink: (item: Agent) => `agents/${item.agentId}`,
-  renderItemDetails: (item: Agent) => AgentDetails(item),
+  renderItemDetails: (item: Agent) => {if (item.agentType == "Business") return BusinessAgentDetails(item);
+    return IndividualAgentDetails(item)
+  },
   actions: [
     {
       id: "individual-agent-reg",
@@ -113,6 +121,7 @@ const IndividualAgentForm: React.FC = () => (
         required: true,
         placeholder: "23667272",
       },
+      { id: "gender", label: "Gender", type: "text", required: true, placeholder: "Female" },
       {
         id: "dateOfBirth",
         label: "Date of Birth",

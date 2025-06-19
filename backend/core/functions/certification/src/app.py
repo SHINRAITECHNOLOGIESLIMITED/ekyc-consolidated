@@ -144,7 +144,7 @@ def create_customer_certificate(data):
         # Generate S3 path for the certificate
         id_number = registration['idNumber']
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        s3_key = f"customer_ekyc_certificates/{id_number}/{timestamp}_certificate.pdf"
+        s3_key = f"customer_ekyc_certificates/{id_number}/{identifier}_{timestamp}_certificate.pdf"
 
         # Upload to S3
         s3_client.put_object(
@@ -179,6 +179,7 @@ def create_individual_agent_certificate(data):
                     "name": {"type": "string"},
                     "pinNumber": {"type": "string"},
                     "idNumber": {"type": "string"},
+                    "gender": {"type": "string"},
                     "passportPhotoUrl": {"type": "string"},
                     "nationalIdCardUrl": {"type": "string"},
                     "dateOfBirth": {"type": "string"},
@@ -249,7 +250,7 @@ def create_individual_agent_certificate(data):
         # Generate S3 path for the certificate
         id_number = registration['idNumber']
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        s3_key = f"individual_agents_ekyc_certificates/{id_number}/{timestamp}_certificate.pdf"
+        s3_key = f"individual_agents_ekyc_certificates/{id_number}/{identifier}_{timestamp}_certificate.pdf"
 
         # Upload to S3
         s3_client.put_object(
@@ -300,13 +301,13 @@ def create_business_agent_certificate(data):
         cr12Validation = data['cr12Validation']
         identifier = registration["agentId"]
         # Create PDF certificate
-        pdf_buffer = generate_kyc_certificate("Business Agent", identifier,
-                                              registration, cr12Validation=cr12Validation)
+        pdf_buffer = generate_business_kyc_certificate("Business Agent", identifier,
+                                                       registration, cr12Validation=cr12Validation)
 
         # Generate S3 path for the certificate
         id_number = registration['idNumber']
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        s3_key = f"business_agents_ekyc_certificates/{id_number}/{timestamp}_certificate.pdf"
+        s3_key = f"business_agents_ekyc_certificates/{id_number}/{identifier}_{timestamp}_certificate.pdf"
 
         # Upload to S3
         s3_client.put_object(
@@ -333,165 +334,297 @@ def generate_kyc_certificate(certificateType, identifier, registration, id_valid
     """
     Generate a PDF KYC certificate based on verification results
     """
-    buffer = BytesIO()
-    pdf = canvas.Canvas(buffer)
+    try:
+        buffer = BytesIO()
+        pdf = canvas.Canvas(buffer)
 
-    # Set up the document
-    pdf.setTitle(f"{certificateType} eKYC Certificate")
+        # Set up the document
+        pdf.setTitle(f"{certificateType} eKYC Certificate")
 
-    # Add header
-    pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawCentredString(300, 770, "KYC VERIFICATION CERTIFICATE")
-    pdf.setFont("Helvetica", 12)
-    pdf.drawCentredString(
-        300, 750, f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        # Add header
+        pdf.setFont("Helvetica-Bold", 16)
+        pdf.drawCentredString(300, 770, "KYC VERIFICATION CERTIFICATE")
+        pdf.setFont("Helvetica", 12)
+        pdf.drawCentredString(
+            300, 750, f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-    # Add customer information
-    pdf.setFont("Helvetica-Bold", 14)
-    pdf.drawString(50, 700, f"{certificateType} Information")
-    pdf.setFont("Helvetica", 12)
+        # Add customer information
+        pdf.setFont("Helvetica-Bold", 14)
+        pdf.drawString(50, 700, f"{certificateType} Information")
+        pdf.setFont("Helvetica", 12)
 
-    y_position = 680
-    pdf.drawString(
-        70, y_position, f"{certificateType} Identifier: {identifier}")
-    y_position -= 20
-    pdf.drawString(70, y_position, f"Name: {registration.get('name', 'N/A')}")
-    y_position -= 20
-    pdf.drawString(
-        70, y_position, f"ID Number: {registration.get('idNumber', 'N/A')}")
-    y_position -= 20
-    pdf.drawString(
-        70, y_position, f"PIN Number: {registration.get('pinNumber', 'N/A')}")
-    y_position -= 20
-    if 'gender' in registration:
+        y_position = 680
         pdf.drawString(
-            70, y_position, f"Gender: {registration.get('gender', 'N/A')}")
+            70, y_position, f"{certificateType} Identifier: {identifier}")
         y_position -= 20
-    pdf.drawString(
-        70, y_position, f"Date of Birth: {registration.get('dateOfBirth', 'N/A')}")
-
-    # Add verification results
-    y_position -= 40
-    pdf.setFont("Helvetica-Bold", 14)
-    pdf.drawString(50, y_position, "Verification Results")
-    pdf.setFont("Helvetica", 12)
-
-    # National ID validation
-    y_position -= 30
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(70, y_position, "National ID Validation:")
-    pdf.setFont("Helvetica", 12)
-    y_position -= 20
-    pdf.drawString(
-        90, y_position, f"Status: {id_validation.get('message', 'N/A')}")
-    if 'error' in id_validation:
+        pdf.drawString(
+            70, y_position, f"Name: {registration.get('name', 'N/A')}")
         y_position -= 20
-        error_text = f"Error: {id_validation.get('error', 'N/A')}"
-        y_position = wrap_text(pdf, error_text, 90, y_position, 450)
-    if 'results' in id_validation:
-        id_results = id_validation.get('results', {})
-        checks = id_results.get('matchResults', {})
-        for check in checks:
+        pdf.drawString(
+            70, y_position, f"ID Number: {registration.get('idNumber', 'N/A')}")
+        y_position -= 20
+        pdf.drawString(
+            70, y_position, f"PIN Number: {registration.get('pinNumber', 'N/A')}")
+        y_position -= 20
+        if 'gender' in registration:
+            pdf.drawString(
+                70, y_position, f"Gender: {registration.get('gender', 'N/A')}")
+            y_position -= 20
+        pdf.drawString(
+            70, y_position, f"Date of Birth: {registration.get('dateOfBirth', 'N/A')}")
+
+        # Add verification results
+        y_position -= 40
+        pdf.setFont("Helvetica-Bold", 14)
+        pdf.drawString(50, y_position, "Verification Results")
+        pdf.setFont("Helvetica", 12)
+
+        # National ID validation
+        y_position -= 30
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(70, y_position, "National ID Validation:")
+        pdf.setFont("Helvetica", 12)
+        y_position -= 20
+        pdf.drawString(
+            90, y_position, f"Status: {id_validation.get('message', 'N/A')}")
+        if 'error' in id_validation:
+            y_position -= 20
+            error_text = f"Error: {id_validation.get('error', 'N/A')}"
+            y_position = wrap_text(pdf, error_text, 90, y_position, 450)
+        if 'results' in id_validation:
+            id_results = id_validation.get('results', {})
+            checks = id_results.get('matchResults', {})
+            for check in checks:
+                y_position -= 20
+                pdf.drawString(
+                    90, y_position, f"{check}: {'Ok' if checks['result'] else 'Nok'}")
+            id_val_results = id_results.get('matchResults', {})
+            for key, value in id_val_results.items():
+                y_position -= 20
+                pdf.drawString(
+                    90, y_position, f"{key}: {get_verification_status(value) if isinstance(value, dict) else str(value)}")
+
+        # ID verification
+        y_position -= 30
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(70, y_position, "ID Verification:")
+        pdf.setFont("Helvetica", 12)
+        if 'error' in id_verification:
+            y_position -= 20
+            error_text = f"Error: {id_verification.get('error', 'N/A')}"
+            y_position = wrap_text(pdf, error_text, 90, y_position, 450)
+        if 'results' in id_verification:
+            id_results = id_verification.get('results', {})
             y_position -= 20
             pdf.drawString(
-                90, y_position, f"{check}: {'Ok' if checks['result'] else 'Nok'}")
-        id_val_results = id_results.get('matchResults', {})
-        for key, value in id_val_results.items():
+                90, y_position, f"ID Number: {get_verification_status(id_results.get('idNumber', {}))}")
             y_position -= 20
             pdf.drawString(
-                90, y_position, f"{key}: {get_verification_status(value) if isinstance(value, dict) else str(value)}")
-
-    # ID verification
-    y_position -= 30
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(70, y_position, "ID Verification:")
-    pdf.setFont("Helvetica", 12)
-    if 'error' in id_verification:
-        y_position -= 20
-        error_text = f"Error: {id_verification.get('error', 'N/A')}"
-        y_position = wrap_text(pdf, error_text, 90, y_position, 450)
-    if 'results' in id_verification:
-        id_results = id_verification.get('results', {})
-        y_position -= 20
-        pdf.drawString(
-            90, y_position, f"ID Number: {get_verification_status(id_results.get('idNumber', {}))}")
-        y_position -= 20
-        pdf.drawString(
-            90, y_position, f"Full Names: {get_verification_status(id_results.get('fullNames', {}))}")
-        y_position -= 20
-        pdf.drawString(
-            90, y_position, f"Date of Birth: {get_verification_status(id_results.get('dateOfBirth', {}))}")
-        y_position -= 20
-        pdf.drawString(
-            90, y_position, f"Gender: {get_verification_status(id_results.get('gender', {}))}")
-
-    # Tax verification
-    y_position -= 30
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(70, y_position, "Tax Verification:")
-    pdf.setFont("Helvetica", 12)
-    if 'error' in tax_verification:
-        y_position -= 20
-        error_text = f"Error: {tax_verification.get('error', 'N/A')}"
-        y_position = wrap_text(pdf, error_text, 90, y_position, 450)
-    if 'results' in tax_verification:
-        tax_results = tax_verification.get('results', {})
-        y_position -= 20
-        pdf.drawString(
-            90, y_position, f"PIN: {get_verification_status(tax_results.get('pin', {}))}")
-        y_position -= 20
-        pdf.drawString(
-            90, y_position, f"Taxpayer Name: {get_verification_status(tax_results.get('taxPayerName', {}))}")
-
-    # Background check
-    y_position -= 30
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(70, y_position, "Background Check:")
-    pdf.setFont("Helvetica", 12)
-    if 'error' in background_check:
-        y_position -= 20
-        error_text = f"Error: {background_check.get('error', 'N/A')}"
-        y_position = wrap_text(pdf, error_text, 90, y_position, 450)
-    else:
-        y_position -= 20
-        pdf.drawString(
-            90, y_position, f"Status: {background_check.get('message', 'N/A')}")
-        y_position -= 20
-        pdf.drawString(
-            90, y_position, f"Entity Score: {background_check.get('EntityScore', 'N/A')}")
-        y_position -= 20
-        pdf.drawString(
-            90, y_position, f"Name Score: {background_check.get('BestNameScore', 'N/A')}")
-        y_position -= 20
-        pdf.drawString(
-            90, y_position, f"Country Score: {background_check.get('BestCountryScore', 'N/A')}")
-
-        # Add entity details if present
-        entity_details = background_check.get('entityDetails', [])
-        if entity_details:
+                90, y_position, f"Full Names: {get_verification_status(id_results.get('fullNames', {}))}")
             y_position -= 20
-            pdf.drawString(90, y_position, "Entity Details:")
-            # Limit to first 3 entities to avoid overflow
-            for i, entity in enumerate(entity_details[:3]):
-                y_position -= 15
-                entity_text = f"Entity {i+1}: {str(entity)}"
-                y_position = wrap_text(pdf, entity_text, 100, y_position, 440)
+            pdf.drawString(
+                90, y_position, f"Date of Birth: {get_verification_status(id_results.get('dateOfBirth', {}))}")
+            y_position -= 20
+            pdf.drawString(
+                90, y_position, f"Gender: {get_verification_status(id_results.get('gender', {}))}")
 
-    # Add certification statement
-    y_position -= 40
-    pdf.setFont("Helvetica-Oblique", 10)
-    cert_statement = f"This certificate confirms that the {certificateType.lower()}'s identity has been verified according to KYC requirements as above."
-    y_position = wrap_text(pdf, cert_statement, 50, y_position, 500)
+        # Tax verification
+        y_position -= 30
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(70, y_position, "Tax Verification:")
+        pdf.setFont("Helvetica", 12)
+        if 'error' in tax_verification:
+            y_position -= 20
+            error_text = f"Error: {tax_verification.get('error', 'N/A')}"
+            y_position = wrap_text(pdf, error_text, 90, y_position, 450)
+        if 'results' in tax_verification:
+            tax_results = tax_verification.get('results', {})
+            y_position -= 20
+            pdf.drawString(
+                90, y_position, f"PIN: {get_verification_status(tax_results.get('pin', {}))}")
+            y_position -= 20
+            pdf.drawString(
+                90, y_position, f"Taxpayer Name: {get_verification_status(tax_results.get('taxPayerName', {}))}")
 
-    # Add footer
-    pdf.setFont("Helvetica", 8)
-    pdf.drawString(
-        50, 50, f"Certificate ID: {registration.get('idNumber')}-{datetime.now().strftime('%Y%m%d%H%M%S')}")
-    pdf.drawString(50, 40, "This is a system-generated document.")
+        # Background check
+        y_position -= 30
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(70, y_position, "Background Check:")
+        pdf.setFont("Helvetica", 12)
+        if 'error' in background_check:
+            y_position -= 20
+            error_text = f"Error: {background_check.get('error', 'N/A')}"
+            y_position = wrap_text(pdf, error_text, 90, y_position, 450)
+        else:
+            y_position -= 20
+            pdf.drawString(
+                90, y_position, f"Status: {background_check.get('message', 'N/A')}")
+            y_position -= 20
+            pdf.drawString(
+                90, y_position, f"Entity Score: {background_check.get('EntityScore', 'N/A')}")
+            y_position -= 20
+            pdf.drawString(
+                90, y_position, f"Name Score: {background_check.get('BestNameScore', 'N/A')}")
+            y_position -= 20
+            pdf.drawString(
+                90, y_position, f"Country Score: {background_check.get('BestCountryScore', 'N/A')}")
 
-    pdf.save()
-    buffer.seek(0)
-    return buffer
+            # Add entity details if present
+            entity_details = background_check.get('entityDetails', [])
+            if entity_details:
+                y_position -= 20
+                pdf.drawString(90, y_position, "Entity Details:")
+                # Limit to first 3 entities to avoid overflow
+                for i, entity in enumerate(entity_details[:3]):
+                    y_position -= 15
+                    entity_text = f"Entity {i+1}: {str(entity)}"
+                    y_position = wrap_text(
+                        pdf, entity_text, 100, y_position, 440)
+
+        # Add certification statement
+        y_position -= 40
+        pdf.setFont("Helvetica-Oblique", 10)
+        cert_statement = f"This certificate confirms that the {certificateType.lower()}'s identity has been verified according to KYC requirements as above."
+        y_position = wrap_text(pdf, cert_statement, 50, y_position, 500)
+
+        # Add footer
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(
+            50, 50, f"Certificate ID: {registration.get('idNumber')}-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+        pdf.drawString(50, 40, "This is a system-generated document.")
+
+        pdf.save()
+        buffer.seek(0)
+        return buffer
+
+    except Exception as e:
+        logger.error(f"Error generating PDF certificate: {e}")
+        # Create a minimal error PDF
+        try:
+            buffer = BytesIO()
+            pdf = canvas.Canvas(buffer)
+            pdf.setFont("Helvetica-Bold", 16)
+            pdf.drawCentredString(300, 400, "CERTIFICATE GENERATION ERROR")
+            pdf.setFont("Helvetica", 12)
+            pdf.drawCentredString(300, 370, f"Error: {str(e)}")
+            pdf.drawCentredString(
+                300, 350, "Please contact support for assistance")
+            pdf.save()
+            buffer.seek(0)
+            return buffer
+        except Exception as fallback_error:
+            logger.error(f"Failed to create error PDF: {fallback_error}")
+            raise Exception(f"PDF generation failed: {e}")
+
+
+def generate_business_kyc_certificate(certificateType, identifier, registration, cr12_validation):
+    """
+    Generate a PDF KYC certificate based on verification results
+    """
+    try:
+        buffer = BytesIO()
+        pdf = canvas.Canvas(buffer)
+
+        # Set up the document
+        pdf.setTitle(f"{certificateType} eKYC Certificate")
+
+        # Add header
+        pdf.setFont("Helvetica-Bold", 16)
+        pdf.drawCentredString(300, 770, "KYC VERIFICATION CERTIFICATE")
+        pdf.setFont("Helvetica", 12)
+        pdf.drawCentredString(
+            300, 750, f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+        # Add customer information
+        pdf.setFont("Helvetica-Bold", 14)
+        pdf.drawString(50, 700, f"{certificateType} Information")
+        pdf.setFont("Helvetica", 12)
+
+        y_position = 680
+        pdf.drawString(
+            70, y_position, f"{certificateType} Identifier: {identifier}")
+        y_position -= 20
+        pdf.drawString(
+            70, y_position, f"Name: {registration.get('name', 'N/A')}")
+        y_position -= 20
+        pdf.drawString(
+            70, y_position, f"ID Number: {registration.get('idNumber', 'N/A')}")
+        y_position -= 20
+        pdf.drawString(
+            70, y_position, f"PIN Number: {registration.get('pinNumber', 'N/A')}")
+        y_position -= 20
+        if 'gender' in registration:
+            pdf.drawString(
+                70, y_position, f"Gender: {registration.get('gender', 'N/A')}")
+            y_position -= 20
+        pdf.drawString(
+            70, y_position, f"Date of Birth: {registration.get('dateOfBirth', 'N/A')}")
+
+        # Add verification results
+        y_position -= 40
+        pdf.setFont("Helvetica-Bold", 14)
+        pdf.drawString(50, y_position, "Verification Results")
+        pdf.setFont("Helvetica", 12)
+
+        # CR12 ID validation
+        y_position -= 30
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(70, y_position, "CR12 ID Validation:")
+        pdf.setFont("Helvetica", 12)
+        y_position -= 20
+        pdf.drawString(
+            90, y_position, f"Status: {cr12_validation.get('message', 'N/A')}")
+        if 'error' in cr12_validation:
+            y_position -= 20
+            error_text = f"Error: {cr12_validation.get('error', 'N/A')}"
+            y_position = wrap_text(pdf, error_text, 90, y_position, 450)
+        if 'results' in cr12_validation:
+            id_results = cr12_validation.get('results', {})
+            checks = id_results.get('matchResults', {})
+            for check in checks:
+                y_position -= 20
+                pdf.drawString(
+                    90, y_position, f"{check}: {'Ok' if checks['result'] else 'Nok'}")
+            id_val_results = id_results.get('matchResults', {})
+            for key, value in id_val_results.items():
+                y_position -= 20
+                pdf.drawString(
+                    90, y_position, f"{key}: {get_verification_status(value) if isinstance(value, dict) else str(value)}")
+
+        # Add certification statement
+        y_position -= 40
+        pdf.setFont("Helvetica-Oblique", 10)
+        cert_statement = f"This certificate confirms that the {certificateType.lower()}'s entity identity has been verified according to KYC requirements as above."
+        y_position = wrap_text(pdf, cert_statement, 50, y_position, 500)
+
+        # Add footer
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(
+            50, 50, f"Certificate ID: {registration.get('businessNumber')}-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+        pdf.drawString(50, 40, "This is a system-generated document.")
+
+        pdf.save()
+        buffer.seek(0)
+        return buffer
+
+    except Exception as e:
+        logger.error(f"Error generating PDF certificate: {e}")
+        # Create a minimal error PDF
+        try:
+            buffer = BytesIO()
+            pdf = canvas.Canvas(buffer)
+            pdf.setFont("Helvetica-Bold", 16)
+            pdf.drawCentredString(300, 400, "CERTIFICATE GENERATION ERROR")
+            pdf.setFont("Helvetica", 12)
+            pdf.drawCentredString(300, 370, f"Error: {str(e)}")
+            pdf.drawCentredString(
+                300, 350, "Please contact support for assistance")
+            pdf.save()
+            buffer.seek(0)
+            return buffer
+        except Exception as fallback_error:
+            logger.error(f"Failed to create error PDF: {fallback_error}")
+            raise Exception(f"PDF generation failed: {e}")
 
 
 def wrap_text(pdf, text, x, y, max_width, line_height=15):
@@ -501,7 +634,7 @@ def wrap_text(pdf, text, x, y, max_width, line_height=15):
     words = str(text).split(' ')
     lines = []
     current_line = ""
-    
+
     for word in words:
         test_line = current_line + (" " if current_line else "") + word
         if pdf.stringWidth(test_line) <= max_width:
@@ -510,13 +643,13 @@ def wrap_text(pdf, text, x, y, max_width, line_height=15):
             if current_line:
                 lines.append(current_line)
             current_line = word
-    
+
     if current_line:
         lines.append(current_line)
-    
+
     for i, line in enumerate(lines):
         pdf.drawString(x, y - (i * line_height), line)
-    
+
     return y - (len(lines) * line_height)
 
 

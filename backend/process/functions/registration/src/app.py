@@ -58,6 +58,7 @@ def register_agent(event_data):
             "name": {"type": "string"},
             "pinNumber": {"type": "string"},
             "idNumber": {"type": "string"},
+            "gender": {"type": "string"},
             "passportPhotoUrl": {"type": "string"},
             "nationalIdCardUrl": {"type": "string"},
             "companyCertificateUrl": {"type": "string"},
@@ -77,9 +78,13 @@ def register_agent(event_data):
                 if "businessNumber" in event_data:
                     raise Exception(
                         "businessNumber should not be supplied for Individual")
+                if not ("gender" in event_data):
+                    raise Exception(
+                        "gender should be supplied for Individual")
                 if not ("passportPhotoUrl" in event_data):
                     raise Exception(
                         "passportPhotoUrl should be supplied for Individual")
+
                 if not ("nationalIdCardUrl" in event_data):
                     raise Exception(
                         "nationalIdCardUrl should be supplied for Individual")
@@ -96,6 +101,10 @@ def register_agent(event_data):
                 if "idNumber" in event_data:
                     raise Exception(
                         "idNumber should not be supplied for Business")
+                if "gender" in event_data:
+                    raise Exception(
+                        "gender should not be supplied for Business")
+
                 if "passportPhotoUrl" in event_data:
                     raise Exception(
                         "passportPhotoUrl should not be supplied for Business")
