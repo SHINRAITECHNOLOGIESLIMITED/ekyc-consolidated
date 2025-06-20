@@ -191,6 +191,7 @@ States:
           firstName: '{% $split($registration.name, " ")[0] %}'
           lastName: '{% $split($registration.name, " ")[-1] %}'
           dateOfBirth: '{% $registration.dateOfBirth %}'
+          gender: '{% $registration.gender %}'
           nationalIdentificationNumber: '{% $registration.idNumber %}'
     Assign:
       backgroundCheck: '{% $parse($states.result.Payload.body) %}'
