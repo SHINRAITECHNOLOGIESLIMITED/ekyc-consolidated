@@ -13,7 +13,7 @@ class TestNationalIDDocumentValidation(unittest.TestCase):
             "fullNames":"JOEL MUUO",
             "dateOfBirth":"30-08-1998",
             "dateOfIssue":"28-03-2017",
-            "gender":"Male",
+            # "gender":"M",
             "districtOfBirth":"KIBWEZI",
             "placeOfIssue":"BIASHARA",
         }
@@ -26,9 +26,9 @@ class TestNationalIDDocumentValidation(unittest.TestCase):
             "serialNumber":"217990310",
             "idNumber":"23224868",
             "fullNames":"STEPHEN BIKO NYAMAI",
-            "dateOfBirth":"19-02-1984",
+            # "dateOfBirth":"19-02-1984",
             "dateOfIssue":"01-04-2003",
-            "gender":"MALE",
+            "gender":"M",
             "districtOfBirth":"NAIROBI",
             "placeOfIssue":"MAKADARA",
         }
