@@ -1,9 +1,9 @@
 release:
-  date: '2025-06-20'
+  date: '2025-07-07'
   last_commit: 7cb5e7190eee0658eb587e211d98ebc85fad376a
-  status: beta
+  status: alpha
 version:
   build: null
   major: 0
   minor: 1
-  patch: 1
+  patch: 2
