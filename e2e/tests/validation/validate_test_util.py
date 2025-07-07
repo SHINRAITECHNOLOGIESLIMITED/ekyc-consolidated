@@ -3,16 +3,17 @@ from pprint import pprint
 import sys
 from e2e.tests.config import *
 
-def validate_test(tester,payload,url):
-    response = post_with_auth(url, json= json.dumps(payload))
+
+def validate_test(tester, payload, url):
+    response = post_with_auth(url, json=json.dumps(payload))
     if response.status_code != 200:
-        print("\nResponse Body:",file=sys.stderr)
+        print("\nResponse Body:", file=sys.stderr)
         try:
             response_json = response.json()
-            pprint(response_json,stream=sys.stderr)
-            
+            pprint(response_json, stream=sys.stderr)
+
         except json.JSONDecodeError:
-            print(response.text,file=sys.stderr)
+            print(response.text, file=sys.stderr)
         tester.fail(f"Request failed with status code {response.status_code}")
     tester.assertEqual(response.status_code, 200)
     results = response.json()
@@ -21,14 +22,16 @@ def validate_test(tester,payload,url):
     tester.assertTrue("matchResults" in results)
     unmatched = []
     not_found = []
-    for field_name,match_result in results["matchResults"].items():
+    for field_name, match_result in results["matchResults"].items():
         if match_result["status"] == "Not Matched":
+            print(f"Not matched {field_name} . {match_result}")
             unmatched.append(field_name)
         if match_result["status"] == "Not Found":
             not_found.append(field_name)
     if unmatched or not_found:
+        message = ""
         if unmatched:
-            print("Not Matched ",  ",".join(unmatched), ")")
+            message += f"\nNot Matched: { ','.join(unmatched)}"
         if not_found:
-            print("Not Found ",  ",".join(not_found), ")")
-        tester.fail(f"Issues with Fields")
+            message += f"\nNot Found: { ','.join(not_found)}"
+        tester.fail(f"Issues with Fields. {message}")
