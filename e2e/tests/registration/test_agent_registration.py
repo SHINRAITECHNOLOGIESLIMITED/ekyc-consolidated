@@ -14,8 +14,8 @@ class TestAgentRegistration(unittest.TestCase):
             "pinNumber": "A008279496S",
             "idNumber": "32140017",
             "gender": "Female",
-            "passportPhotoUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/customer-registration/passportPhotoUrl/9d0556685ab002c09376c8b5832d8717123dd686.jpg",
-            "nationalIdCardUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/document/nationalid/uploadedDocumentUrl/e677499a43d2644ea635393c504b6e0027cc6fb7.png",
+            "passportPhotoUrl": "s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/effie1.jpg",
+            "nationalIdCardUrl": "s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/effies-ID.jpg",
             "dateOfBirth": "1994-12-19"
         }
         register_200_test(tester=self,
@@ -29,8 +29,8 @@ class TestAgentRegistration(unittest.TestCase):
             "pinNumber": "A015539643F",
             "idNumber": "27681984",
             "gender": "Female",
-            "passportPhotoUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/PHOTO-2025-05-22-16-00-57.jpg",
-            "nationalIdCardUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/PHOTO-2025-05-22-16-00-57.jpg",
+            "passportPhotoUrl": "s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/pesh.jpg",
+            "nationalIdCardUrl": "s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/PHOTO-2025-05-22-16-00-57.jpg",
             "dateOfBirth": "1990-05-26",
         }
         register_200_test(tester=self,
@@ -44,8 +44,8 @@ class TestAgentRegistration(unittest.TestCase):
             "pinNumber": "A005394549Z",
             "idNumber": "26465570",
             "gender": "Male",
-            "passportPhotoUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/b2d5f444-7081-70b4-d0ad-0fcbb5320bd3/customer-registration/passportPhotoUrl/fecfeb7833b8284b9e3979fa36dc1f8759d64127.jpg",
-            "nationalIdCardUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_NATIONAL_ID.pdf",
+            "passportPhotoUrl": "s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/Tim.jpg",
+            "nationalIdCardUrl": "s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/KENYAN_NATIONAL_ID.pdf",
             "dateOfBirth": "1988-01-13",
         }
         register_200_test(tester=self,
@@ -57,7 +57,7 @@ class TestAgentRegistration(unittest.TestCase):
             "agentType": "Business",
             "name": "DETALI INSURANCE AGENCY LIMITED",
             "pinNumber": "PVT-RXUMYGVQ",
-            "companyCertificateUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/c2a5e464-30b1-70e8-eeb0-8c196da88147/agent-registration/companyCertificateUrl/9bcb0e79dcd42f130f9b5d67d6ab2b0749a9aefb.pdf",
+            "companyCertificateUrl": "s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/CR12-003Sample.jpg",
             "businessNumber": "PVT-RXUMYGVQ"
         }
         register_200_test(tester=self,

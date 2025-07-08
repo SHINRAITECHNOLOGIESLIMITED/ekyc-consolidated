@@ -6,20 +6,24 @@ Description: |
 Parameters:
   AmplifyS3BucketName:
     Type: String
-    Default: amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
+    Default: amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou
     Description: Name of the Amplify S3 bucket where KYC documents are upload into by portal
   AmplifyDynamoDBCustomerRegistrationTable:
     Type: String
-    Default: Customer-y45h6ljj7rd6te7pyigqschiyy-NONE
+    Default: Customer-uroky5ewhjg6lmwnsirguiz3ke-NONE
     Description: Name of the Amplify DynamoDb Table with customer registrations
   AmplifyDynamoDBAgentRegistrationTable:
     Type: String
-    Default: Agent-y45h6ljj7rd6te7pyigqschiyy-NONE
+    Default: Agent-uroky5ewhjg6lmwnsirguiz3ke-NONE
     Description: Name of the Amplify DynamoDb Table with agent registrations
   AmplifyCognitoUserPoolId:
     Type: String
-    Default: eu-west-1_eMNIDFsxx
+    Default: eu-west-1_Ggp07MyBe
     Description: Cognito userpool id
+  IrelandCognitoUserPoolArn:
+    Type: String
+    Default: arn:aws:cognito-idp:eu-west-1:851725215817:userpool/eu-west-1_Ggp07MyBe
+    Description: Ireland Cognito User Pool ARN
   JubileeESBAPICredentials:
     Type: String
     Default: '{"username":"your-username","password":"your-password","business":"your-business","baseurl":"https://example.com"}'
@@ -227,6 +231,7 @@ Resources:
               Action:
                 - s3:GetObject
                 - s3:GetObjectVersion
+                - s3:HeadObject
                 - s3:ListBucket
                 - s3:ListBucketVersions
               Resource:

@@ -4,18 +4,18 @@ from e2e.tests.registration.register_test_util import register_200_test
 
 class TestCustomerRegistration(unittest.TestCase):
     URL=f"{APIGW_URL}/customer-registration"
-    def test_customer_joel(self):
+    def test_customer_effie(self):
         payload = {
-            "name": "JOEL MUUO",
-            "pinNumber":"A011797599Y",
-            "idNumber": "36296352",
-            "gender": "Male",
-            "dateOfBirth": "1998-08-30",
-            "passportPhotoUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/PHOTO-2025-05-22-16-00-57.jpg",
-            "nationalIdCardUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_NATIONAL_ID-9f0ea801f683f6c8314c9d7ad0e7a93ed01b9693.jpg",
-            "kraPinCardUrl": "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq.s3.eu-west-1.amazonaws.com/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KRA_PIN_CERTIFICATE-002samplekra.jpg"
+            "name": "EFFIE NJOKI NYAMBURA",
+            "pinNumber":"A008279496S",
+            "idNumber": "32140017",
+            "gender": "Female",
+            "dateOfBirth": "1994-12-19",
+            "passportPhotoUrl": "s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/effie1.jpg",
+            "nationalIdCardUrl": "s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/effies-ID.jpg",
+            "kraPinCardUrl": "s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/effies-KRA.jpg"
         }
-        register_200_test(tester= self, 
+        register_200_test(tester= self,
                       url= self.URL,
                       payload=payload)
 

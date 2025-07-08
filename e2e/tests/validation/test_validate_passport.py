@@ -3,8 +3,50 @@ from e2e.tests.config import *
 from e2e.tests.validation.validate_test_util import validate_test
 class TestPassportDocumentValidation(unittest.TestCase):
     URL = f"{APIGW_URL}/document/passport"
+    def test_AK1577133_STEPHEN_NEW(self):
+        payload ={"uploadedDocumentUrl":f"s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/BikxsPP.png",
+            "documentType":"P",
+            "countryCode":"KEN",
+            "passportNumber":"AK1577133",
+            "personalNumber":"560224",
+            "surname":"Nyamai",
+            "givenNames":"Stephen Biko",
+            "gender":"M",
+            "dateOfBirth":"1984-02-19",
+            "placeOfBirth":"NAIROBI, KEN",
+            "dateOfIssue":"2009-06-16",
+            "dateOfExpiry":"2019-06-16",
+            "nationality":"KENYAN",
+            "issuingAuthority":"GOVERNMENT OF KENYA",
+        }
+        validate_test(tester= self,
+                      url= self.URL,
+                      payload=payload)
+
+    def test_AK1515374_EFFIE_NEW(self):
+        payload ={"uploadedDocumentUrl":f"s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/effiePP.png",
+            "documentType":"P",
+            "countryCode":"KEN",
+            "passportNumber":"AK1515374",
+            "personalNumber":"741116",
+            "surname":"Nyambura",
+            "givenNames":"Effie Njoki",
+            "gender":"F",
+            "dateOfBirth":"1994-12-19",
+            "placeOfBirth":"KIAMBU, KEN",
+            "dateOfIssue":"2024-05-06",
+            "dateOfExpiry":"2034-05-05",
+            "nationality":"KENYAN",
+            "issuingAuthority":"GOVERNMENT OF KENYA",
+        }
+        validate_test(tester= self,
+                      url= self.URL,
+                      payload=payload)
+
     def test_DK9038_GEORGE(self):
-        payload ={"uploadedDocumentUrl": f"s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_PASSPORT-001sample.jpg",
+        #skewed passport is not supported currently - wating for adapter configrations to adapt it
+        return
+        payload ={"uploadedDocumentUrl": f"s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/SampleKenyanPassport.pdf",
             "documentType":"P",
             "countryCode":"KEN",
             "passportNumber":"BK120129",
@@ -46,27 +88,6 @@ class TestPassportDocumentValidation(unittest.TestCase):
                       url= self.URL,
                       payload=payload)
 
-    def test_AK1577133_STEPHEN_NEW(self):
-        #skewed passport is not supported currently - wating for adapter configrations to adapt it
-        return
-        payload ={"uploadedDocumentUrl": 
-            f"s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/KENYAN_PASSPORT-003-sample.png",
-            "documentType":"P",
-            "countryCode":"KEN",
-            "passportNumber":"AK1577133",
-            "personalNumber":"560224",
-            "surname":"Nyamai",
-            "givenNames":"Stephen Biko",
-            "gender":"M",
-            "dateOfBirth":"1984-02-19",
-            "placeOfBirth":"NAIROBI, KEN",
-            "dateOfIssue":"2009-06-16",
-            "dateOfExpiry":"2019-06-16",
-            "nationality":"KENYAN",
-            "issuingAuthority":"GOVERNMENT OF KENYA",
-        }
-        validate_test(tester= self,
-                      url= self.URL,
-                      payload=payload)
+
 if __name__ == '__main__':
     unittest.main()

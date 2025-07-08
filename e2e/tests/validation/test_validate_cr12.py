@@ -7,9 +7,9 @@ from e2e.tests.validation.validate_test_util import validate_test
 class TestCertificateOfIncorporationDocumentValidation(unittest.TestCase):
     URL = f"{APIGW_URL}/document/cr12"
     def test_PVTRXUMYGVQ_DETALI(self):
-        payload ={"uploadedDocumentUrl": f"s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/8205e4c4-80a1-7006-b6ef-6aa6c57e84ec/effie-upload-test/CERTIFICATE_OF_INCORPORATION-003Sample.jpg",
+        payload ={"uploadedDocumentUrl": f"s3://amplify-d3fnn95gtf6qnl-ma-kycdocumentsbucketa4bf11-sh8x1somscou/uploaded_kyc_docs/CR12-003Sample.jpg",
             "businessNumber":"PVT-RXUMYGVQ",
-            "businessName":"DETALI INSURANCE AGENCY LIMITED", 
+            "businessName":"DETALI INSURANCE AGENCY LIMITED",
         }
         validate_test(tester= self,
                       url= self.URL,

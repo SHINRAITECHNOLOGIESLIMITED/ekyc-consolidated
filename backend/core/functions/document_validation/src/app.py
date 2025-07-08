@@ -80,6 +80,7 @@ def copy_to_s3(url, object_key):
         # if url is s3 ulr use s3_client to download the document
         if url.startswith('s3://'):
             bucket_name, key = url[5:].split('/', 1)
+            logger.info(f"Accessing S3: bucket={bucket_name}, key={key}")
             try:
                 content_type = s3_client.head_object(Bucket=bucket_name, Key=key)['ContentType']
                 s3_client.download_file(bucket_name, key, file_name)
