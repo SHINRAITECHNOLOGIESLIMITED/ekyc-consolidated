@@ -6,19 +6,19 @@ Description: |
 Parameters:
   AmplifyS3BucketName:
     Type: String
-    Default: amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq
+    Default: amplify-dnw02dhxhpu7h-mai-kycdocumentsbucketa4bf11-wxhjqijfdzdz
     Description: Name of the Amplify S3 bucket where KYC documents are upload into by portal
   AmplifyDynamoDBCustomerRegistrationTable:
     Type: String
-    Default: Customer-y45h6ljj7rd6te7pyigqschiyy-NONE
+    Default: Customer-7s7oergeyvc23jelhjmhef4uki-NONE
     Description: Name of the Amplify DynamoDb Table with customer registrations
   AmplifyDynamoDBAgentRegistrationTable:
     Type: String
-    Default: Agent-y45h6ljj7rd6te7pyigqschiyy-NONE
+    Default: Agent-7s7oergeyvc23jelhjmhef4uki-NONE
     Description: Name of the Amplify DynamoDb Table with agent registrations
   AmplifyCognitoUserPoolId:
     Type: String
-    Default: eu-west-1_eMNIDFsxx
+    Default: eu-west-1_zn9jaZ2zR
     Description: Cognito userpool id
   JubileeESBAPICredentials:
     Type: String

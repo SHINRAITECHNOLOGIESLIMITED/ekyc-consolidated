@@ -3,8 +3,7 @@ from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 import requests
 
-APIGW_URL = "https://65mz46ka57.execute-api.eu-west-1.amazonaws.com/Prod"
-# APIGW_URL = "https://uppjkm7ere.execute-api.eu-west-1.amazonaws.com/Prod"
+APIGW_URL = "https://k4m88497ad.execute-api.eu-west-1.amazonaws.com/Prod"
 DOCUMENTS_URL = "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/"
 
 PROFILE = "shinrai.devpost"
