@@ -2,6 +2,8 @@
 version = 0.1
 
 [default.deploy.parameters]
+resolve_s3 = true
+profile = "shinrai.devpost"
 stack_name = "jubilee-ekyc-backend"
 region = "eu-west-1"
 confirm_changeset = true
