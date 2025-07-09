@@ -20,6 +20,10 @@ Parameters:
     Type: String
     Default: eu-west-1_zn9jaZ2zR
     Description: Cognito userpool id
+  IrelandCognitoUserPoolArn:
+    Type: String
+    Default: arn:aws:cognito-idp:eu-west-1:851725215817:userpool/eu-west-1_Ggp07MyBe
+    Description: Ireland Cognito User Pool ARN
   JubileeESBAPICredentials:
     Type: String
     Default: '{"username":"your-username","password":"your-password","business":"your-business","baseurl":"https://example.com"}'
@@ -227,6 +231,7 @@ Resources:
               Action:
                 - s3:GetObject
                 - s3:GetObjectVersion
+                - s3:HeadObject
                 - s3:ListBucket
                 - s3:ListBucketVersions
               Resource:

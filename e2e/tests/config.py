@@ -2,6 +2,7 @@ import boto3
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 import requests
+import os
 
 APIGW_URL = "https://k4m88497ad.execute-api.eu-west-1.amazonaws.com/Prod"
 DOCUMENTS_URL = "s3://amplify-d2896e60a8d7f8-ma-kycdocumentsbucketa4bf11-aae1vuopf1xq/uploaded_kyc_docs/"
@@ -15,6 +16,10 @@ SERVICE = "execute-api"
 session = boto3.Session(profile_name=PROFILE)
 credentials = session.get_credentials()
 
+# Verify credentials are available
+if not credentials:
+    raise ValueError(f"No credentials found for profile: {PROFILE}")
+
 def get_auth_headers(method, url, body=None):
     """Generate SigV4 authentication headers for API Gateway"""
     request = AWSRequest(method=method, url=url, data=body, headers={"Content-Type": "application/json"})
@@ -23,5 +28,7 @@ def get_auth_headers(method, url, body=None):
 
 # Override the standard requests.post method to include SigV4 authentication
 def post_with_auth(url, json=None):
-    auth_headers = get_auth_headers('POST', url, body=json)
-    return requests.post(url, json=json, headers=auth_headers)
+    import json as json_module
+    body = json_module.dumps(json) if json else None
+    auth_headers = get_auth_headers('POST', url, body=body)
+    return requests.post(url, json=json, headers=auth_headers, verify=False)
