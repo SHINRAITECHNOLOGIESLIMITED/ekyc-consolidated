@@ -78,4 +78,7 @@ pytest_cache/
 htmlcov/
 
 #word documents background files
-.~docx
+.~docx.claude_context.md
+
+# Project-specific docs we don't want in Git
+backend/CONSOLIDATED_KYC_IMPLEMENTATION_PLAN.md
