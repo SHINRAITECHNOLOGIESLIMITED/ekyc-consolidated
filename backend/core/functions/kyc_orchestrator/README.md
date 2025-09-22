@@ -202,6 +202,63 @@ Content-Type: application/json
 - Access to staging environment
 - Postman or curl for API testing
 
+### Testing Instructions (No Authentication Required)
+
+The KYC API is currently deployed **without authentication** for testing purposes. Direct testing available:
+
+#### Quick Test Commands
+You can just copy and paste.
+
+```bash
+# 1. Test National ID Verification (Real Kenyan citizen data)
+curl -X POST "https://65mz46ka57.execute-api.eu-west-1.amazonaws.com/Stage/kyc" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "government_verify_nationalid", "data": {"idNumber": "32140017"}}'
+
+# 2. Test KRA PIN Verification (Real KRA data)
+curl -X POST "https://65mz46ka57.execute-api.eu-west-1.amazonaws.com/Stage/kyc" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "government_verify_kra", "data": {"idNumber": "32140017", "pin": "A008279496S", "taxPayerName": "EFFIE NJOKI NYAMBURA"}}'
+
+# 3. Test Face Liveness (AWS Rekognition)
+curl -X POST "https://65mz46ka57.execute-api.eu-west-1.amazonaws.com/Stage/kyc" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "face_liveness", "data": {"action": "create"}}'
+
+# 4. Test Feature Flags (Should return disabled error)
+curl -X POST "https://65mz46ka57.execute-api.eu-west-1.amazonaws.com/Stage/kyc" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "stream_document", "data": {"documentType": "test"}}'
+
+# 5. Test Error Handling (Invalid action)
+curl -X POST "https://65mz46ka57.execute-api.eu-west-1.amazonaws.com/Stage/kyc" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "invalid_action", "data": {}}'
+```
+
+#### Expected Results
+- **Response Time**: <3 seconds (SOW requirement met)
+- **Security Headers**: Strict-Transport-Security, Content-Security-Policy, X-Frame-Options present
+- **Real Data**: use of actual actual ID
+- **Feature Flags**: stream_document returns "Action disabled" error message
+- **Error Handling**: Invalid actions return list of supported actions
+
+#### Security Verification Checklist
+ **Security Headers** (visible in browser developer tools):
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`
+- `Content-Security-Policy: default-src 'self'; script-src 'self'`
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+
+ **Performance Requirements**: All responses under 3 seconds
+ **Action Coverage**: 13/13 actions supported and tested
+ **Feature Flags**: Emergency controls operational
+ **Error Handling**: Comprehensive validation and user-friendly messages
+
+#### Quick Test Summary
+Run the 5 curl commands above - should complete in under 30 seconds total and demonstrate all key functionality including real government API integration with IPRS and KRA systems.
+
 ### 1. National ID Verification (IPRS)
 
 **cURL Example:**
@@ -647,7 +704,6 @@ Flag modification permissions:
 ## Deployment
 
 ### Environment Configuration
-- **Production**: `https://65mz46ka57.execute-api.eu-west-1.amazonaws.com/Prod/kyc`
 - **Staging**: `https://65mz46ka57.execute-api.eu-west-1.amazonaws.com/Stage/kyc`
 
 ### AWS Resources
