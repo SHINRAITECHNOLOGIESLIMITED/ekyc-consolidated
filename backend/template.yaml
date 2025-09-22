@@ -155,6 +155,58 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${RegistrationFn}
       RetentionInDays: 30
+
+  KYCOrchestratorFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Consolidated KYC processing endpoint - orchestrates complete KYC workflow
+      CodeUri: core/functions/kyc_orchestrator/src
+      Handler: app.handler
+      MemorySize: 1024
+      Timeout: 900
+      Environment:
+        Variables:
+          DOCUMENT_VALIDATION_FUNCTION: !Ref DocumentValidationFn
+          GOVERNMENT_VERIFICATION_FUNCTION: !Ref GovernmentVerificationFn
+          BACKGROUND_CHECK_FUNCTION: !Ref BackgroundChecksFn
+          FACE_LIVENESS_FUNCTION: !Ref FaceLivenessFn
+          CERTIFICATION_FUNCTION: !Ref CertificationFn
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+      Events:
+        ApiGatewayPOSTKYCProcess:
+          Type: Api
+          Properties:
+            Path: /kyc/process
+            Method: POST
+            RestApiId: !Ref ApiGateway
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource:
+                - !GetAtt DocumentValidationFn.Arn
+                - !GetAtt GovernmentVerificationFn.Arn
+                - !GetAtt BackgroundChecksFn.Arn
+                - !GetAtt FaceLivenessFn.Arn
+                - !GetAtt CertificationFn.Arn
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref PortalGraphQLSecret
+      Layers:
+        - !Ref PortalProjectionLayer
+
+  KYCOrchestratorFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${KYCOrchestratorFn}
+      RetentionInDays: 30
+
   DocumentValidationFn:
     Type: AWS::Serverless::Function
     Properties:
