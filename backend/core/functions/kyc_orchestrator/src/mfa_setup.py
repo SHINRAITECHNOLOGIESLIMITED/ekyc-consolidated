@@ -181,6 +181,6 @@ def initialize_2fa_on_deployment():
 logger.info("Initializing 2FA configuration...")
 initialization_result = initialize_2fa_on_deployment()
 if initialization_result['success']:
-    logger.info("✅ 2FA initialization completed successfully")
+    logger.info("2FA initialization completed successfully")
 else:
-    logger.warning(f"⚠️ 2FA initialization failed: {initialization_result.get('error', 'Unknown error')}")
+    logger.warning(f"2FA initialization failed: {initialization_result.get('error', 'Unknown error')}")
