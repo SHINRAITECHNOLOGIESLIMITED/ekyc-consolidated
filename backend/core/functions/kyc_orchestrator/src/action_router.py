@@ -97,7 +97,7 @@ class ActionRouter:
                     'error_code': 'ACTION_DISABLED',
                     'fallback_available': True
                 },
-                request_context=request_context
+                request_id=request_context.get('request_id') if request_context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code(action, error_response)
             return secure_response_factory(status_code, error_response)
@@ -112,7 +112,7 @@ class ActionRouter:
                     'valid_actions': list(self.action_handlers.keys()),
                     'error_code': 'INVALID_ACTION'
                 },
-                request_context=request_context
+                request_id=request_context.get('request_id') if request_context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code(action, error_response)
             return secure_response_factory(status_code, error_response)
@@ -437,7 +437,7 @@ class ActionRouter:
                     action='validate_nationalid',
                     success=False,
                     error=result['error'],
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('validate_nationalid', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -448,7 +448,7 @@ class ActionRouter:
                 action='validate_nationalid',
                 success=True,
                 result=validation_response,
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('validate_nationalid', standardized_result)
             return secure_response_factory(status_code, standardized_result)
@@ -462,7 +462,7 @@ class ActionRouter:
                     'message': f'Validation processing error: {str(e)}',
                     'error_code': 'VALIDATION_PROCESSING_ERROR'
                 },
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('validate_nationalid', error_response)
             return secure_response_factory(status_code, error_response)
@@ -481,7 +481,7 @@ class ActionRouter:
                     action='validate_passport',
                     success=False,
                     error=result['error'],
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('validate_passport', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -491,7 +491,7 @@ class ActionRouter:
                 action='validate_passport',
                 success=True,
                 result=validation_response,
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('validate_passport', standardized_result)
             return secure_response_factory(status_code, standardized_result)
@@ -505,7 +505,7 @@ class ActionRouter:
                     'message': f'Validation processing error: {str(e)}',
                     'error_code': 'VALIDATION_PROCESSING_ERROR'
                 },
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('validate_passport', error_response)
             return secure_response_factory(status_code, error_response)
@@ -524,7 +524,7 @@ class ActionRouter:
                     action='validate_krapincertificate',
                     success=False,
                     error=result['error'],
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('validate_krapincertificate', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -534,7 +534,7 @@ class ActionRouter:
                 action='validate_krapincertificate',
                 success=True,
                 result=validation_response,
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('validate_krapincertificate', standardized_result)
             return secure_response_factory(status_code, standardized_result)
@@ -548,7 +548,7 @@ class ActionRouter:
                     'message': f'Validation processing error: {str(e)}',
                     'error_code': 'VALIDATION_PROCESSING_ERROR'
                 },
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('validate_krapincertificate', error_response)
             return secure_response_factory(status_code, error_response)
@@ -567,7 +567,7 @@ class ActionRouter:
                     action='validate_cr12',
                     success=False,
                     error=result['error'],
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('validate_cr12', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -577,7 +577,7 @@ class ActionRouter:
                 action='validate_cr12',
                 success=True,
                 result=validation_response,
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('validate_cr12', standardized_result)
             return secure_response_factory(status_code, standardized_result)
@@ -591,7 +591,7 @@ class ActionRouter:
                     'message': f'Validation processing error: {str(e)}',
                     'error_code': 'VALIDATION_PROCESSING_ERROR'
                 },
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('validate_cr12', error_response)
             return secure_response_factory(status_code, error_response)
@@ -610,7 +610,7 @@ class ActionRouter:
                     action='government_verify_nationalid',
                     success=False,
                     error=result['error'],
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('government_verify_nationalid', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -620,7 +620,7 @@ class ActionRouter:
                 action='government_verify_nationalid',
                 success=True,
                 result=verification_response,
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('government_verify_nationalid', standardized_result)
             return secure_response_factory(status_code, standardized_result)
@@ -634,7 +634,7 @@ class ActionRouter:
                     'message': f'Verification processing error: {str(e)}',
                     'error_code': 'VERIFICATION_PROCESSING_ERROR'
                 },
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('government_verify_nationalid', error_response)
             return secure_response_factory(status_code, error_response)
@@ -653,7 +653,7 @@ class ActionRouter:
                     action='government_verify_passport',
                     success=False,
                     error=result['error'],
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('government_verify_passport', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -663,7 +663,7 @@ class ActionRouter:
                 action='government_verify_passport',
                 success=True,
                 result=verification_response,
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('government_verify_passport', standardized_result)
             return secure_response_factory(status_code, standardized_result)
@@ -677,7 +677,7 @@ class ActionRouter:
                     'message': f'Verification processing error: {str(e)}',
                     'error_code': 'VERIFICATION_PROCESSING_ERROR'
                 },
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('government_verify_passport', error_response)
             return secure_response_factory(status_code, error_response)
@@ -696,7 +696,7 @@ class ActionRouter:
                     action='government_verify_kra',
                     success=False,
                     error=result['error'],
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('government_verify_kra', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -706,7 +706,7 @@ class ActionRouter:
                 action='government_verify_kra',
                 success=True,
                 result=verification_response,
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('government_verify_kra', standardized_result)
             return secure_response_factory(status_code, standardized_result)
@@ -720,7 +720,7 @@ class ActionRouter:
                     'message': f'Verification processing error: {str(e)}',
                     'error_code': 'VERIFICATION_PROCESSING_ERROR'
                 },
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('government_verify_kra', error_response)
             return secure_response_factory(status_code, error_response)
@@ -739,7 +739,7 @@ class ActionRouter:
                     action='background_check',
                     success=False,
                     error=result['error'],
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('background_check', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -749,7 +749,7 @@ class ActionRouter:
                 action='background_check',
                 success=True,
                 result=check_response,
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('background_check', standardized_result)
             return secure_response_factory(status_code, standardized_result)
@@ -763,7 +763,7 @@ class ActionRouter:
                     'message': f'Background check processing error: {str(e)}',
                     'error_code': 'BACKGROUND_CHECK_PROCESSING_ERROR'
                 },
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('background_check', error_response)
             return secure_response_factory(status_code, error_response)
@@ -782,7 +782,7 @@ class ActionRouter:
                     action='face_liveness',
                     success=False,
                     error=result['error'],
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('face_liveness', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -792,7 +792,7 @@ class ActionRouter:
                 action='face_liveness',
                 success=True,
                 result=liveness_response,
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('face_liveness', standardized_result)
             return secure_response_factory(status_code, standardized_result)
@@ -806,7 +806,7 @@ class ActionRouter:
                     'message': f'Face liveness processing error: {str(e)}',
                     'error_code': 'FACE_LIVENESS_PROCESSING_ERROR'
                 },
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('face_liveness', error_response)
             return secure_response_factory(status_code, error_response)
@@ -825,7 +825,7 @@ class ActionRouter:
                     action='agent_registration',
                     success=False,
                     error=result['error'],
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('agent_registration', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -835,7 +835,7 @@ class ActionRouter:
                 action='agent_registration',
                 success=True,
                 result=registration_response,
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('agent_registration', standardized_result)
             return secure_response_factory(status_code, standardized_result)
@@ -849,7 +849,7 @@ class ActionRouter:
                     'message': f'Agent registration processing error: {str(e)}',
                     'error_code': 'AGENT_REGISTRATION_PROCESSING_ERROR'
                 },
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('agent_registration', error_response)
             return secure_response_factory(status_code, error_response)
@@ -868,7 +868,7 @@ class ActionRouter:
                     action='customer_registration',
                     success=False,
                     error=result['error'],
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('customer_registration', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -878,7 +878,7 @@ class ActionRouter:
                 action='customer_registration',
                 success=True,
                 result=registration_response,
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('customer_registration', standardized_result)
             return secure_response_factory(status_code, standardized_result)
@@ -892,7 +892,7 @@ class ActionRouter:
                     'message': f'Customer registration processing error: {str(e)}',
                     'error_code': 'CUSTOMER_REGISTRATION_PROCESSING_ERROR'
                 },
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('customer_registration', error_response)
             return secure_response_factory(status_code, error_response)
@@ -915,7 +915,7 @@ class ActionRouter:
                         'message': 'Missing required parameters: bucketType and documentKey',
                         'error_code': 'MISSING_PARAMETERS'
                     },
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('stream_document', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -928,7 +928,7 @@ class ActionRouter:
                     action='stream_document',
                     success=False,
                     error=result['error'],
-                    request_context=context
+                    request_id=context.get('request_id') if context else None
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('stream_document', error_response)
                 return secure_response_factory(status_code, error_response)
@@ -938,7 +938,7 @@ class ActionRouter:
                 action='stream_document',
                 success=True,
                 result=streaming_response,
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('stream_document', standardized_result)
             return secure_response_factory(status_code, standardized_result)
@@ -952,7 +952,7 @@ class ActionRouter:
                     'message': f'Document streaming processing error: {str(e)}',
                     'error_code': 'DOCUMENT_STREAMING_PROCESSING_ERROR'
                 },
-                request_context=context
+                request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('stream_document', error_response)
             return secure_response_factory(status_code, error_response)
