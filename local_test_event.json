@@ -1,5 +1,0 @@
-{
-  "httpMethod": "POST",
-  "path": "/kyc/process",
-  "body": "{\"processType\":\"customer\",\"personalData\":{\"name\":\"John Doe\",\"idNumber\":\"12345678\",\"pinNumber\":\"A123456789M\",\"dateOfBirth\":\"1990-01-15\"},\"documents\":{\"nationalIdUrl\":\"https://example.com/test-id.jpg\"},\"options\":{\"includeFaceLiveness\":false,\"includeBackgroundCheck\":false,\"generateCertificate\":false,\"skipValidationErrors\":true}}"
-}
