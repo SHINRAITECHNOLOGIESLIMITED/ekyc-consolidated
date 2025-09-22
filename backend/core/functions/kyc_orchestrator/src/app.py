@@ -47,7 +47,8 @@ def handler(event, context):
             }
 
             # Check if this is a new action-based request or legacy workflow
-            if 'action' in data and should_use_unified_endpoint(request_context):
+            # For /kyc endpoint, always use action-based routing if action is present (SOW requirement)
+            if 'action' in data and (path.endswith('/kyc') or should_use_unified_endpoint(request_context)):
                 logger.info("Processing action-based request via unified endpoint")
                 return handle_action_based_request(data, request_context)
             else:
