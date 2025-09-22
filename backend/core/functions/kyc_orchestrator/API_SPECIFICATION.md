@@ -628,7 +628,7 @@ X-XSS-Protection: 1; mode=block
 
 ### Test Endpoint
 ```
-POST https://api-staging.jubilee-insurance.co.ke/kyc
+
 ```
 
 ### Sample Test Requests
@@ -639,15 +639,13 @@ Test requests and responses are available in the `/tests` directory of this repo
 ## Support
 
 For API support and questions:
-- **Documentation**: https://docs.jubilee-insurance.co.ke/kyc-api
-- **Support Email**: api-support@jubilee-insurance.co.ke
-- **Developer Portal**: https://developer.jubilee-insurance.co.ke
+- **Documentation**: Shinrai Technologies 
 
 ---
 
 ## Changelog
 
-### Version 1.0.0 (2024-01-01)
+### Version 1.0.0 (2025-09-22)
 - Initial release of unified action-based KYC API
 - Support for 12+ KYC operations
 - SOW-compliant security enhancements
