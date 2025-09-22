@@ -4,6 +4,8 @@ from aws_lambda_powertools import Logger, Tracer
 from orchestrator import KYCOrchestrator
 from validators import validate_kyc_request
 from portal import Portal
+from security import secure_response_factory, SecurityManager
+from mfa_setup import handle_2fa_management
 
 logger = Logger()
 tracer = Tracer()
@@ -35,15 +37,21 @@ def handler(event, context):
 
             return handle_kyc_processing(data)
 
+    elif http_method == 'POST' and path.endswith('/kyc/2fa'):
+        # SOW Day 1 requirement: 2FA management endpoint
+        try:
+            logger.info("Processing 2FA management request")
+            return handle_2fa_management(event)
+
         except json.JSONDecodeError:
             logger.error("Error decoding JSON body")
-            return make_response(400, {'message': 'Invalid JSON body', 'error': 'Request body is not valid JSON'})
+            return secure_response_factory(400, {'message': 'Invalid JSON body', 'error': 'Request body is not valid JSON'})
         except Exception as e:
             logger.error(f"An unexpected error occurred in handler: {e}")
-            return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
+            return secure_response_factory(500, {'message': 'Internal Server Error', 'error': str(e)})
     else:
         logger.error(f'Method Not Allowed - received {http_method} for path {path}')
-        return make_response(405, {'message': 'Method Not Allowed'})
+        return secure_response_factory(405, {'message': 'Method Not Allowed'})
 
 
 def handle_kyc_processing(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -56,7 +64,7 @@ def handle_kyc_processing(data: Dict[str, Any]) -> Dict[str, Any]:
         validation_result = validate_kyc_request(data)
         if not validation_result['valid']:
             logger.error(f"Schema validation failed: {validation_result['errors']}")
-            return make_response(400, {
+            return secure_response_factory(400, {
                 'message': 'Request validation failed',
                 'error': validation_result['errors']
             })
@@ -71,15 +79,15 @@ def handle_kyc_processing(data: Dict[str, Any]) -> Dict[str, Any]:
 
         # Return response based on overall status
         if result.get('overallStatus') == 'success':
-            return make_response(200, result)
+            return secure_response_factory(200, result)
         elif result.get('overallStatus') == 'partial':
-            return make_response(207, result)  # Multi-Status for partial success
+            return secure_response_factory(207, result)  # Multi-Status for partial success
         else:
-            return make_response(400, result)
+            return secure_response_factory(400, result)
 
     except Exception as e:
         logger.error(f"Error occurred during KYC processing: {e}")
-        return make_response(500, {
+        return secure_response_factory(500, {
             'message': 'KYC processing failed',
             'error': str(e),
             'overallStatus': 'failed'
@@ -90,14 +98,23 @@ def make_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     """
     Helper function to format responses for API Gateway.
     Maintains consistency with existing function response patterns.
+    Includes SOW-required security headers for vulnerability mitigation.
     """
     response = {
         'statusCode': status_code,
         'headers': {
             'Content-Type': 'application/json',
+            # CORS headers
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Api-Key, X-Amz-Date, X-Amz-Security-Token',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            # SOW Day 1 Required Security Headers
+            'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+            'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self'; object-src 'none'; frame-ancestors 'none';",
+            'X-Frame-Options': 'DENY',
+            'X-Content-Type-Options': 'nosniff',
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
+            'X-XSS-Protection': '1; mode=block'
         },
         'body': json.dumps(body, default=str)  # Handle datetime serialization
     }

@@ -159,7 +159,7 @@ Resources:
   KYCOrchestratorFn:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Consolidated KYC processing endpoint - orchestrates complete KYC workflow
+      Description: Consolidated KYC processing endpoint - orchestrates complete KYC workflow with SOW security features
       CodeUri: core/functions/kyc_orchestrator/src
       Handler: app.handler
       MemorySize: 1024
@@ -172,11 +172,34 @@ Resources:
           FACE_LIVENESS_FUNCTION: !Ref FaceLivenessFn
           CERTIFICATION_FUNCTION: !Ref CertificationFn
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+          COGNITO_USER_POOL_ID: !Ref AmplifyCognitoUserPoolId
+      Policies:
+        - LambdaInvokeFunction
+        - Statement:
+            - Sid: CognitoMFAManagement
+              Effect: Allow
+              Action:
+                - cognito-idp:AdminSetUserMFAPreference
+                - cognito-idp:UpdateUserPool
+                - cognito-idp:DescribeUserPool
+                - cognito-idp:AssociateSoftwareToken
+                - cognito-idp:VerifySoftwareToken
+                - cognito-idp:SetUserMFAPreference
+                - cognito-idp:GetUser
+                - cognito-idp:AdminGetUser
+              Resource:
+                - !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${AmplifyCognitoUserPoolId}
       Events:
         ApiGatewayPOSTKYCProcess:
           Type: Api
           Properties:
             Path: /kyc/process
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTKYC2FA:
+          Type: Api
+          Properties:
+            Path: /kyc/2fa
             Method: POST
             RestApiId: !Ref ApiGateway
       Policies:
