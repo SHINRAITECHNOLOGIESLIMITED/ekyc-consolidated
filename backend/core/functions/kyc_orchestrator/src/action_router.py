@@ -139,7 +139,7 @@ class ActionRouter:
                     success=True,
                     result=result,
                     request_id=request_context.get('requestId') if request_context else None,
-                    execution_time=execution_time
+                    processing_time=execution_time / 1000  # Convert ms to seconds
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code(action, standardized_result)
                 return secure_response_factory(status_code, standardized_result)
