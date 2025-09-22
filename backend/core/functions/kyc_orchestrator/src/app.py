@@ -54,6 +54,13 @@ def handler(event, context):
                 logger.info("Processing legacy workflow request")
                 return handle_kyc_processing(data)
 
+        except json.JSONDecodeError:
+            logger.error("Error decoding JSON body")
+            return secure_response_factory(400, {'message': 'Invalid JSON body', 'error': 'Request body is not valid JSON'})
+        except Exception as e:
+            logger.error(f"An unexpected error occurred in handler: {e}")
+            return secure_response_factory(500, {'message': 'Internal Server Error', 'error': str(e)})
+
     elif http_method == 'POST' and path.endswith('/kyc/2fa'):
         # SOW Day 1 requirement: 2FA management endpoint
         try:
