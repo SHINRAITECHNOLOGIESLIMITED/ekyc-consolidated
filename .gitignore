@@ -79,6 +79,7 @@ htmlcov/
 
 #word documents background files
 .~docx.claude_context.md
+.claude_context.md
 
 # Project-specific docs we don't want in Git
 backend/CONSOLIDATED_KYC_IMPLEMENTATION_PLAN.md
