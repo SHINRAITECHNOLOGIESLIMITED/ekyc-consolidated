@@ -13,6 +13,12 @@ from typing import Dict, Any, Optional, Callable
 from aws_lambda_powertools import Logger
 from security import secure_response_factory
 from response_schemas import create_standardized_response, HTTPStatusMapper
+from feature_flags import (
+    should_use_action_routing,
+    is_action_enabled,
+    FeatureFlag,
+    FeatureFlagDecorator
+)
 
 logger = Logger()
 
@@ -70,6 +76,27 @@ class ActionRouter:
             Standardized action response
         """
         logger.info(f"Routing action: {action}")
+
+        # Check if action-based routing is enabled via feature flag
+        if not should_use_action_routing(request_context):
+            logger.info("Action-based routing disabled via feature flag, falling back to legacy workflow")
+            return self._handle_workflow_orchestration(data, request_context)
+
+        # Check if specific action is enabled
+        if not is_action_enabled(action, request_context):
+            logger.info(f"Action {action} disabled via feature flag")
+            error_response = create_standardized_response(
+                action=action,
+                success=False,
+                error={
+                    'message': f'Action {action} is currently disabled',
+                    'error_code': 'ACTION_DISABLED',
+                    'fallback_available': True
+                },
+                request_context=request_context
+            )
+            status_code = HTTPStatusMapper.map_result_to_status_code(action, error_response)
+            return secure_response_factory(status_code, error_response)
 
         # Validate action exists
         if action not in self.action_handlers:

@@ -1,0 +1,257 @@
+{
+  "feature_flags": {
+    "action_based_routing": {
+      "description": "Enable action-based routing for KYC requests",
+      "strategy": "gradual",
+      "start_time": "2024-01-01T00:00:00Z",
+      "end_time": "2024-01-07T23:59:59Z",
+      "start_percentage": 0,
+      "end_percentage": 100,
+      "enabled": true,
+      "metadata": {
+        "created_by": "kyc_team",
+        "deployment_phase": "day_3",
+        "sow_requirement": "unified_endpoint_routing"
+      }
+    },
+
+    "unified_kyc_endpoint": {
+      "description": "Enable unified /kyc endpoint with action parameters",
+      "strategy": "percentage",
+      "percentage": 25,
+      "enabled": true,
+      "whitelist": ["test_client_1", "staging_client", "development"],
+      "metadata": {
+        "created_by": "kyc_team",
+        "deployment_phase": "day_3",
+        "sow_requirement": "single_kyc_endpoint"
+      }
+    },
+
+    "document_validation_actions": {
+      "description": "Enable document validation actions (nationalid, passport, kra, cr12)",
+      "strategy": "canary",
+      "canary_users": ["test_user_1", "admin_user"],
+      "canary_clients": ["test_client_1", "staging_client"],
+      "enabled": true,
+      "metadata": {
+        "actions_included": ["validate_nationalid", "validate_passport", "validate_krapincertificate", "validate_cr12"],
+        "priority": "high"
+      }
+    },
+
+    "government_verification_actions": {
+      "description": "Enable government verification actions",
+      "strategy": "percentage",
+      "percentage": 10,
+      "enabled": false,
+      "metadata": {
+        "actions_included": ["government_verify_nationalid", "government_verify_passport", "government_verify_kra"],
+        "priority": "medium",
+        "notes": "Requires government API integration"
+      }
+    },
+
+    "background_check_action": {
+      "description": "Enable background check action",
+      "strategy": "disabled",
+      "enabled": false,
+      "metadata": {
+        "reason": "Pending third-party provider integration",
+        "estimated_ready": "day_5"
+      }
+    },
+
+    "face_liveness_action": {
+      "description": "Enable face liveness detection action",
+      "strategy": "whitelist",
+      "whitelist": ["test_client_1"],
+      "enabled": true,
+      "metadata": {
+        "requires_aws_rekognition": true,
+        "priority": "high"
+      }
+    },
+
+    "registration_actions": {
+      "description": "Enable agent and customer registration actions",
+      "strategy": "percentage",
+      "percentage": 50,
+      "enabled": true,
+      "metadata": {
+        "actions_included": ["agent_registration", "customer_registration"],
+        "priority": "medium"
+      }
+    },
+
+    "document_streaming_action": {
+      "description": "Enable document streaming from S3",
+      "strategy": "enabled",
+      "enabled": true,
+      "metadata": {
+        "low_risk": true,
+        "existing_functionality": true
+      }
+    },
+
+    "async_processing": {
+      "description": "Enable asynchronous processing for long-running operations",
+      "strategy": "percentage",
+      "percentage": 20,
+      "enabled": true,
+      "metadata": {
+        "performance_optimization": true,
+        "requires_sqs": true
+      }
+    },
+
+    "enhanced_validation": {
+      "description": "Enable enhanced validation with additional security checks",
+      "strategy": "canary",
+      "canary_clients": ["premium_client_1", "enterprise_client"],
+      "enabled": true,
+      "metadata": {
+        "security_enhancement": true,
+        "performance_impact": "medium"
+      }
+    },
+
+    "caching_enabled": {
+      "description": "Enable caching for repeated validation requests",
+      "strategy": "gradual",
+      "start_time": "2024-01-03T00:00:00Z",
+      "end_time": "2024-01-05T23:59:59Z",
+      "start_percentage": 10,
+      "end_percentage": 80,
+      "enabled": true,
+      "metadata": {
+        "performance_optimization": true,
+        "cache_ttl_minutes": 30
+      }
+    },
+
+    "enhanced_2fa": {
+      "description": "Enable enhanced 2FA features with additional verification methods",
+      "strategy": "whitelist",
+      "whitelist": ["admin_user", "security_team"],
+      "enabled": true,
+      "metadata": {
+        "security_feature": true,
+        "sow_day_1_requirement": true
+      }
+    },
+
+    "strict_validation": {
+      "description": "Enable strict validation mode with additional checks",
+      "strategy": "percentage",
+      "percentage": 30,
+      "enabled": true,
+      "metadata": {
+        "security_enhancement": true,
+        "may_increase_rejection_rate": true
+      }
+    },
+
+    "audit_logging": {
+      "description": "Enable comprehensive audit logging for all KYC operations",
+      "strategy": "enabled",
+      "enabled": true,
+      "metadata": {
+        "compliance_requirement": true,
+        "storage_cost_impact": "low"
+      }
+    },
+
+    "debug_mode": {
+      "description": "Enable debug mode with detailed logging and response information",
+      "strategy": "whitelist",
+      "whitelist": ["development", "staging", "debug_client"],
+      "enabled": true,
+      "metadata": {
+        "development_feature": true,
+        "never_enable_in_production": true
+      }
+    },
+
+    "performance_monitoring": {
+      "description": "Enable detailed performance monitoring and metrics collection",
+      "strategy": "enabled",
+      "enabled": true,
+      "metadata": {
+        "observability_feature": true,
+        "helps_with_sow_performance_requirements": true
+      }
+    }
+  },
+
+  "rollout_schedule": {
+    "phase_1": {
+      "description": "Initial rollout to test clients",
+      "date": "2024-01-01",
+      "flags": [
+        "unified_kyc_endpoint",
+        "document_validation_actions",
+        "face_liveness_action"
+      ],
+      "strategy": "canary"
+    },
+
+    "phase_2": {
+      "description": "Expand to 25% of clients",
+      "date": "2024-01-03",
+      "flags": [
+        "action_based_routing",
+        "registration_actions",
+        "async_processing"
+      ],
+      "strategy": "percentage"
+    },
+
+    "phase_3": {
+      "description": "Full rollout excluding high-risk features",
+      "date": "2024-01-05",
+      "flags": [
+        "document_streaming_action",
+        "caching_enabled",
+        "audit_logging"
+      ],
+      "strategy": "enabled"
+    },
+
+    "phase_4": {
+      "description": "Complete rollout with all features",
+      "date": "2024-01-07",
+      "flags": [
+        "government_verification_actions",
+        "background_check_action",
+        "enhanced_validation"
+      ],
+      "strategy": "gradual"
+    }
+  },
+
+  "emergency_flags": {
+    "kill_switch": {
+      "description": "Emergency kill switch for action-based routing",
+      "action": "disable_all_new_features",
+      "fallback": "legacy_workflow_only"
+    },
+
+    "performance_degradation": {
+      "description": "Disable performance-heavy features if system is under load",
+      "flags_to_disable": [
+        "enhanced_validation",
+        "async_processing",
+        "background_check_action"
+      ]
+    }
+  },
+
+  "monitoring": {
+    "success_rate_threshold": 95,
+    "response_time_threshold_ms": 3000,
+    "error_rate_threshold": 5,
+    "automatic_rollback": true,
+    "alert_channels": ["slack", "email", "cloudwatch"]
+  }
+}

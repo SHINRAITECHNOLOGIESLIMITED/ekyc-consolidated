@@ -1,11 +1,15 @@
 import json
 from typing import Dict, Any
+from datetime import datetime
 from aws_lambda_powertools import Logger, Tracer
 from orchestrator import KYCOrchestrator
 from validators import validate_kyc_request
 from portal import Portal
 from security import secure_response_factory, SecurityManager
 from mfa_setup import handle_2fa_management
+from action_router import ActionRouter
+from payload_schemas import PayloadValidator
+from feature_flags import should_use_unified_endpoint, FeatureFlag
 
 logger = Logger()
 tracer = Tracer()
@@ -25,7 +29,7 @@ def handler(event, context):
     http_method = event.get('httpMethod')
     path = event.get('path', '')
 
-    if http_method == 'POST' and path.endswith('/kyc/process'):
+    if http_method == 'POST' and (path.endswith('/kyc/process') or path.endswith('/kyc')):
         try:
             # Parse request body
             data = event.get('body', {})
@@ -35,7 +39,23 @@ def handler(event, context):
 
             logger.info(f"Request Data (body): {data}")
 
-            return handle_kyc_processing(data)
+            # Create request context for feature flag evaluation
+            request_context = {
+                'request_id': event.get('requestContext', {}).get('requestId'),
+                'client_id': event.get('headers', {}).get('X-Client-Id'),
+                'user_id': event.get('requestContext', {}).get('authorizer', {}).get('principalId'),
+                'source_ip': event.get('requestContext', {}).get('identity', {}).get('sourceIp'),
+                'user_agent': event.get('headers', {}).get('User-Agent'),
+                'api_gateway_context': event.get('requestContext', {})
+            }
+
+            # Check if this is a new action-based request or legacy workflow
+            if 'action' in data and should_use_unified_endpoint(request_context):
+                logger.info("Processing action-based request via unified endpoint")
+                return handle_action_based_request(data, request_context)
+            else:
+                logger.info("Processing legacy workflow request")
+                return handle_kyc_processing(data)
 
     elif http_method == 'POST' and path.endswith('/kyc/2fa'):
         # SOW Day 1 requirement: 2FA management endpoint
@@ -52,6 +72,52 @@ def handler(event, context):
     else:
         logger.error(f'Method Not Allowed - received {http_method} for path {path}')
         return secure_response_factory(405, {'message': 'Method Not Allowed'})
+
+
+def handle_action_based_request(data: Dict[str, Any], request_context: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Handle action-based KYC requests via the new unified endpoint.
+    SOW Day 2 Requirement: Single /kyc endpoint with action parameters.
+    """
+    try:
+        # Validate using new action-based schema
+        validation_result = PayloadValidator.validate_request(data)
+        if not validation_result['valid']:
+            logger.error(f"Action-based validation failed: {validation_result['errors']}")
+            return secure_response_factory(400, {
+                'success': False,
+                'action': data.get('action', 'unknown'),
+                'error': {
+                    'message': 'Request validation failed',
+                    'details': validation_result['errors'],
+                    'error_code': 'VALIDATION_ERROR'
+                },
+                'timestamp': datetime.utcnow().isoformat() + 'Z'
+            })
+
+        # Route to appropriate action handler
+        action_router = ActionRouter()
+        result = action_router.route_action(
+            action=data['action'],
+            data=data['data'],
+            request_context=request_context
+        )
+
+        logger.info(f"Action-based processing completed for action: {data['action']}")
+        return result
+
+    except Exception as e:
+        logger.error(f"Error in action-based request handling: {e}")
+        return secure_response_factory(500, {
+            'success': False,
+            'action': data.get('action', 'unknown'),
+            'error': {
+                'message': 'Action-based processing failed',
+                'details': str(e),
+                'error_code': 'PROCESSING_ERROR'
+            },
+            'timestamp': datetime.utcnow().isoformat() + 'Z'
+        })
 
 
 def handle_kyc_processing(data: Dict[str, Any]) -> Dict[str, Any]:

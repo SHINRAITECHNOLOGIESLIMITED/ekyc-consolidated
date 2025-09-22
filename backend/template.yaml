@@ -202,6 +202,12 @@ Resources:
             Path: /kyc/2fa
             Method: POST
             RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTKYCUnified:
+          Type: Api
+          Properties:
+            Path: /kyc
+            Method: POST
+            RestApiId: !Ref ApiGateway
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -219,6 +225,14 @@ Resources:
                 - secretsmanager:GetSecretValue
               Resource:
                 - !Ref PortalGraphQLSecret
+            - Sid: FeatureFlagAccess
+              Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+                - ssm:GetParametersByPath
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/jubilee/kyc/feature-flags/*
       Layers:
         - !Ref PortalProjectionLayer
 
