@@ -474,34 +474,34 @@ class ActionRouter:
     def _handle_workflow_orchestration(self, data: Dict[str, Any],
                                      context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Handle legacy workflow orchestration (backward compatibility)."""
-        logger.info("Processing workflow orchestration")
+        logger.info("Processing legacy workflow orchestration")
 
-        # Import here to avoid circular imports
-        from orchestrator import KYCOrchestrator
-        from validators import validate_kyc_request
+        # SOW Compliance: Legacy workflows are deprecated in favor of action-based processing
+        logger.warning("Legacy workflow orchestration accessed - this will be deprecated")
 
-        # Validate using existing validator
-        validation_result = validate_kyc_request(data)
-        if not validation_result['valid']:
-            return secure_response_factory(400, {
-                'success': False,
-                'action': 'process_workflow',
-                'error': validation_result['errors'],
-                'message': 'Workflow validation failed'
-            })
-
-        # Process using existing orchestrator
-        orchestrator = KYCOrchestrator()
-        result = orchestrator.process_kyc(data)
-
-        # Convert to action-based response format
-        return secure_response_factory(
-            200 if result.get('overallStatus') == 'success' else
-            207 if result.get('overallStatus') == 'partial' else 400,
-            {
-                'success': result.get('overallStatus') in ['success', 'partial'],
-                'action': 'process_workflow',
-                'workflowResult': result,
-                'timestamp': self._get_timestamp()
-            }
+        # For now, return a deprecation notice with guidance to migrate
+        return create_standardized_response(
+            action='process_workflow',
+            success=False,
+            error={
+                'message': 'Legacy workflow orchestration is deprecated',
+                'error_code': 'DEPRECATED_WORKFLOW',
+                'migration_guidance': {
+                    'new_approach': 'Use individual action-based operations',
+                    'example_actions': [
+                        'validate_nationalid',
+                        'government_verify_nationalid',
+                        'background_check',
+                        'face_liveness'
+                    ],
+                    'documentation': '/kyc API specification'
+                },
+                'support_until': '2024-06-01',
+                'recommended_actions': [
+                    'Migrate to action-based API calls',
+                    'Update client applications',
+                    'Test with new endpoint format'
+                ]
+            },
+            request_id=context.get('requestId') if context else None
         )

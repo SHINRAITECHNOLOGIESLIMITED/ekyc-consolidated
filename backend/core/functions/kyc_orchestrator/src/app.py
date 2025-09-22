@@ -2,9 +2,7 @@ import json
 from typing import Dict, Any
 from datetime import datetime
 from aws_lambda_powertools import Logger, Tracer
-from orchestrator import KYCOrchestrator
-from validators import validate_kyc_request
-from portal import Portal
+# Legacy imports removed - using SOW-compliant action-based approach only
 from security import secure_response_factory, SecurityManager
 from mfa_setup import handle_2fa_management
 from action_router import ActionRouter
@@ -13,7 +11,6 @@ from feature_flags import should_use_unified_endpoint, FeatureFlag
 
 logger = Logger()
 tracer = Tracer()
-portal = Portal()
 
 
 @logger.inject_lambda_context
@@ -122,41 +119,55 @@ def handle_action_based_request(data: Dict[str, Any], request_context: Dict[str,
 
 def handle_kyc_processing(data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Main KYC processing handler.
-    Validates input and orchestrates the complete KYC workflow.
+    Legacy KYC processing handler - redirects to action-based processing.
+    SOW Compliance: All requests now use action-based routing.
     """
     try:
-        # Validate request schema
-        validation_result = validate_kyc_request(data)
-        if not validation_result['valid']:
-            logger.error(f"Schema validation failed: {validation_result['errors']}")
+        logger.info("Legacy endpoint accessed - redirecting to action-based processing")
+
+        # Convert legacy request to action-based format
+        if 'processType' in data:
+            # This is a legacy workflow request, convert to process_workflow action
+            action_data = {
+                'action': 'process_workflow',
+                'data': data,
+                'metadata': {
+                    'legacy_conversion': True,
+                    'original_endpoint': '/kyc/process'
+                }
+            }
+
+            # Use action-based processing
+            action_router = ActionRouter()
+            result = action_router.route_action(
+                action='process_workflow',
+                data=data,
+                request_context={'legacy_request': True}
+            )
+
+            return result
+        else:
+            # Unknown legacy format
             return secure_response_factory(400, {
-                'message': 'Request validation failed',
-                'error': validation_result['errors']
+                'success': False,
+                'error': {
+                    'message': 'Legacy request format not supported',
+                    'error_code': 'LEGACY_FORMAT_UNSUPPORTED',
+                    'suggestion': 'Use action-based format with /kyc endpoint'
+                },
+                'timestamp': datetime.utcnow().isoformat() + 'Z'
             })
 
-        # Initialize orchestrator
-        orchestrator = KYCOrchestrator()
-
-        # Process KYC workflow
-        result = orchestrator.process_kyc(data)
-
-        logger.info(f"KYC processing completed with status: {result.get('overallStatus')}")
-
-        # Return response based on overall status
-        if result.get('overallStatus') == 'success':
-            return secure_response_factory(200, result)
-        elif result.get('overallStatus') == 'partial':
-            return secure_response_factory(207, result)  # Multi-Status for partial success
-        else:
-            return secure_response_factory(400, result)
-
     except Exception as e:
-        logger.error(f"Error occurred during KYC processing: {e}")
+        logger.error(f"Error in legacy processing handler: {e}")
         return secure_response_factory(500, {
-            'message': 'KYC processing failed',
-            'error': str(e),
-            'overallStatus': 'failed'
+            'success': False,
+            'error': {
+                'message': 'Legacy processing failed',
+                'details': str(e),
+                'error_code': 'LEGACY_PROCESSING_ERROR'
+            },
+            'timestamp': datetime.utcnow().isoformat() + 'Z'
         })
 
 
