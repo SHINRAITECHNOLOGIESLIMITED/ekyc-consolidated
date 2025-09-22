@@ -132,10 +132,10 @@ const Dashboard: React.FC = () => {
         eKYC Dashboard
       </Header>
 
-      <Alert type="info" header="🚀 SOW-Compliant Unified KYC API Ready">
+      <Alert type="info" header="SOW-Compliant Unified KYC API Ready">
         <Box>
           The new <strong>unified action-based KYC endpoint</strong> is now live and fully tested with real Kenyan government APIs.
-          Visit <strong>Administration → 🧪 Unified KYC Testing</strong> to test all 13 actions including IPRS, KRA, and LexisNexis integrations.
+          Visit <strong>Administration → Unified KYC Testing</strong> to test all 13 actions including IPRS, KRA, and LexisNexis integrations.
         </Box>
       </Alert>
 
