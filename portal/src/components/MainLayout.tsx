@@ -118,6 +118,11 @@ const Navigation = () => {
           items: [
             {
               type: "link",
+              text: "Unified KYC Testing",
+              href: "/kyc-testing",
+            },
+            {
+              type: "link",
               text: "Users",
               href: "/users",
             },

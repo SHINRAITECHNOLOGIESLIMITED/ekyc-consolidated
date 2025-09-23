@@ -510,6 +510,56 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /kyc/process:
+    post:
+      summary: Process complete KYC verification workflow
+      operationId: processConsolidatedKYC
+      description: |
+        Consolidated KYC endpoint that orchestrates the complete KYC workflow including
+        document validation, government verification, background checks, face liveness,
+        and certificate generation in a single API call.
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${KYCOrchestratorFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsolidatedKYCRequest'
+      responses:
+        '200':
+          description: KYC processing completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsolidatedKYCResponse'
+        '207':
+          description: KYC processing completed with partial success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsolidatedKYCResponse'
+        '400':
+          description: Invalid input or validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error during KYC processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
     AgentRegistrationRequest:
@@ -1004,3 +1054,311 @@ components:
                   type: boolean
                 reason:
                   type: string
+
+    ConsolidatedKYCRequest:
+      type: object
+      description: Consolidated KYC request for complete identity verification workflow
+      properties:
+        processType:
+          type: string
+          description: Type of KYC process to execute
+          enum:
+            - customer
+            - individual_agent
+            - business_agent
+          example: customer
+        personalData:
+          type: object
+          description: Personal information for verification
+          properties:
+            name:
+              type: string
+              description: Full legal name
+              example: John Doe
+            idNumber:
+              type: string
+              description: National ID number or passport number
+              example: '12345678'
+            pinNumber:
+              type: string
+              description: KRA Personal Identification Number
+              example: A000000000B
+            dateOfBirth:
+              type: string
+              format: date
+              description: Date of birth in YYYY-MM-DD format
+              example: '1990-01-15'
+            gender:
+              type: string
+              description: Gender of the person (required for some process types)
+              enum:
+                - Male
+                - Female
+              example: Male
+            businessNumber:
+              type: string
+              description: Business registration number (required for business agents)
+              example: BN123456
+          required:
+            - name
+            - idNumber
+            - pinNumber
+            - dateOfBirth
+          additionalProperties: false
+        documents:
+          type: object
+          description: Document URLs for verification
+          properties:
+            nationalIdUrl:
+              type: string
+              format: uri
+              description: URL of uploaded National ID document
+              example: 'https://example.com/documents/nationalid.pdf'
+            passportUrl:
+              type: string
+              format: uri
+              description: URL of uploaded passport document
+              example: 'https://example.com/documents/passport.pdf'
+            kraUrl:
+              type: string
+              format: uri
+              description: URL of uploaded KRA PIN certificate
+              example: 'https://example.com/documents/kra.pdf'
+            passportPhotoUrl:
+              type: string
+              format: uri
+              description: URL of uploaded passport photo
+              example: 'https://example.com/documents/photo.jpg'
+            companyCertificateUrl:
+              type: string
+              format: uri
+              description: URL of company certificate (for business agents)
+              example: 'https://example.com/documents/certificate.pdf'
+          additionalProperties: false
+        options:
+          type: object
+          description: Processing options
+          properties:
+            includeFaceLiveness:
+              type: boolean
+              description: Whether to include face liveness verification
+              default: false
+            includeBackgroundCheck:
+              type: boolean
+              description: Whether to include background check via LexisNexis
+              default: false
+            generateCertificate:
+              type: boolean
+              description: Whether to generate a KYC completion certificate
+              default: true
+            skipValidationErrors:
+              type: boolean
+              description: Whether to continue processing despite validation errors
+              default: false
+          additionalProperties: false
+        beneficiaries:
+          type: array
+          description: List of policy beneficiaries (for customer registrations)
+          items:
+            type: object
+            properties:
+              idNumber:
+                type: string
+                description: Beneficiary identification number
+                example: 'BC123456'
+              relationship:
+                type: string
+                description: Relationship to the customer
+                example: Child
+              gender:
+                type: string
+                enum:
+                  - Male
+                  - Female
+                description: Gender of the beneficiary
+              dateOfBirth:
+                type: string
+                format: date
+                description: Date of birth of the beneficiary
+                example: '2010-05-10'
+            required:
+              - idNumber
+              - relationship
+              - gender
+              - dateOfBirth
+            additionalProperties: false
+      required:
+        - processType
+        - personalData
+        - documents
+      additionalProperties: false
+
+    ConsolidatedKYCResponse:
+      type: object
+      description: Consolidated KYC response with complete workflow results
+      properties:
+        kycId:
+          type: string
+          description: Unique identifier for this KYC processing session
+          example: '550e8400-e29b-41d4-a716-446655440000'
+        overallStatus:
+          type: string
+          description: Overall status of the KYC processing
+          enum:
+            - success
+            - partial
+            - failed
+          example: success
+        processType:
+          type: string
+          description: Type of KYC process that was executed
+          enum:
+            - customer
+            - individual_agent
+            - business_agent
+          example: customer
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO timestamp of when processing completed
+          example: '2023-12-01T10:30:00.000Z'
+        processingTime:
+          type: number
+          description: Total processing time in milliseconds
+          example: 45000
+        results:
+          type: object
+          description: Detailed results from each verification step
+          properties:
+            documentValidation:
+              type: object
+              description: Document validation results
+              properties:
+                status:
+                  type: string
+                  enum: [success, failed, partial]
+                nationalId:
+                  type: object
+                  description: National ID validation result
+                passport:
+                  type: object
+                  description: Passport validation result
+                kraPin:
+                  type: object
+                  description: KRA PIN certificate validation result
+                companyCertificate:
+                  type: object
+                  description: Company certificate validation result
+            governmentVerification:
+              type: object
+              description: Government verification results
+              properties:
+                status:
+                  type: string
+                  enum: [success, failed, partial]
+                nationalIdVerification:
+                  type: object
+                  description: IPRS National ID verification result
+                kraVerification:
+                  type: object
+                  description: KRA verification result
+            backgroundCheck:
+              type: object
+              description: Background check results (if requested)
+              properties:
+                status:
+                  type: string
+                  enum: [success, failed, skipped]
+                riskScore:
+                  type: number
+                  description: Risk score from background check
+                  example: 10
+                details:
+                  type: object
+                  description: Detailed background check results
+            faceLiveness:
+              type: object
+              description: Face liveness results (if requested)
+              properties:
+                status:
+                  type: string
+                  enum: [success, failed, skipped]
+                sessionId:
+                  type: string
+                  description: Face liveness session identifier
+                confidence:
+                  type: number
+                  description: Confidence score of liveness detection
+                  example: 95
+            certification:
+              type: object
+              description: Certificate generation results (if requested)
+              properties:
+                status:
+                  type: string
+                  enum: [success, failed, skipped]
+                certificateUrl:
+                  type: string
+                  format: uri
+                  description: URL to download the generated certificate
+                s3Path:
+                  type: string
+                  description: S3 path where certificate is stored
+        errors:
+          type: array
+          description: List of errors encountered during processing
+          items:
+            type: object
+            properties:
+              step:
+                type: string
+                description: The processing step where the error occurred
+                example: document_validation
+              code:
+                type: string
+                description: Error code for programmatic handling
+                example: VALIDATION_FAILED
+              message:
+                type: string
+                description: Human-readable error message
+                example: Document validation failed
+              details:
+                type: string
+                description: Additional error details
+            required:
+              - step
+              - code
+              - message
+        metadata:
+          type: object
+          description: Processing metadata
+          properties:
+            functionsInvoked:
+              type: array
+              items:
+                type: string
+              description: List of Lambda functions that were invoked
+              example: ['DocumentValidation-NationalID', 'GovernmentVerification-KRA']
+            totalSteps:
+              type: integer
+              description: Total number of processing steps
+              example: 5
+            successfulSteps:
+              type: integer
+              description: Number of successfully completed steps
+              example: 4
+        certificateUrl:
+          type: string
+          format: uri
+          description: Direct URL to download the KYC certificate (if generated)
+          example: 'https://example.com/certificates/kyc-cert-123.pdf'
+      required:
+        - kycId
+        - overallStatus
+        - processType
+        - timestamp
+        - processingTime
+        - results
+        - errors
+        - metadata
+      additionalProperties: false

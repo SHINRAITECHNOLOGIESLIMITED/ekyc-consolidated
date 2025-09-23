@@ -3,6 +3,7 @@
 import { fetchMetrics } from "@/services/DataService";
 import { DashboardMetrics } from "@/types/interfaces";
 import {
+  Alert,
   Box,
   Button,
   Cards,
@@ -130,6 +131,13 @@ const Dashboard: React.FC = () => {
       >
         eKYC Dashboard
       </Header>
+
+      <Alert type="info" header="SOW-Compliant Unified KYC API Ready">
+        <Box>
+          The new <strong>unified action-based KYC endpoint</strong> is now live and fully tested with real Kenyan government APIs.
+          Visit <strong>Administration → Unified KYC Testing</strong> to test all 13 actions including IPRS, KRA, and LexisNexis integrations.
+        </Box>
+      </Alert>
 
       {/* Registrations Section - Moved to top */}
       <Box padding="s">
