@@ -11,3 +11,12 @@ capabilities = "CAPABILITY_IAM"
 parameter_overrides = [
     "AmplifyS3BucketName=amplify-dnw02dhxhpu7h-mai-kycdocumentsbucketa4bf11-wxhjqijfdzdz"
 ]
+
+[jubilee.deploy.parameters]
+resolve_s3 = true
+profile = "jubilee-ekyc"
+stack_name = "jubilee-ekyc-backend"
+region = "eu-west-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = []
