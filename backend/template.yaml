@@ -63,18 +63,17 @@ Resources:
       Name: APIGateway-jubilee-eKYC
       StageName: Prod
       Description: API Gateway for Jubilee eKYC
-      # Auth:
-      #   DefaultAuthorizer: AWS_IAM
-      #   Authorizers:
-      #     CognitoAuthorizer:
-      #       UserPoolArn: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${AmplifyCognitoUserPoolId}
-      #       Identity:
-      #         Header: Authorization
-      #     LambdaAuthorizer:
-      #       FunctionArn: !GetAtt AuthorizerFn.Arn
-      #       IdentitySource: method.request.header.Authorization
-      #       Name: LambdaAuthorizer
-      # AddDefaultAuthorizerToCorsPreflight: false
+      Auth:
+        DefaultAuthorizer: LambdaAuthorizer
+        Authorizers:
+          LambdaAuthorizer:
+            FunctionArn: !GetAtt AuthorizerFn.Arn
+            FunctionPayloadType: TOKEN
+            Identity:
+              Header: Authorization
+              ValidationExpression: "^Bearer [-0-9a-zA-Z\\._]*$"
+              ReauthorizeEvery: 300
+        AddDefaultAuthorizerToCorsPreflight: false
       DefinitionBody: !Transform
         Name: AWS::Include
         Parameters:
@@ -106,6 +105,15 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${AuthorizerFn}
       RetentionInDays: 30
+
+  AuthorizerFnInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthorizerFn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/authorizers/*
+
   RegistrationFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -175,7 +183,6 @@ Resources:
           COGNITO_USER_POOL_ID: !Ref AmplifyCognitoUserPoolId
       Policies:
         - AWSLambdaBasicExecutionRole
-        - LambdaInvokeFunction
         - Statement:
             - Sid: CognitoMFAManagement
               Effect: Allow
