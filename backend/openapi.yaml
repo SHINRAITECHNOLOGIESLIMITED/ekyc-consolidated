@@ -6,6 +6,9 @@ info:
   description: API endpoints to support the KYC Identity Verification System for
     agent and customer onboarding and verification processes.
 
+security:
+  - LambdaAuthorizer: []
+
 paths:
   /agent-registration:
     post:
@@ -424,7 +427,7 @@ paths:
       summary: Perform background check against Lexis Nexis
       operationId: performBackgroundCheck
       x-amazon-apigateway-integration:
-        uri: 
+        uri:
           Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BackgroundChecksFn.Arn}/invocations"
         responses:
           default:
@@ -433,6 +436,31 @@ paths:
         httpMethod: POST
         contentHandling: CONVERT_TO_TEXT
         type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackgroundCheckRequest'
+      responses:
+        '200':
+          description: Background check completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackgroundCheckResult'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         
   /stream/{bucketType}/{documentKey+}:
     get:
@@ -479,36 +507,11 @@ paths:
         '500':
           description: Internal server error
       x-amazon-apigateway-integration:
-        uri: 
+        uri:
           Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentStreamingFn.Arn}/invocations"
         passthroughBehavior: when_no_match
         httpMethod: POST
         type: aws_proxy
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BackgroundCheckRequest'
-      responses:
-        '200':
-          description: Background check completed successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BackgroundCheckResult'
-        '400':
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   /kyc/process:
     post:
@@ -1362,3 +1365,16 @@ components:
         - errors
         - metadata
       additionalProperties: false
+
+  securitySchemes:
+    LambdaAuthorizer:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: custom
+      x-amazon-apigateway-authorizer:
+        type: token
+        authorizerUri:
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthorizerFn.Arn}/invocations"
+        authorizerResultTtlInSeconds: 300
+        identityValidationExpression: "^Bearer [-0-9a-zA-Z\\._]*$"
