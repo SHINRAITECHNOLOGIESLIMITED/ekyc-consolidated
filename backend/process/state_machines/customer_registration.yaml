@@ -20,6 +20,23 @@ States:
       registration: '{% $states.input %}'
       idValidation: '{% $parse($states.result.Payload.body) %}'
       nationalIdValidation: '{% $parse($states.result.Payload.body) %}'
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Catch:
+      - ErrorEquals:
+          - States.ALL
+        Next: Flag For Manual Review
+        Assign:
+          failedStep: National ID Document Validation
+          errorCause: '{% $states.error.Cause %}'
+          errorMessage: '{% $states.error.Error %}'
     Next: UpdateNationalIDValidated
   UpdateNationalIDValidated:
     Type: Task
@@ -28,7 +45,7 @@ States:
     Arguments:
       TableName: ${CustomerRegitrationTable}
       Key:
-        customerId: 
+        customerId:
           S: '{% $registration.customerId %}'
       UpdateExpression: "SET kycStatus = :kycStatus"
       ExpressionAttributeValues:
@@ -51,6 +68,23 @@ States:
           gender: '{% $registration.gender %}'
     Assign:
       idVerification: '{% $parse($states.result.Payload.body) %}'
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Catch:
+      - ErrorEquals:
+          - States.ALL
+        Next: Flag For Manual Review
+        Assign:
+          failedStep: ID Verification
+          errorCause: '{% $states.error.Cause %}'
+          errorMessage: '{% $states.error.Error %}'
     Next: UpdateNationalIDVerified
   UpdateNationalIDVerified:
     Type: Task
@@ -59,7 +93,7 @@ States:
     Arguments:
       TableName: ${CustomerRegitrationTable}
       Key:
-        customerId: 
+        customerId:
           S: '{% $registration.customerId %}'
       UpdateExpression: "SET kycStatus = :kycStatus"
       ExpressionAttributeValues:
@@ -81,6 +115,23 @@ States:
           taxPayerName: '{% $registration.name %}'
     Assign:
       taxPayerVerification: '{% $parse($states.result.Payload.body) %}'
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Catch:
+      - ErrorEquals:
+          - States.ALL
+        Next: Flag For Manual Review
+        Assign:
+          failedStep: TaxPayer Verification
+          errorCause: '{% $states.error.Cause %}'
+          errorMessage: '{% $states.error.Error %}'
     Next: UpdateTaxPayerInfoVerified
   UpdateTaxPayerInfoVerified:
     Type: Task
@@ -89,7 +140,7 @@ States:
     Arguments:
       TableName: ${CustomerRegitrationTable}
       Key:
-        customerId: 
+        customerId:
           S: '{% $registration.customerId %}'
       UpdateExpression: "SET kycStatus = :kycStatus"
       ExpressionAttributeValues:
@@ -112,6 +163,23 @@ States:
           nationalIdentificationNumber: '{% $registration.idNumber %}'
     Assign:
       backgroundCheck: '{% $parse($states.result.Payload.body) %}'
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Catch:
+      - ErrorEquals:
+          - States.ALL
+        Next: Flag For Manual Review
+        Assign:
+          failedStep: Background Check
+          errorCause: '{% $states.error.Cause %}'
+          errorMessage: '{% $states.error.Error %}'
     Next: UpdateBackGroundCheckDone
   UpdateBackGroundCheckDone:
     Type: Task
@@ -120,7 +188,7 @@ States:
     Arguments:
       TableName: ${CustomerRegitrationTable}
       Key:
-        customerId: 
+        customerId:
           S: '{% $registration.customerId %}'
       UpdateExpression: "SET kycStatus = :kycStatus"
       ExpressionAttributeValues:
@@ -153,6 +221,14 @@ States:
         IntervalSeconds: 1
         MaxAttempts: 3
         BackoffRate: 2
+    Catch:
+      - ErrorEquals:
+          - States.ALL
+        Next: Flag For Manual Review
+        Assign:
+          failedStep: Certificate Generation
+          errorCause: '{% $states.error.Cause %}'
+          errorMessage: '{% $states.error.Error %}'
     Next: UpdateCustomerCertificateCreated
   UpdateCustomerCertificateCreated:
     Type: Task
@@ -161,7 +237,7 @@ States:
     Arguments:
       TableName: ${CustomerRegitrationTable}
       Key:
-        customerId: 
+        customerId:
           S: '{% $registration.customerId %}'
       UpdateExpression: "SET kycStatus = :kycStatus, kycCertificateS3Path = :kycCertificateS3Path"
       ExpressionAttributeValues:
@@ -169,4 +245,26 @@ States:
           S: "Customer Certificate Created"
         ":kycCertificateS3Path":
           S: '{% $certification.s3Path %}'
+    End: true
+  Flag For Manual Review:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    QueryLanguage: "JSONata"
+    Arguments:
+      TableName: ${CustomerRegitrationTable}
+      Key:
+        customerId:
+          S: '{% $registration.customerId %}'
+      UpdateExpression: "SET kycStatus = :kycStatus, manualReviewRequired = :manualReviewRequired, failedStep = :failedStep, failureReason = :failureReason, failedAt = :failedAt"
+      ExpressionAttributeValues:
+        ":kycStatus":
+          S: "Manual Review Required"
+        ":manualReviewRequired":
+          BOOL: true
+        ":failedStep":
+          S: '{% $failedStep %}'
+        ":failureReason":
+          S: '{% $errorMessage & " - " & $errorCause %}'
+        ":failedAt":
+          S: '{% $now() %}'
     End: true

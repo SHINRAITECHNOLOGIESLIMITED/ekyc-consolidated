@@ -28,6 +28,31 @@ s3_client = boto3.client('s3')
 def handler(event, context):
     """
     Lambda handler for KYC Certification creation
+
+    MANUAL REVIEW WORKFLOW (for CRM Team):
+    ========================================
+    When a KYC operation fails after retries, the state machine flags the record in DynamoDB with:
+    - kycStatus: "Manual Review Required"
+    - manualReviewRequired: true
+    - failedStep: <step that failed>
+    - failureReason: <error details>
+    - failedAt: <timestamp>
+
+    After manual review and approval, CRM team should call the appropriate endpoint:
+
+    1. Customer Registration:
+       POST /certification/customer_registration
+       Body: { registration, nationalIdValidation, idVerification, taxPayerVerification, backgroundCheck }
+
+    2. Individual Agent Registration:
+       POST /certification/individual_agent_registration
+       Body: { registration, nationalIdValidation, idVerification, taxPayerVerification, backgroundCheck }
+
+    3. Business Agent Registration:
+       POST /certification/business_agent_registration
+       Body: { registration, cr12Validation }
+
+    Note: All verification data must be provided. Retrieve from DynamoDB or re-run failed steps manually.
     """
     logger.info(f"Received event: {json.dumps(event)}")
 

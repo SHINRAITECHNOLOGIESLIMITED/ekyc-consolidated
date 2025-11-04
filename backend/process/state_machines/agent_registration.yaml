@@ -30,6 +30,23 @@ States:
     Assign:
       registration: '{% $states.input %}'
       cr12Validation: '{% $parse($states.result.Payload.body) %}'
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Catch:
+      - ErrorEquals:
+          - States.ALL
+        Next: Flag For Manual Review
+        Assign:
+          failedStep: CR12 Document Validation
+          errorCause: '{% $states.error.Cause %}'
+          errorMessage: '{% $states.error.Error %}'
     Next: UpdateCR12Validated
   UpdateCR12Validated:
     Type: Task
@@ -43,7 +60,7 @@ States:
       UpdateExpression: SET kycStatus = :kycStatus
       ExpressionAttributeValues:
         ':kycStatus':
-          S: National ID Doc Validated
+          S: CR12 Document Validated
     Next: Certify and Persist Business Agent
   Certify and Persist Business Agent:
     Type: Task
@@ -57,7 +74,6 @@ States:
         body:
           registration: '{% $registration %}'
           cr12Validation: '{% $cr12Validation %}'
-          
     Assign:
       certification: '{% $parse($states.result.Payload.body) %}'
     Retry:
@@ -69,6 +85,14 @@ States:
         IntervalSeconds: 1
         MaxAttempts: 3
         BackoffRate: 2
+    Catch:
+      - ErrorEquals:
+          - States.ALL
+        Next: Flag For Manual Review
+        Assign:
+          failedStep: Business Agent Certificate Generation
+          errorCause: '{% $states.error.Cause %}'
+          errorMessage: '{% $states.error.Error %}'
     Next: UpdateBusinessAgentCertificateCreated
   UpdateBusinessAgentCertificateCreated:
     Type: Task
@@ -104,6 +128,23 @@ States:
       registration: '{% $states.input %}'
       idValidation: '{% $parse($states.result.Payload.body) %}'
       nationalIdValidation: '{% $parse($states.result.Payload.body) %}'
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Catch:
+      - ErrorEquals:
+          - States.ALL
+        Next: Flag For Manual Review
+        Assign:
+          failedStep: National ID Document Validation
+          errorCause: '{% $states.error.Cause %}'
+          errorMessage: '{% $states.error.Error %}'
     Next: UpdateNationalIDValidated
   UpdateNationalIDValidated:
     Type: Task
@@ -134,6 +175,23 @@ States:
           dateOfBirth: '{% $registration.dateOfBirth %}'
     Assign:
       idVerification: '{% $parse($states.result.Payload.body) %}'
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Catch:
+      - ErrorEquals:
+          - States.ALL
+        Next: Flag For Manual Review
+        Assign:
+          failedStep: ID Verification
+          errorCause: '{% $states.error.Cause %}'
+          errorMessage: '{% $states.error.Error %}'
     Next: UpdateNationalIDVerified
   UpdateNationalIDVerified:
     Type: Task
@@ -164,6 +222,23 @@ States:
           taxPayerName: '{% $registration.name %}'
     Assign:
       taxPayerVerification: '{% $parse($states.result.Payload.body) %}'
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Catch:
+      - ErrorEquals:
+          - States.ALL
+        Next: Flag For Manual Review
+        Assign:
+          failedStep: TaxPayer Verification
+          errorCause: '{% $states.error.Cause %}'
+          errorMessage: '{% $states.error.Error %}'
     Next: UpdateTaxPayerInfoVerified
   UpdateTaxPayerInfoVerified:
     Type: Task
@@ -195,6 +270,23 @@ States:
           nationalIdentificationNumber: '{% $registration.idNumber %}'
     Assign:
       backgroundCheck: '{% $parse($states.result.Payload.body) %}'
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Catch:
+      - ErrorEquals:
+          - States.ALL
+        Next: Flag For Manual Review
+        Assign:
+          failedStep: Background Check
+          errorCause: '{% $states.error.Cause %}'
+          errorMessage: '{% $states.error.Error %}'
     Next: UpdateBackGroundCheckDone
   UpdateBackGroundCheckDone:
     Type: Task
@@ -236,6 +328,14 @@ States:
         IntervalSeconds: 1
         MaxAttempts: 3
         BackoffRate: 2
+    Catch:
+      - ErrorEquals:
+          - States.ALL
+        Next: Flag For Manual Review
+        Assign:
+          failedStep: Individual Agent Certificate Generation
+          errorCause: '{% $states.error.Cause %}'
+          errorMessage: '{% $states.error.Error %}'
     Next: UpdateIndividualAgentCertificateCreated
   UpdateIndividualAgentCertificateCreated:
     Type: Task
@@ -252,4 +352,26 @@ States:
           S: Agent Certificate Created
         ':kycCertificateS3Path':
           S: '{% $certification.s3Path %}'
+    End: true
+  Flag For Manual Review:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:updateItem
+    QueryLanguage: "JSONata"
+    Arguments:
+      TableName: ${AgentRegitrationTable}
+      Key:
+        agentId:
+          S: '{% $registration.agentId %}'
+      UpdateExpression: "SET kycStatus = :kycStatus, manualReviewRequired = :manualReviewRequired, failedStep = :failedStep, failureReason = :failureReason, failedAt = :failedAt"
+      ExpressionAttributeValues:
+        ":kycStatus":
+          S: "Manual Review Required"
+        ":manualReviewRequired":
+          BOOL: true
+        ":failedStep":
+          S: '{% $failedStep %}'
+        ":failureReason":
+          S: '{% $errorMessage & " - " & $errorCause %}'
+        ":failedAt":
+          S: '{% $now() %}'
     End: true
