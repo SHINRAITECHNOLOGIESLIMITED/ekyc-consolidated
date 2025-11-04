@@ -191,9 +191,12 @@ def generate_policy(
     """
     # Extract API Gateway ARN components to create wildcard resource
     # Format: arn:aws:execute-api:region:account:api-id/stage/method/path
-    # We allow/deny all methods in the API
+    # We allow/deny all methods and stages in the API
     arn_parts = resource.split(':')
-    api_gateway_arn = ':'.join(arn_parts[:5]) + '/*'
+    # Get the api-id from the last part (format: api-id/stage/method/path)
+    api_gateway_part = arn_parts[5].split('/')[0]
+    # Construct wildcard ARN: arn:aws:execute-api:region:account:api-id/*/*
+    api_gateway_arn = ':'.join(arn_parts[:5]) + ':' + api_gateway_part + '/*/*'
 
     policy_document = {
         "Version": "2012-10-17",
