@@ -33,7 +33,6 @@ States:
       - ErrorEquals:
           - States.ALL
         Next: Flag For Manual Review
-        ResultPath: $.error
         Assign:
           failedStep: National ID Document Validation
           failureReason: Failed during national ID document validation
@@ -81,7 +80,6 @@ States:
       - ErrorEquals:
           - States.ALL
         Next: Flag For Manual Review
-        ResultPath: $.error
         Assign:
           failedStep: ID Verification
           failureReason: Failed during government ID verification
@@ -128,7 +126,6 @@ States:
       - ErrorEquals:
           - States.ALL
         Next: Flag For Manual Review
-        ResultPath: $.error
         Assign:
           failedStep: TaxPayer Verification
           failureReason: Failed during KRA taxpayer verification
@@ -176,7 +173,6 @@ States:
       - ErrorEquals:
           - States.ALL
         Next: Flag For Manual Review
-        ResultPath: $.error
         Assign:
           failedStep: Background Check
           failureReason: Failed during background check with LexisNexis
@@ -225,7 +221,6 @@ States:
       - ErrorEquals:
           - States.ALL
         Next: Flag For Manual Review
-        ResultPath: $.error
         Assign:
           failedStep: Certificate Generation
           failureReason: Failed during certificate generation
