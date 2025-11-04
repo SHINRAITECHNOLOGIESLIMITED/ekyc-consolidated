@@ -79,7 +79,7 @@ Resources:
         Parameters:
           Location: openapi.yaml
       EndpointConfiguration: REGIONAL
-      TracingEnabled: true
+      TracingEnabled: false
       Cors:
         AllowOrigin: '''*'''
         AllowHeaders: '''Content-Type, Authorization, X-Api-Key, X-Amz-Date,
