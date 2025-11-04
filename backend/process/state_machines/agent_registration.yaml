@@ -43,10 +43,10 @@ States:
       - ErrorEquals:
           - States.ALL
         Next: Flag For Manual Review
+        ResultPath: $.error
         Assign:
           failedStep: CR12 Document Validation
-          errorCause: '{% $states.error.Cause %}'
-          errorMessage: '{% $states.error.Error %}'
+          failureReason: Failed during CR12 document validation
     Next: UpdateCR12Validated
   UpdateCR12Validated:
     Type: Task
@@ -89,10 +89,10 @@ States:
       - ErrorEquals:
           - States.ALL
         Next: Flag For Manual Review
+        ResultPath: $.error
         Assign:
           failedStep: Business Agent Certificate Generation
-          errorCause: '{% $states.error.Cause %}'
-          errorMessage: '{% $states.error.Error %}'
+          failureReason: Failed during business agent certificate generation
     Next: UpdateBusinessAgentCertificateCreated
   UpdateBusinessAgentCertificateCreated:
     Type: Task
@@ -141,10 +141,10 @@ States:
       - ErrorEquals:
           - States.ALL
         Next: Flag For Manual Review
+        ResultPath: $.error
         Assign:
           failedStep: National ID Document Validation
-          errorCause: '{% $states.error.Cause %}'
-          errorMessage: '{% $states.error.Error %}'
+          failureReason: Failed during national ID document validation
     Next: UpdateNationalIDValidated
   UpdateNationalIDValidated:
     Type: Task
@@ -188,10 +188,10 @@ States:
       - ErrorEquals:
           - States.ALL
         Next: Flag For Manual Review
+        ResultPath: $.error
         Assign:
           failedStep: ID Verification
-          errorCause: '{% $states.error.Cause %}'
-          errorMessage: '{% $states.error.Error %}'
+          failureReason: Failed during government ID verification
     Next: UpdateNationalIDVerified
   UpdateNationalIDVerified:
     Type: Task
@@ -235,10 +235,10 @@ States:
       - ErrorEquals:
           - States.ALL
         Next: Flag For Manual Review
+        ResultPath: $.error
         Assign:
           failedStep: TaxPayer Verification
-          errorCause: '{% $states.error.Cause %}'
-          errorMessage: '{% $states.error.Error %}'
+          failureReason: Failed during KRA taxpayer verification
     Next: UpdateTaxPayerInfoVerified
   UpdateTaxPayerInfoVerified:
     Type: Task
@@ -283,10 +283,10 @@ States:
       - ErrorEquals:
           - States.ALL
         Next: Flag For Manual Review
+        ResultPath: $.error
         Assign:
           failedStep: Background Check
-          errorCause: '{% $states.error.Cause %}'
-          errorMessage: '{% $states.error.Error %}'
+          failureReason: Failed during background check with LexisNexis
     Next: UpdateBackGroundCheckDone
   UpdateBackGroundCheckDone:
     Type: Task
@@ -332,10 +332,10 @@ States:
       - ErrorEquals:
           - States.ALL
         Next: Flag For Manual Review
+        ResultPath: $.error
         Assign:
           failedStep: Individual Agent Certificate Generation
-          errorCause: '{% $states.error.Cause %}'
-          errorMessage: '{% $states.error.Error %}'
+          failureReason: Failed during individual agent certificate generation
     Next: UpdateIndividualAgentCertificateCreated
   UpdateIndividualAgentCertificateCreated:
     Type: Task
@@ -371,7 +371,7 @@ States:
         ":failedStep":
           S: '{% $failedStep %}'
         ":failureReason":
-          S: '{% $errorMessage & " - " & $errorCause %}'
+          S: '{% $failureReason %}'
         ":failedAt":
           S: '{% $now() %}'
     End: true
