@@ -179,6 +179,8 @@ Resources:
           BACKGROUND_CHECK_FUNCTION: !Ref BackgroundChecksFn
           FACE_LIVENESS_FUNCTION: !Ref FaceLivenessFn
           CERTIFICATION_FUNCTION: !Ref CertificationFn
+          REGISTRATION_FUNCTION: !Ref RegistrationFn
+          DOCUMENT_STREAMING_FUNCTION: !Ref DocumentStreamingFn
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
           COGNITO_USER_POOL_ID: !Ref AmplifyCognitoUserPoolId
       Policies:
@@ -206,6 +208,8 @@ Resources:
                 - !GetAtt BackgroundChecksFn.Arn
                 - !GetAtt FaceLivenessFn.Arn
                 - !GetAtt CertificationFn.Arn
+                - !GetAtt RegistrationFn.Arn
+                - !GetAtt DocumentStreamingFn.Arn
             - Effect: Allow
               Action:
                 - secretsmanager:GetSecretValue

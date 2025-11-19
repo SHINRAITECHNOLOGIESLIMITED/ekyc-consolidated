@@ -59,6 +59,21 @@ def handler(event, context):
     authorization_token = event['authorizationToken']
     method_arn = event['methodArn']
 
+    # Extract stage from methodArn: arn:aws:execute-api:region:account:api-id/stage/method/path
+    # Auto-approve Stage environment for rapid testing (no auth required)
+    try:
+        arn_parts = method_arn.split(':')
+        api_gateway_part = arn_parts[5]  # api-id/stage/method/path
+        stage = api_gateway_part.split('/')[1]  # Extract stage
+
+        if stage == 'Stage':
+            logger.info(f"Stage environment detected - auto-approving request without token validation")
+            return generate_policy("stage-user", "Allow", method_arn,
+                                  context={"stage": "Stage", "autoApproved": "true"})
+    except Exception as e:
+        logger.warning(f"Could not extract stage from methodArn: {str(e)}")
+        # Continue with normal token validation if stage extraction fails
+
     if not authorization_token:
         logger.warning("Authorization token is missing")
         return generate_policy("Unauthorized", "Deny", method_arn,

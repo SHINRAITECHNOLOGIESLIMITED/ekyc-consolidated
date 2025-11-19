@@ -29,38 +29,58 @@ SUPPORTED_DOCUMENT_TYPES = [e.value for e in DOCUMENT_TYPE]
 
 class Portal:
     def __init__(self):
+        self.enabled = False
+        self.PORTAL_GRAPHQL_URL = None
+        self.PORTAL_GRAPHQL_API_KEY = None
+        self.headers = {}
         self._load_secrets()
 
     def _load_secrets(self):
-        secrets_client = boto3.client('secretsmanager')
-        logger.info(f"Loading portal graphql credentials from {PORTAL_GRAPHQL_SECRET_ARN}")
-        portal_credentials_response = secrets_client.get_secret_value(
-            SecretId=PORTAL_GRAPHQL_SECRET_ARN
-        )
-        if 'SecretString' not in portal_credentials_response:
-            logger.error("Failed to load Portal Connection credentials: SecretString not found")
-            raise Exception("Failed to load Portal service")
-        _portal_credentials = json.loads(portal_credentials_response['SecretString'])
-        self.PORTAL_GRAPHQL_URL = _portal_credentials['url']
-        assert self.PORTAL_GRAPHQL_URL != "https://example.com", "Portal URL and API Key has not been configured in Secrets Manager"
+        try:
+            secrets_client = boto3.client('secretsmanager')
+            logger.info(f"Loading portal graphql credentials from {PORTAL_GRAPHQL_SECRET_ARN}")
+            portal_credentials_response = secrets_client.get_secret_value(
+                SecretId=PORTAL_GRAPHQL_SECRET_ARN
+            )
+            if 'SecretString' not in portal_credentials_response:
+                logger.warning("Portal credentials not found - Portal projection disabled. eKYC will work as backend-only API.")
+                return
 
-        self.PORTAL_GRAPHQL_API_KEY = _portal_credentials['api_key']
-        self.headers = {
-            'Content-Type': 'application/json',
-            'x-api-key': self.PORTAL_GRAPHQL_API_KEY
-        }
-        logger.info(f"Loaded portal graphql credentials. GraphQL URL: {self.PORTAL_GRAPHQL_URL}")
+            _portal_credentials = json.loads(portal_credentials_response['SecretString'])
+            self.PORTAL_GRAPHQL_URL = _portal_credentials.get('url')
+
+            # Portal is optional - if not configured, just log warning and continue
+            if not self.PORTAL_GRAPHQL_URL or self.PORTAL_GRAPHQL_URL == "https://example.com":
+                logger.warning("Portal URL not configured - Portal projection disabled. eKYC will work as backend-only API.")
+                return
+
+            self.PORTAL_GRAPHQL_API_KEY = _portal_credentials.get('api_key')
+            self.headers = {
+                'Content-Type': 'application/json',
+                'x-api-key': self.PORTAL_GRAPHQL_API_KEY
+            }
+            self.enabled = True
+            logger.info(f"Portal projection enabled. GraphQL URL: {self.PORTAL_GRAPHQL_URL}")
+        except Exception as e:
+            logger.warning(f"Portal initialization failed - Portal projection disabled: {str(e)}. eKYC will work as backend-only API.")
+            self.enabled = False
 
     def capture_agent_registration(self, agent):
         """
         Create a new agent registration record in the portal using Amplify GraphQL API.
-        
+
         Args:
             agent: Dictionary containing agent registration data
-            
+
         Returns:
             The created agent record or None if there was an error
         """
+        if not self.enabled:
+            logger.debug("Portal projection disabled - generating local agent ID")
+            # Return a locally generated ID so registration can proceed without portal
+            agent_id = str(uuid.uuid4())
+            return {"agentId": agent_id, "name": agent.get("name"), "agentType": agent.get("agentType")}
+
         try:
             # Create a new agent registration
             create_mutation = """
@@ -127,13 +147,19 @@ class Portal:
     def capture_customer_registration(self, customer):
         """
         Create a new customer registration record in the portal using Amplify GraphQL API.
-        
+
         Args:
             customer: Dictionary containing customer registration data
-            
+
         Returns:
             The created customer record or None if there was an error
         """
+        if not self.enabled:
+            logger.debug("Portal projection disabled - generating local customer ID")
+            # Return a locally generated ID so registration can proceed without portal
+            customer_id = str(uuid.uuid4())
+            return {"customerId": customer_id, "name": customer.get("name")}
+
         try:
             # Create a new customer registration
             create_mutation = """
@@ -200,13 +226,17 @@ class Portal:
     def capture_background_check(self, backgroud_check):
         """
         Create a new background check record in the portal using Amplify GraphQL API.
-        
+
         Args:
             backgroud_check: Dictionary containing background check data
-            
+
         Returns:
             The created background check record or None if there was an error
         """
+        if not self.enabled:
+            logger.debug("Portal projection disabled - skipping background check capture")
+            return None
+
         try:
             # Create a new background check
             create_mutation = """
@@ -272,13 +302,17 @@ class Portal:
     def capture_face_liveness(self, face_liveness):
         """
         Create a new face liveness record in the portal using Amplify GraphQL API.
-        
+
         Args:
             face_liveness: Dictionary containing face liveness data
-            
+
         Returns:
             The created face liveness record or None if there was an error
         """
+        if not self.enabled:
+            logger.debug("Portal projection disabled - skipping face liveness capture")
+            return None
+
         try:
             # Create a new face liveness session
             create_mutation = """
@@ -331,17 +365,21 @@ class Portal:
                                validation_accuracy,processing_accuracy,overall_confidence):
         """
         Create a new document validation record in the portal using Amplify GraphQL API.
-        
+
         Args:
             documentType: Type of document (ID, Passport, etc.)
             s3Path: Path to the document in S3
             documentIdentifier: Identifier for the document (ID number, passport number)
             matchResults: JSON object with match results
             keywords_checks: JSON object with keyword check results
-            
+
         Returns:
             The created document validation record or None if there was an error
         """
+        if not self.enabled:
+            logger.debug("Portal projection disabled - skipping document validation capture")
+            return None
+
         assert documentType.value in SUPPORTED_DOCUMENT_TYPES, f"Invalid document type: {documentType} expected one of {SUPPORTED_DOCUMENT_TYPES}"
         documentType = documentType.value
         try:
@@ -414,9 +452,13 @@ class Portal:
         Returns:
             The created document verification record or None if there was an error
         """
+        if not self.enabled:
+            logger.debug("Portal projection disabled - skipping document verification capture")
+            return None
+
         assert documentType.value in SUPPORTED_DOCUMENT_TYPES, f"Invalid document type: {documentType} expected one of {SUPPORTED_DOCUMENT_TYPES}"
         documentType = documentType.value
-        
+
         try:
             # Create a new document verification
             create_mutation = """

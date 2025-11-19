@@ -513,14 +513,73 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
+  /kyc:
+    post:
+      summary: Unified KYC endpoint with action-based routing
+      operationId: processActionBasedKYC
+      description: |
+        Unified KYC endpoint that supports action-based routing for all KYC operations including
+        document validation, government verification, background checks, face liveness, registration,
+        and certificate generation. Use the 'action' parameter to specify the desired operation.
+
+        Supports 13 actions: validate_nationalid, validate_passport, validate_krapincertificate,
+        validate_cr12, government_verify_nationalid, government_verify_passport, government_verify_kra,
+        background_check, face_liveness, customer_registration, agent_registration, process_workflow,
+        get_kyc_status.
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${KYCOrchestratorFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+                - data
+              properties:
+                action:
+                  type: string
+                  description: The KYC action to perform
+                  example: validate_nationalid
+                data:
+                  type: object
+                  description: Action-specific data payload
+      responses:
+        '200':
+          description: Action completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Invalid input or validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /kyc/process:
     post:
-      summary: Process complete KYC verification workflow
+      summary: Process complete KYC verification workflow (Legacy)
       operationId: processConsolidatedKYC
       description: |
-        Consolidated KYC endpoint that orchestrates the complete KYC workflow including
-        document validation, government verification, background checks, face liveness,
-        and certificate generation in a single API call.
+        Legacy consolidated KYC endpoint. Please use /kyc with action-based routing instead.
+        This endpoint remains for backward compatibility with existing integrations.
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${KYCOrchestratorFn.Arn}/invocations"

@@ -40,7 +40,7 @@ class LambdaService:
                                                 'jubilee-ekyc-backend-DocumentValidationFn-sX697rYQ8AYw'),
             'government_verification': os.environ.get('GOVERNMENT_VERIFICATION_FUNCTION',
                                                    'jubilee-ekyc-backend-GovernmentVerificationFn-i19xxoO1d3ia'),
-            'background_checks': os.environ.get('BACKGROUND_CHECKS_FUNCTION',
+            'background_checks': os.environ.get('BACKGROUND_CHECK_FUNCTION',
                                               'jubilee-ekyc-backend-BackgroundChecksFn-U37eW5O12VZk'),
             'face_liveness': os.environ.get('FACE_LIVENESS_FUNCTION',
                                           'jubilee-ekyc-backend-FaceLivenessFn-M7Sci6jlul3P'),
@@ -209,8 +209,18 @@ class LambdaService:
 
     def invoke_face_liveness(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Invoke face liveness function."""
+        # FaceLivenessFn expects action: "create" or "get_results" in the body
+        # If userId is provided, create a session; if sessionId, get results
+        liveness_action = 'get_results' if 'sessionId' in data else 'create'
+
+        # Merge the action with the data
+        liveness_payload = {
+            'action': liveness_action,
+            **data
+        }
+
         event_payload = {
-            'body': json.dumps(data),
+            'body': json.dumps(liveness_payload),
             'headers': {'Content-Type': 'application/json'},
             'requestContext': {'requestId': f'action-{datetime.utcnow().isoformat()}'}
         }
