@@ -338,6 +338,14 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+                - s3:GetObject
+                - s3:GetObjectVersion
+                - s3:HeadObject
+                - s3:ListBucket
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
                 - textract:AnalyzeDocument
                 - textract:DetectDocumentText
                 - textract:GetDocumentAnalysis
@@ -608,6 +616,14 @@ Resources:
                 - !Sub arn:${AWS::Partition}:s3:::${FaceLivenessCaptureBucket}/*
                 - !Sub arn:${AWS::Partition}:s3:::${CertificationBucket}
                 - !Sub arn:${AWS::Partition}:s3:::${CertificationBucket}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:GetObjectVersion
+                - s3:HeadObject
+                - s3:ListBucket
+              Resource: '*'
       Events:
         ApiGatewayPOSTfaceliveness:
           Type: Api
