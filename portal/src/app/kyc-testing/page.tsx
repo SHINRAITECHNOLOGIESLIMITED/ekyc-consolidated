@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import {
   Box,
   Button,
-  Cards,
   Header,
   SpaceBetween,
   FormField,
@@ -23,7 +22,7 @@ interface TestResult {
   action: string;
   success: boolean;
   responseTime: number;
-  response: any;
+  response: Record<string, unknown>;
   timestamp: Date;
 }
 
@@ -41,7 +40,7 @@ interface ActionTest {
     defaultValue?: string;
     options?: Array<{ label: string; value: string }>;
   }>;
-  getPayload: (formData: Record<string, string>) => any;
+  getPayload: (formData: Record<string, string>) => Record<string, unknown>;
 }
 
 const actionTests: ActionTest[] = [
@@ -212,11 +211,12 @@ const UnifiedKYCTesting: React.FC = () => {
       }));
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const testResult: TestResult = {
         action: actionId,
         success: false,
         responseTime: 0,
-        response: { error: error.message },
+        response: { error: errorMessage },
         timestamp: new Date()
       };
 
