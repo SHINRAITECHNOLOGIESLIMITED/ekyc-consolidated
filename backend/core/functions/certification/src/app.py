@@ -148,7 +148,7 @@ def create_customer_certificate(data):
                       "required": ["message"]
                   }
               },
-              "required": ["registration", "nationalIdValidation", "idVerification", "taxPayerVerification", "backgroundCheck"]
+              "required": ["registration", "idVerification", "taxPayerVerification", "backgroundCheck"]
               }
 
     try:
@@ -157,8 +157,9 @@ def create_customer_certificate(data):
 
         # Extract required data from the input
         registration = data['registration']
-        id_validation = data['nationalIdValidation']
-        id_verification = data['idVerification']
+        # Support both National ID and Passport validation
+        id_validation = data.get('nationalIdValidation') or data.get('passportValidation') or {'message': 'Not performed'}
+        id_verification = data.get('idVerification') or data.get('passportVerification')
         tax_verification = data['taxPayerVerification']
         background_check = data['backgroundCheck']
         identifier = registration["customerId"]
@@ -254,7 +255,7 @@ def create_individual_agent_certificate(data):
                 "required": ["message"]
             }
         },
-        "required": ["registration", "nationalIdValidation", "idVerification", "taxPayerVerification", "backgroundCheck"]
+        "required": ["registration", "idVerification", "taxPayerVerification", "backgroundCheck"]
     }
 
     try:
@@ -263,8 +264,9 @@ def create_individual_agent_certificate(data):
 
         # Extract required data from the input
         registration = data['registration']
-        id_validation = data['nationalIdValidation']
-        id_verification = data['idVerification']
+        # Support both National ID and Passport validation
+        id_validation = data.get('nationalIdValidation') or data.get('passportValidation') or {'message': 'Not performed'}
+        id_verification = data.get('idVerification') or data.get('passportVerification')
         tax_verification = data['taxPayerVerification']
         background_check = data['backgroundCheck']
         identifier = registration["agentId"]
@@ -456,7 +458,7 @@ def generate_kyc_certificate(certificateType, identifier, registration, id_valid
                 y_position -= 20
                 error_text = f"Error: {id_verification.get('error', 'N/A')}"
                 y_position = wrap_text(pdf, error_text, 90, y_position, 450)
-            if 'results' in id_verification:
+            elif 'results' in id_verification:
                 id_results = id_verification.get('results', {})
                 y_position -= 20
                 pdf.drawString(
@@ -470,6 +472,11 @@ def generate_kyc_certificate(certificateType, identifier, registration, id_valid
                 y_position -= 20
                 pdf.drawString(
                     90, y_position, f"Gender: {get_verification_status(id_results.get('gender', {}))}")
+            else:
+                # Show status message when no detailed results available
+                y_position -= 20
+                pdf.drawString(
+                    90, y_position, f"Status: {id_verification.get('message', 'Completed')}")
         except Exception as e:
             logger.error(f"Error adding ID verification: {e}")
             #raise Exception("Failed to add ID verification to PDF")
@@ -483,7 +490,7 @@ def generate_kyc_certificate(certificateType, identifier, registration, id_valid
                 y_position -= 20
                 error_text = f"Error: {tax_verification.get('error', 'N/A')}"
                 y_position = wrap_text(pdf, error_text, 90, y_position, 450)
-            if 'results' in tax_verification:
+            elif 'results' in tax_verification:
                 tax_results = tax_verification.get('results', {})
                 y_position -= 20
                 pdf.drawString(
@@ -491,6 +498,11 @@ def generate_kyc_certificate(certificateType, identifier, registration, id_valid
                 y_position -= 20
                 pdf.drawString(
                     90, y_position, f"Taxpayer Name: {get_verification_status(tax_results.get('taxPayerName', {}))}")
+            else:
+                # Show status message when no detailed results available
+                y_position -= 20
+                pdf.drawString(
+                    90, y_position, f"Status: {tax_verification.get('message', 'Completed')}")
         except Exception as e:
             logger.error(f"Error adding Tax verification: {e}")
             #raise Exception("Failed to add Tax verification to PDF")
