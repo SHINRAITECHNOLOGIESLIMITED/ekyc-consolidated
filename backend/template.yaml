@@ -8,14 +8,6 @@ Parameters:
     Type: String
     Default: amplify-dnw02dhxhpu7h-mai-kycdocumentsbucketa4bf11-wxhjqijfdzdz
     Description: Name of the Amplify S3 bucket where KYC documents are upload into by portal
-  AmplifyDynamoDBCustomerRegistrationTable:
-    Type: String
-    Default: Customer-7s7oergeyvc23jelhjmhef4uki-NONE
-    Description: Name of the Amplify DynamoDb Table with customer registrations
-  AmplifyDynamoDBAgentRegistrationTable:
-    Type: String
-    Default: Agent-7s7oergeyvc23jelhjmhef4uki-NONE
-    Description: Name of the Amplify DynamoDb Table with agent registrations
   AmplifyCognitoUserPoolId:
     Type: String
     Default: eu-west-1_zn9jaZ2zR
@@ -57,6 +49,50 @@ Resources:
       Name: !Sub ${AWS::StackName}-portal-graphql-credentials
       Description: Portal GraphQL API Credentials
       SecretString: !Ref PortalGraphQLCredentials
+
+  # DynamoDB Tables for Customer and Agent Registration
+  CustomerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${AWS::StackName}-Customer
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: customerId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: customerId
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Purpose
+          Value: eKYC Customer Registration
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  AgentTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${AWS::StackName}-Agent
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: agentId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: agentId
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Purpose
+          Value: eKYC Agent Registration
+        - Key: ManagedBy
+          Value: CloudFormation
+
   ApiGateway:
     Type: AWS::Serverless::Api
     Properties:
@@ -183,6 +219,9 @@ Resources:
           DOCUMENT_STREAMING_FUNCTION: !Ref DocumentStreamingFn
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
           COGNITO_USER_POOL_ID: !Ref AmplifyCognitoUserPoolId
+          AMPLIFY_DYNAMODB_CUSTOMER_TABLE: !Ref CustomerTable
+          AMPLIFY_DYNAMODB_AGENT_TABLE: !Ref AgentTable
+          CERTIFICATION_BUCKET_NAME: !Ref CertificationBucket
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -223,6 +262,24 @@ Resources:
                 - ssm:GetParametersByPath
               Resource:
                 - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/jubilee/kyc/feature-flags/*
+            - Sid: DynamoDBAccess
+              Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:Query
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt CustomerTable.Arn
+                - !GetAtt AgentTable.Arn
+            - Sid: CertificationBucketReadAccess
+              Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:GetObjectVersion
+                - s3:HeadObject
+              Resource:
+                - !Sub arn:aws:s3:::${CertificationBucket}/*
       Events:
         ApiGatewayPOSTKYCProcess:
           Type: Api
@@ -753,7 +810,7 @@ Resources:
                 - !GetAtt BackgroundChecksFn.Arn
                 - !GetAtt CertificationFn.Arn
         - DynamoDBCrudPolicy:
-            TableName: !Ref AmplifyDynamoDBCustomerRegistrationTable
+            TableName: !Ref CustomerTable
       Tracing:
         Enabled: true
       Type: STANDARD
@@ -762,7 +819,7 @@ Resources:
         GovernmentVerification: !Ref GovernmentVerificationFn
         BackgroundChecks: !Ref BackgroundChecksFn
         Certification: !Ref CertificationFn
-        CustomerRegitrationTable: !Ref AmplifyDynamoDBCustomerRegistrationTable
+        CustomerRegitrationTable: !Ref CustomerTable
       DefinitionUri: process/state_machines/customer_registration.yaml
   CustomerRegistrationSMLogGroup:
     Type: AWS::Logs::LogGroup
@@ -805,7 +862,7 @@ Resources:
                 - !GetAtt BackgroundChecksFn.Arn
                 - !GetAtt CertificationFn.Arn
         - DynamoDBCrudPolicy:
-            TableName: !Ref AmplifyDynamoDBAgentRegistrationTable
+            TableName: !Ref AgentTable
       Tracing:
         Enabled: true
       Type: STANDARD
@@ -814,7 +871,7 @@ Resources:
         GovernmentVerification: !Ref GovernmentVerificationFn
         BackgroundChecks: !Ref BackgroundChecksFn
         Certification: !Ref CertificationFn
-        AgentRegitrationTable: !Ref AmplifyDynamoDBAgentRegistrationTable
+        AgentRegitrationTable: !Ref AgentTable
       DefinitionUri: process/state_machines/agent_registration.yaml
   AgentRegistrationSMLogGroup:
     Type: AWS::Logs::LogGroup
