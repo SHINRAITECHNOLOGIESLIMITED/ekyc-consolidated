@@ -31,6 +31,9 @@ class KYCAction(Enum):
 
     # Supporting operations
     STREAM_DOCUMENT = "stream_document"
+    GET_CERTIFICATE = "get_certificate"
+    GENERATE_CERTIFICATE = "generate_certificate"
+    GET_KYC_STATUS = "get_kyc_status"
 
     # Legacy workflow (backward compatibility)
     PROCESS_WORKFLOW = "process_workflow"
@@ -406,6 +409,110 @@ class PayloadValidator:
                         }
                     }
                 }
+            },
+
+            "get_certificate": {
+                "type": "object",
+                "description": "Retrieve existing KYC certificate by entity ID",
+                "properties": {
+                    "customerId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Customer ID to retrieve certificate for"
+                    },
+                    "agentId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Agent ID to retrieve certificate for"
+                    }
+                },
+                "oneOf": [
+                    {"required": ["customerId"]},
+                    {"required": ["agentId"]}
+                ]
+            },
+
+            "generate_certificate": {
+                "type": "object",
+                "description": "Generate KYC certificate from stored verification results (simplified approach)",
+                "properties": {
+                    "customerId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Customer ID to generate certificate for"
+                    },
+                    "agentId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Agent ID to generate certificate for"
+                    },
+                    "idNumber": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "National ID number (natural identifier)"
+                    },
+                    "passportNumber": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Passport number (natural identifier)"
+                    },
+                    "businessNumber": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Business registration number (natural identifier)"
+                    },
+                    "certificateType": {
+                        "type": "string",
+                        "enum": ["customer", "individual_agent", "business_agent"],
+                        "description": "Type of certificate (required for agents)"
+                    }
+                },
+                "oneOf": [
+                    {"required": ["customerId"]},
+                    {"required": ["agentId"]},
+                    {"required": ["idNumber"]},
+                    {"required": ["passportNumber"]},
+                    {"required": ["businessNumber"]}
+                ]
+            },
+
+            "get_kyc_status": {
+                "type": "object",
+                "description": "Retrieve KYC verification status and completed verifications",
+                "properties": {
+                    "customerId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Customer ID to get status for"
+                    },
+                    "agentId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Agent ID to get status for"
+                    },
+                    "idNumber": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "National ID number (natural identifier)"
+                    },
+                    "passportNumber": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Passport number (natural identifier)"
+                    },
+                    "businessNumber": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Business registration number (natural identifier)"
+                    }
+                },
+                "oneOf": [
+                    {"required": ["customerId"]},
+                    {"required": ["agentId"]},
+                    {"required": ["idNumber"]},
+                    {"required": ["passportNumber"]},
+                    {"required": ["businessNumber"]}
+                ]
             },
 
             "process_workflow": {
