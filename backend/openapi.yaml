@@ -520,12 +520,12 @@ paths:
       description: |
         Unified KYC endpoint that supports action-based routing for all KYC operations including
         document validation, government verification, background checks, face liveness, registration,
-        and certificate generation. Use the 'action' parameter to specify the desired operation.
+        certificate generation and retrieval, and document streaming. Use the 'action' parameter to specify the desired operation.
 
-        Supports 13 actions: validate_nationalid, validate_passport, validate_krapincertificate,
+        Supports 15 actions: validate_nationalid, validate_passport, validate_krapincertificate,
         validate_cr12, government_verify_nationalid, government_verify_passport, government_verify_kra,
-        background_check, face_liveness, customer_registration, agent_registration, process_workflow,
-        get_kyc_status.
+        background_check, face_liveness, customer_registration, agent_registration, stream_document,
+        get_certificate, generate_certificate, process_workflow (deprecated).
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${KYCOrchestratorFn.Arn}/invocations"
