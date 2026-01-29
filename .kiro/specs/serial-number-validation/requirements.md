@@ -111,3 +111,29 @@ This document defines the requirements for the Serial Number Validation feature 
 3. IF normalization encounters unexpected characters, THEN THE Serial_Number_Validator SHALL handle them gracefully and proceed with comparison
 4. THE Serial_Number_Validator SHALL validate input parameters and return appropriate error details for invalid inputs
 5. IF an unexpected error occurs, THEN THE Serial_Number_Validator SHALL log the error and return INCONCLUSIVE status with error details
+
+
+### Requirement 9: ESB Schema Versioning
+
+**User Story:** As a system architect, I want the ESB payload schema locked and versioned, so that changes to the IPRS response structure do not break the validation.
+
+#### Acceptance Criteria
+
+1. THE Serial_Number_Validator SHALL document the expected IPRS response schema including the `serialNumber` field location
+2. THE Serial_Number_Validator SHALL validate that the IPRS response conforms to the expected schema version
+3. IF the IPRS response schema changes unexpectedly, THEN THE Serial_Number_Validator SHALL log a schema mismatch warning and return INCONCLUSIVE
+4. THE Serial_Number_Validator SHALL support schema version configuration via SSM Parameter Store
+5. WHEN a schema version mismatch is detected, THE Serial_Number_Validator SHALL emit a CloudWatch alarm for immediate attention
+6. THE ESB integration team SHALL confirm serial number field availability within 48 hours of sprint start (Action Item)
+
+### Requirement 10: Metrics and Monitoring
+
+**User Story:** As a product owner, I want operational metrics for serial number validation, so that I can monitor validation rates and detect issues.
+
+#### Acceptance Criteria
+
+1. THE Serial_Number_Validator SHALL emit CloudWatch metrics for each validation outcome (MATCH, MISMATCH, INCONCLUSIVE)
+2. THE Serial_Number_Validator SHALL emit metrics for IPRS API latency and error rates
+3. THE Serial_Number_Validator SHALL emit metrics for schema validation failures
+4. THE Serial_Number_Validator SHALL create a CloudWatch dashboard for serial number validation monitoring
+5. WHEN MISMATCH rate exceeds configurable threshold, THE Serial_Number_Validator SHALL trigger a CloudWatch alarm

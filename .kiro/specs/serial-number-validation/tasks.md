@@ -91,6 +91,48 @@ This implementation plan breaks down the Serial Number Validation feature into d
 - [ ] 8. Final Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
+- [ ] 9. Implement ESB Schema Versioning
+  - [ ] 9.1 Document expected IPRS response schema
+    - Create schema documentation for serialNumber field location
+    - Define expected response structure version
+    - Store schema version in SSM Parameter Store
+    - _Requirements: 9.1, 9.4_
+  
+  - [ ] 9.2 Implement schema validation
+    - Validate IPRS response conforms to expected schema
+    - Log schema mismatch warnings
+    - Return INCONCLUSIVE on schema mismatch
+    - _Requirements: 9.2, 9.3_
+  
+  - [ ] 9.3 Create CloudWatch alarm for schema mismatches
+    - Emit metric on schema validation failure
+    - Configure alarm for immediate notification
+    - _Requirements: 9.5_
+
+- [ ] 10. Implement Metrics and Monitoring
+  - [ ] 10.1 Create CloudWatch metrics emitter
+    - Emit counters for MATCH, MISMATCH, INCONCLUSIVE outcomes
+    - Emit IPRS API latency metrics
+    - Emit schema validation failure metrics
+    - _Requirements: 10.1, 10.2, 10.3_
+  
+  - [ ] 10.2 Create CloudWatch dashboard
+    - Add validation outcome charts
+    - Add IPRS latency charts
+    - Add MISMATCH rate monitoring
+    - _Requirements: 10.4_
+  
+  - [ ] 10.3 Configure MISMATCH rate alarm
+    - Set configurable threshold for MISMATCH rate
+    - Trigger alarm when threshold exceeded
+    - _Requirements: 10.5_
+
+- [ ] 11. ESB Confirmation Checkpoint
+  - Confirm with ESB team that serialNumber field is available
+  - Document confirmed payload structure
+  - Update schema version if needed
+  - _Requirements: 9.6_
+
 ## Notes
 
 - All tasks are required including property-based tests for comprehensive coverage
@@ -98,3 +140,5 @@ This implementation plan breaks down the Serial Number Validation feature into d
 - Property tests use the Hypothesis library for property-based testing
 - All new modules are created in `backend/core/functions/document_validation/src/`
 - The existing IPRS integration in `jubilee_esb_api_layer` is reused without modification
+- **CRITICAL**: ESB confirmation for serial number payload is required within 48 hours of sprint start
+- Schema versioning protects against unexpected ESB payload changes
