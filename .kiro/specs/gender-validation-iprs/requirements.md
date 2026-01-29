@@ -92,3 +92,16 @@ This document specifies the requirements for the Gender Validation via IPRS feat
 3. WHEN gender validation completes, THE Document_Validation_Function SHALL log the validation status and both gender values at INFO level
 4. IF an unexpected exception occurs during gender validation, THEN THE Document_Validation_Function SHALL log the exception at ERROR level with stack trace
 5. THE logging output SHALL include the ID number (masked) for correlation with other validation steps
+
+
+### Requirement 7: Metrics and Monitoring
+
+**User Story:** As a product owner, I want operational metrics for gender validation, so that I can monitor data quality trends and detect issues.
+
+#### Acceptance Criteria
+
+1. THE Gender_Validator SHALL emit CloudWatch metrics for each validation outcome (MATCH, MISMATCH, INCONCLUSIVE)
+2. THE Gender_Validator SHALL emit metrics for IPRS API latency during gender retrieval
+3. THE Gender_Validator SHALL emit metrics for unrecognized gender value occurrences
+4. WHEN MISMATCH rate exceeds configurable threshold, THE Gender_Validator SHALL trigger a CloudWatch alarm
+5. THE Gender_Validator SHALL create a CloudWatch dashboard for gender validation monitoring

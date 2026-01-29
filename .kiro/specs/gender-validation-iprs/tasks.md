@@ -78,6 +78,23 @@ This implementation plan breaks down the gender validation feature into discrete
 - [ ] 6. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
+- [ ] 7. Implement Metrics and Monitoring
+  - [ ] 7.1 Create CloudWatch metrics emitter
+    - Emit counters for MATCH, MISMATCH, INCONCLUSIVE outcomes
+    - Emit IPRS API latency metrics
+    - Emit unrecognized gender value metrics
+    - _Requirements: 7.1, 7.2, 7.3_
+
+  - [ ] 7.2 Create CloudWatch dashboard
+    - Add validation outcome charts
+    - Add MISMATCH rate monitoring
+    - _Requirements: 7.5_
+
+  - [ ] 7.3 Configure MISMATCH rate alarm
+    - Set configurable threshold for MISMATCH rate
+    - Trigger alarm when threshold exceeded
+    - _Requirements: 7.4_
+
 ## Notes
 
 - All tasks are required for comprehensive implementation
@@ -86,3 +103,4 @@ This implementation plan breaks down the gender validation feature into discrete
 - Property tests validate universal correctness properties using Hypothesis
 - Unit tests validate specific examples and edge cases
 - The implementation reuses existing IPRS integration - no new API calls needed
+- Gender validation uses IPRS only (NOT LexisNexis) per data quality concerns
