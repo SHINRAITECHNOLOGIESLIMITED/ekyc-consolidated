@@ -122,3 +122,55 @@ This document defines the requirements for the Face Matching Verification featur
 4. IF image format is unsupported, THEN THE Face_Matching_Service SHALL return an error with code UNSUPPORTED_FORMAT
 5. IF the request times out, THEN THE Face_Matching_Service SHALL return a partial result with completed comparisons and indicate which comparisons timed out
 6. THE Face_Matching_Service SHALL validate all input parameters and return validation errors with specific field-level details
+
+### Requirement 9: Metrics and Observability
+
+**User Story:** As a product owner, I want operational metrics instrumented from day one, so that I can monitor system performance and tune thresholds during UAT.
+
+#### Acceptance Criteria
+
+1. THE Face_Matching_Service SHALL emit CloudWatch metrics for each verification outcome (APPROVED, MANUAL_REVIEW, REJECTED)
+2. THE Face_Matching_Service SHALL track and emit the percentage of requests routed to manual review
+3. THE Face_Matching_Service SHALL log ROC (Receiver Operating Characteristic) metrics during UAT phase for threshold tuning
+4. THE Face_Matching_Service SHALL emit latency metrics for each comparison operation
+5. THE Face_Matching_Service SHALL emit metrics for image quality gate failures (poor selfie quality, low resolution)
+6. THE Face_Matching_Service SHALL create CloudWatch dashboards for real-time monitoring of approval/rejection rates
+
+### Requirement 10: Feature Flags and Configuration
+
+**User Story:** As a system administrator, I want thresholds and feature behavior to be configurable without code deployment, so that I can tune the system based on UAT feedback.
+
+#### Acceptance Criteria
+
+1. THE Face_Matching_Service SHALL support feature flags via AWS AppConfig or SSM Parameter Store
+2. THE Approval_Threshold (default 70%) SHALL be configurable at runtime without code deployment
+3. THE Review_Threshold (default 50%) SHALL be configurable at runtime without code deployment
+4. THE Face_Matching_Service SHALL support a feature flag to enable/disable the third comparison (ID_Document ↔ IPRS)
+5. THE Face_Matching_Service SHALL support a feature flag to switch between aggregation rules (fail-fast, minimum score, weighted average)
+6. WHEN threshold values are changed, THE Face_Matching_Service SHALL log the configuration change with timestamp and previous values
+
+### Requirement 11: Manual Review Workflow Integration
+
+**User Story:** As a KYC reviewer, I want manual review to be a first-class workflow, so that borderline cases are handled efficiently with proper SLAs.
+
+#### Acceptance Criteria
+
+1. WHEN Match_Status is MANUAL_REVIEW, THE Face_Matching_Service SHALL create a review task in the review queue
+2. THE review task SHALL include all comparison scores, image references, and quality metrics
+3. THE Face_Matching_Service SHALL support configurable SLA thresholds for manual review completion
+4. THE Face_Matching_Service SHALL emit metrics for manual review queue depth and average resolution time
+5. THE Face_Matching_Service SHALL support reviewer assignment and workload balancing
+6. THE Face_Matching_Service SHALL log all manual review decisions with reviewer ID and timestamp for audit
+
+### Requirement 12: Capture-Time Quality Gates
+
+**User Story:** As a UX designer, I want quality gates enforced at capture time, so that poor quality selfies are rejected before submission.
+
+#### Acceptance Criteria
+
+1. THE portal SHALL enforce minimum image resolution (480x480) before upload
+2. THE portal SHALL detect and reject images with no face detected before submission
+3. THE portal SHALL detect and reject images with multiple faces before submission
+4. THE portal SHALL provide real-time feedback on image quality (brightness, blur) during capture
+5. THE Face_Matching_Service SHALL return quality gate failure reasons that can be displayed to the customer
+6. THE quality gate thresholds SHALL be configurable via feature flags

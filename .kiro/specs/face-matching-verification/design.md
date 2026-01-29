@@ -16,6 +16,44 @@ The feature integrates with the existing KYC Orchestrator as a new `face_matchin
 
 4. **Parallel Comparison Execution**: All three comparisons are executed in parallel to meet the <500ms per comparison performance target.
 
+5. **Explicit Aggregation Rule**: The decision algorithm uses a **fail-fast minimum score** approach - the lowest score among all comparisons determines the outcome. This is configurable via feature flags.
+
+### 3-Way Comparison Logic (Explicit)
+
+The system performs exactly three pairwise comparisons:
+
+| Comparison | Source | Target | Purpose |
+|------------|--------|--------|---------|
+| **Selfie ↔ ID** | Customer selfie | ID document photo | Verify person matches their ID |
+| **Selfie ↔ IPRS** | Customer selfie | IPRS government photo | Verify person matches government records |
+| **ID ↔ IPRS** | ID document photo | IPRS government photo | Verify document photo matches government records |
+
+**Aggregation Rules** (configurable via feature flag):
+
+1. **Fail-Fast (default)**: If ANY comparison score < rejection_threshold → REJECTED
+2. **Minimum Score**: Overall decision based on MIN(all scores)
+3. **Weighted Average**: Weighted average with configurable weights per comparison
+
+**Decision Bands**:
+- **≥70%** (all comparisons): Auto-approve → `APPROVED`
+- **50-69%** (any comparison): Manual review → `MANUAL_REVIEW`
+- **<50%** (any comparison): Auto-reject → `REJECTED`
+
+### Metrics Strategy (Day One)
+
+The following metrics are instrumented from initial deployment:
+
+| Metric | Type | Purpose |
+|--------|------|---------|
+| `FaceMatching.Approved` | Counter | Track auto-approval rate |
+| `FaceMatching.ManualReview` | Counter | Track manual review rate |
+| `FaceMatching.Rejected` | Counter | Track rejection rate |
+| `FaceMatching.ManualReviewPercentage` | Gauge | % routed to manual review |
+| `FaceMatching.ComparisonLatency` | Timer | Per-comparison latency |
+| `FaceMatching.QualityGateFailures` | Counter | Poor image quality rejections |
+| `FaceMatching.FalseAcceptRate` | Gauge | UAT metric for threshold tuning |
+| `FaceMatching.FalseRejectRate` | Gauge | UAT metric for threshold tuning |
+
 ## Architecture
 
 ```mermaid
