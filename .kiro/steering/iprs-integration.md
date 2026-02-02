@@ -1,33 +1,22 @@
-# IPRS Integration Guide
-
-This guide covers integration patterns for the IPRS (Integrated Population Registration System) API via the Jubilee ESB layer.
-
 ---
 inclusion: fileMatch
-fileMatchPattern: "**/iprs.py,**/government_verification/**,**/document_validation/**"
+fileMatchPattern: "**/iprs.py,**/government_verification/**/*.py"
 ---
 
-## Overview
+# IPRS Integration Patterns
 
-IPRS is Kenya's national identity database. The eKYC system queries IPRS to:
-1. Verify identity document data against government records
-2. Retrieve authoritative personal information (name, DOB, gender)
-3. Validate serial numbers to detect replaced/counterfeit IDs
-4. (Planned) Retrieve photos for face matching
+Guidelines for integrating with the IPRS (Integrated Population Registration System) API via the Jubilee ESB layer.
 
-## ESB Layer Architecture
+## Architecture Overview
 
 ```
-Lambda Function
-    └── JubileeESBAPI (jubilee_esb_api.py)
-            └── IPRS class (iprs.py)
-                    └── JubileeESBUtilities (utilities.py)
-                            └── HTTP calls to ESB
+Lambda Function → JubileeESBAPI → IPRS Class → ESB Gateway → IPRS Government System
 ```
 
 ## Using the IPRS Client
 
-### Import Pattern
+### Initialization
+
 ```python
 from jubilee_esb_api import JubileeESBAPI
 from portal import Portal
@@ -36,7 +25,7 @@ portal = Portal()
 esb_client = JubileeESBAPI(portal)
 
 # Access IPRS methods
-response = esb_client.iprs.search_generic(data)
+iprs = esb_client.iprs
 ```
 
 ### Available Methods
@@ -44,245 +33,273 @@ response = esb_client.iprs.search_generic(data)
 | Method | Endpoint | Use Case |
 |--------|----------|----------|
 | `search_generic(data)` | `/iprs/searchV2/LIFE_BUSINESS` | National ID lookup |
-| `search_passport_number(data)` | `/iprs/searchUsingPassportNumber/LIFE_BUSINESS` | Passport lookup |
+| `search_passport_number(data)` | `/iprs/searchUsingPassportNumber/LIFE_BUSINESS` | Passport verification |
 | `search_alien_id(data)` | `/iprs/searchUsingAlienId/LIFE_BUSINESS` | Alien ID lookup |
 | `search_birth_certificate_number(data)` | `/iprs/searchUsingBirthCertificateNumber/LIFE_BUSINESS` | Birth cert lookup |
 | `search_death_certificate_number(data)` | `/iprs/searchUsingDeathCertificateNumber/LIFE_BUSINESS` | Death cert lookup |
 | `bulk_iprs_search(data)` | `/iprs/bulk-search/LIFE_BUSINESS` | Batch lookups |
 | `ping()` | `/iprs/pingIprs/LIFE_BUSINESS` | Health check |
 
-## National ID Lookup Example
+---
+
+## National ID Search Pattern
+
+### Request
 
 ```python
-from jubilee_esb_api import JubileeESBAPI
-from portal import Portal
-
-portal = Portal()
-esb_client = JubileeESBAPI(portal)
-
-# Query IPRS by National ID
 response = esb_client.iprs.search_generic({
     "identifier": "ID_NUMBER",
-    "value": "12345678"
+    "value": "12345678"  # The national ID number
 })
-
-if response.status_code == 200:
-    result = response.json()
-    if result.get("success") and result.get("data"):
-        data = result["data"]
-        
-        # Available fields for v1.2 features:
-        serial_number = data.get("serialNumber")  # For serial validation
-        gender = data.get("gender")               # For gender validation
-        # photo = data.get("photo")               # For face matching (TBD)
 ```
 
-## Response Handling Pattern
+### Response Handling
 
 ```python
-def handle_iprs_response(response):
-    """Standard pattern for handling IPRS responses."""
-    
-    # Check HTTP status
-    if response.status_code >= 400:
-        error_msg = extract_error_message(response)
-        logger.warning(f"IPRS API error: {error_msg}")
-        return None, error_msg
-    
-    # Parse JSON response
-    result = response.json()
-    
-    # Check success flag
-    if result.get("error"):
-        return None, result["error"]
-    
-    if not result.get("success", True):
-        return None, "IPRS call unsuccessful"
-    
-    # Check data presence
-    if "data" not in result:
-        return None, "Missing data in IPRS response"
-    
-    return result["data"], None
+if response.status_code >= 400:
+    # Handle API error
+    logger.error(f"IPRS API error: {response.status_code}")
+    return handle_api_error(response)
 
+api_result = response.json()
 
-def extract_error_message(response):
-    """Extract error message from IPRS error response."""
-    try:
-        error_obj = response.json()
-        if "errors" in error_obj.get("error", {}):
-            return error_obj["error"]["errors"].get("errorMessage", "Unknown error")
-        return error_obj.get("message", f"{response.status_code}: API error")
-    except:
-        return f"{response.status_code}: API error"
+# Check for business logic errors
+if api_result.get("error"):
+    return handle_business_error(api_result["error"])
+
+if not api_result.get("success"):
+    return handle_unsuccessful_call()
+
+# Extract data
+data = api_result.get("data", {})
 ```
 
-## Field Extraction for v1.2 Features
+### Extracting Key Fields
 
-### Serial Number Validation
 ```python
-def get_iprs_serial_number(iprs_data: dict) -> tuple[str | None, str | None]:
-    """Extract serial number from IPRS response for validation."""
-    if not iprs_data:
-        return None, "IPRS data unavailable"
-    
-    serial = iprs_data.get("serialNumber")
-    if not serial:
-        return None, "IPRS serial number unavailable"
-    
-    return serial, None
+# For Serial Number Validation
+serial_number = data.get("serialNumber")
+
+# For Gender Validation  
+gender = data.get("gender")  # Returns "M" or "F"
+
+# For Face Matching (pending ESB confirmation)
+photo = data.get("photo")  # Base64 or URL - needs confirmation
+
+# For Name Matching
+first_name = data.get("firstName", "")
+other_name = data.get("otherName", "")
+surname = data.get("surname", "")
+full_name = f"{first_name} {other_name} {surname}".replace("  ", " ").strip().upper()
 ```
 
-### Gender Validation
-```python
-def get_iprs_gender(iprs_data: dict) -> tuple[str | None, str | None]:
-    """Extract gender from IPRS response for validation."""
-    if not iprs_data:
-        return None, "IPRS data unavailable"
-    
-    gender = iprs_data.get("gender")
-    if not gender:
-        return None, "IPRS gender unavailable"
-    
-    # Normalize: IPRS returns "M" or "F"
-    return gender.upper().strip(), None
-```
+---
 
-### Face Matching (Pending)
+## Field Comparison Pattern
+
+Use the existing `process()` function for field-by-field comparison:
+
 ```python
-def get_iprs_photo(iprs_data: dict) -> tuple[str | None, str | None]:
-    """Extract photo from IPRS response for face matching.
-    
-    NOTE: Photo field availability pending ESB team confirmation.
+def process(event_name, api_field_name, event, api_result, is_date_field=False):
     """
-    if not iprs_data:
-        return None, "IPRS data unavailable"
+    Compare a field from user input against IPRS response.
     
-    photo = iprs_data.get("photo")
-    if not photo:
-        return None, "IPRS photo unavailable"
-    
-    # TODO: Determine if photo is Base64 or URL
-    return photo, None
+    Returns:
+        dict with 'status' and 'details' keys
+        status: "Matched", "Not Matched", "Not provided", "Not Found", "Error in API response"
+    """
 ```
 
-## Error Handling Best Practices
+### Example Usage
 
-### Non-Blocking Validation
 ```python
-def validate_with_iprs(id_number: str, extracted_data: dict) -> dict:
-    """Validate document data against IPRS - non-blocking pattern."""
-    
-    validation_result = {
-        "status": "INCONCLUSIVE",
-        "reason": None,
-        "iprs_data": None
-    }
-    
-    try:
-        response = esb_client.iprs.search_generic({
-            "identifier": "ID_NUMBER",
-            "value": id_number
-        })
-        
-        iprs_data, error = handle_iprs_response(response)
-        
-        if error:
-            validation_result["reason"] = f"IPRS error: {error}"
-            return validation_result
-        
-        validation_result["iprs_data"] = iprs_data
-        # Perform validation...
-        
-    except Exception as e:
-        logger.error(f"IPRS validation failed: {e}")
-        validation_result["reason"] = f"IPRS exception: {str(e)}"
-    
-    return validation_result
+# Compare serial numbers
+serial_result = process(
+    event_name='serialNumber',      # Field name in request
+    api_field_name='serialNumber',  # Field name in IPRS response
+    event=event_data,               # User's request data
+    api_result=api_result           # IPRS response
+)
+
+# Compare gender
+gender_result = process(
+    event_name='gender',
+    api_field_name='gender',
+    event=event_data,
+    api_result=api_result
+)
+
+# Compare dates (with date normalization)
+dob_result = process(
+    event_name='dateOfBirth',
+    api_field_name='dateOfBirth',
+    event=event_data,
+    api_result=api_result,
+    is_date_field=True  # Enables date format normalization
+)
 ```
+
+---
+
+## Error Handling
+
+### API Error Codes
+
+| Status Code | Meaning | Action |
+|-------------|---------|--------|
+| 200 | Success | Process response |
+| 400 | Bad request | Log and return validation error |
+| 401 | Unauthorized | Token expired - auto-refresh handles this |
+| 404 | Not found | ID doesn't exist in IPRS |
+| 417 | Expectation failed | Passport/ID mismatch |
+| 500+ | Server error | Log and return INCONCLUSIVE |
 
 ### Graceful Degradation
-- IPRS failures should NOT block the overall KYC process
-- Return `INCONCLUSIVE` status, not errors
-- Log issues for monitoring
-- Continue with other validations
 
-## Caching
+```python
+try:
+    response = esb_client.iprs.search_generic(data)
+    # ... process response
+except JubileeESBError as e:
+    logger.error(f"IPRS integration error: {e}")
+    return {
+        "status": "INCONCLUSIVE",
+        "reason": f"IPRS API error: {str(e)}"
+    }
+except Exception as e:
+    logger.error(f"Unexpected error: {e}")
+    return {
+        "status": "INCONCLUSIVE", 
+        "reason": "Internal error during IPRS validation"
+    }
+```
 
-IPRS responses are cached for 7 days in DynamoDB. The caching is handled by the ESB layer automatically.
+---
 
-## Timeouts
+## Caching Behavior
 
-- Default timeout: 240 seconds (4 minutes)
-- No automatic retries (KYC operations are not idempotent)
+- **Cache Duration**: 7 days (configured in ESB layer)
+- **Cache Key**: Based on identifier type + value
+- **Cache Storage**: DynamoDB
 
-## Logging
+IPRS responses are cached to reduce API calls and improve latency. Be aware that cached data may be up to 7 days old.
 
-Use AWS Lambda Powertools for structured logging:
+---
+
+## Token Management
+
+The ESB layer handles token management automatically:
+- **Token Validity**: 5 minutes
+- **Auto-Refresh**: At 4.5 minutes
+- **Storage**: In-memory only (never persisted)
+
+No manual token handling required in Lambda functions.
+
+---
+
+## Logging Best Practices
 
 ```python
 from aws_lambda_powertools import Logger
 
 logger = Logger()
 
-@logger.inject_lambda_context
-def handler(event, context):
-    logger.info("IPRS lookup", extra={
-        "id_number": id_number,
-        "operation": "search_generic"
+# Log IPRS requests (without sensitive data)
+logger.info("IPRS lookup", extra={
+    "identifier_type": "ID_NUMBER",
+    "id_number_masked": f"***{id_number[-4:]}"  # Mask sensitive data
+})
+
+# Log validation results
+logger.info("Serial number validation", extra={
+    "status": "MATCH",
+    "id_number_masked": f"***{id_number[-4:]}"
+})
+
+# Log mismatches at WARNING level
+if status == "MISMATCH":
+    logger.warning("Serial number mismatch detected", extra={
+        "extracted_serial": extracted,
+        "iprs_serial": iprs_serial,
+        "id_number_masked": f"***{id_number[-4:]}"
     })
 ```
 
-## Metrics
+---
 
-Emit CloudWatch metrics for monitoring:
+## v1.2 Feature Integration Points
+
+### Serial Number Validation
 
 ```python
-from aws_lambda_powertools import Metrics
-from aws_lambda_powertools.metrics import MetricUnit
+# In document_validation/src/app.py
+from serial_number_validator import validate_serial_number
 
-metrics = Metrics()
+# After Textract extraction and IPRS lookup
+serial_validation = validate_serial_number(
+    extracted_serial=textract_serial,
+    iprs_serial=data.get("serialNumber")
+)
 
-@metrics.log_metrics
-def handler(event, context):
-    # Track IPRS call outcomes
-    metrics.add_metric(
-        name="IPRSCallSuccess",
-        unit=MetricUnit.Count,
-        value=1
-    )
+# Add to match results
+match_results["serialNumberValidation"] = serial_validation.to_dict()
 ```
 
-## Testing
+### Gender Validation
 
-### Mocking IPRS Responses
+```python
+# In document_validation/src/app.py
+from gender_validator import validate_gender
+
+# After Textract extraction and IPRS lookup
+gender_validation = validate_gender(
+    extracted_gender=textract_gender,
+    iprs_gender=data.get("gender")
+)
+
+# Add to match results
+match_results["genderValidation"] = gender_validation.to_dict()
+```
+
+### Face Matching (Pending ESB Confirmation)
+
+```python
+# In face_matching/src/app.py
+# Requires confirmation that IPRS returns photo field
+
+iprs_photo = data.get("photo")  # Base64 or URL - TBD
+if iprs_photo:
+    # Compare with selfie and document photo using Rekognition
+    pass
+```
+
+---
+
+## Testing IPRS Integration
+
+### Unit Test Mocking
+
 ```python
 from unittest.mock import Mock, patch
 
-def test_serial_number_validation():
+@patch('jubilee_esb_api.JubileeESBAPI')
+def test_iprs_lookup(mock_esb):
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
         "success": True,
         "data": {
+            "idNumber": "12345678",
             "serialNumber": "217990310",
-            "gender": "M"
+            "gender": "M",
+            # ... other fields
         }
     }
+    mock_esb.return_value.iprs.search_generic.return_value = mock_response
     
-    with patch.object(esb_client.iprs, 'search_generic', return_value=mock_response):
-        result = validate_serial_number(...)
+    # Test your function
 ```
 
-## Known Issues
+### E2E Test Data
 
-1. **Date Format Inconsistency**: IPRS returns dates in various formats (US, ISO, European). Always normalize before comparison.
-
-2. **Photo Field**: Availability pending ESB team confirmation. Do not assume this field exists.
-
-3. **Gender Values**: IPRS returns "M" or "F". Document extraction may return "Male"/"Female". Normalize before comparison.
-
-## Related Documentation
-
-- See `esb-response-schemas.md` for complete response schemas
-- See `testing-guide.md` for property-based testing patterns
+See `e2e/tests/verification/test_verify_nationalid.py` for real test cases with known ID numbers.

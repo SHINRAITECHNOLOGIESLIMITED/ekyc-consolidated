@@ -1,7 +1,10 @@
-const API_BASE_URL = 'https://k4m88497ad.execute-api.eu-west-1.amazonaws.com/Prod';
-const UNIFIED_KYC_API_URL = 'https://65mz46ka57.execute-api.eu-west-1.amazonaws.com/Stage/kyc';
-const VALIDATED_DOCS_BASE_S3_PATH = 's3://kyc-raw-documents-jubilee-ekyc-backend-851725215817';
-const UPLOADED_DOCS_BASE_S3_PATH = 's3://amplify-dnw02dhxhpu7h-mai-kycdocumentsbucketa4bf11-wxhjqijfdzdz';
+// API Gateway URLs for jubilee-ekyc-dev stack (pasha-eu account)
+// Stage endpoint auto-approves requests for testing (no auth required)
+// Prod endpoint requires JWT Bearer token from ESB
+const API_BASE_URL = 'https://6corkstod4.execute-api.eu-west-1.amazonaws.com/Stage';
+const UNIFIED_KYC_API_URL = 'https://6corkstod4.execute-api.eu-west-1.amazonaws.com/Stage/kyc';
+const VALIDATED_DOCS_BASE_S3_PATH = 's3://kyc-raw-documents-jubilee-ekyc-dev-686255958278';
+const UPLOADED_DOCS_BASE_S3_PATH = 's3://maisha-verification-dev-686255958278';
 const API_HEADERS = {
     'Content-Type': 'application/json'
 };

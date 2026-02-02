@@ -1,0 +1,99 @@
+{
+  "alarms": [
+    {
+      "AlarmName": "JubileeEKYC-SerialNumber-HighMismatchRate",
+      "AlarmDescription": "Alarm when serial number MISMATCH rate exceeds threshold. May indicate fraudulent document submissions or IPRS data issues.",
+      "MetricName": "ValidationMismatch",
+      "Namespace": "JubileeEKYC/DocumentValidation",
+      "Dimensions": [
+        {
+          "Name": "ValidationType",
+          "Value": "SerialNumber"
+        }
+      ],
+      "Statistic": "Sum",
+      "Period": 3600,
+      "EvaluationPeriods": 1,
+      "Threshold": 10,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching",
+      "ActionsEnabled": true,
+      "AlarmActions": ["${SNS_TOPIC_ARN}"],
+      "OKActions": ["${SNS_TOPIC_ARN}"]
+    },
+    {
+      "AlarmName": "JubileeEKYC-Gender-HighMismatchRate",
+      "AlarmDescription": "Alarm when gender MISMATCH rate exceeds threshold. May indicate OCR issues or data entry errors.",
+      "MetricName": "ValidationMismatch",
+      "Namespace": "JubileeEKYC/DocumentValidation",
+      "Dimensions": [
+        {
+          "Name": "ValidationType",
+          "Value": "Gender"
+        }
+      ],
+      "Statistic": "Sum",
+      "Period": 3600,
+      "EvaluationPeriods": 1,
+      "Threshold": 10,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching",
+      "ActionsEnabled": true,
+      "AlarmActions": ["${SNS_TOPIC_ARN}"],
+      "OKActions": ["${SNS_TOPIC_ARN}"]
+    },
+    {
+      "AlarmName": "JubileeEKYC-IPRS-SchemaMismatch",
+      "AlarmDescription": "CRITICAL: IPRS response schema has changed. Immediate investigation required.",
+      "MetricName": "IPRSSchemaMismatch",
+      "Namespace": "JubileeEKYC/DocumentValidation",
+      "Statistic": "Sum",
+      "Period": 300,
+      "EvaluationPeriods": 1,
+      "Threshold": 1,
+      "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+      "TreatMissingData": "notBreaching",
+      "ActionsEnabled": true,
+      "AlarmActions": ["${SNS_TOPIC_ARN}"],
+      "OKActions": ["${SNS_TOPIC_ARN}"]
+    },
+    {
+      "AlarmName": "JubileeEKYC-IPRS-HighLatency",
+      "AlarmDescription": "IPRS API latency is high. May indicate ESB performance issues.",
+      "MetricName": "IPRSAPILatency",
+      "Namespace": "JubileeEKYC/DocumentValidation",
+      "Statistic": "Average",
+      "Period": 300,
+      "EvaluationPeriods": 3,
+      "Threshold": 5000,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching",
+      "ActionsEnabled": true,
+      "AlarmActions": ["${SNS_TOPIC_ARN}"],
+      "OKActions": ["${SNS_TOPIC_ARN}"]
+    },
+    {
+      "AlarmName": "JubileeEKYC-IPRS-APIErrors",
+      "AlarmDescription": "IPRS API is returning errors. Check ESB connectivity.",
+      "MetricName": "IPRSAPIError",
+      "Namespace": "JubileeEKYC/DocumentValidation",
+      "Statistic": "Sum",
+      "Period": 300,
+      "EvaluationPeriods": 2,
+      "Threshold": 5,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching",
+      "ActionsEnabled": true,
+      "AlarmActions": ["${SNS_TOPIC_ARN}"],
+      "OKActions": ["${SNS_TOPIC_ARN}"]
+    }
+  ],
+  "notes": {
+    "threshold_configuration": "Thresholds are configurable via SSM Parameter Store",
+    "ssm_parameters": {
+      "/jubilee-ekyc/alarms/serial-mismatch-threshold": "10",
+      "/jubilee-ekyc/alarms/gender-mismatch-threshold": "10",
+      "/jubilee-ekyc/alarms/iprs-latency-threshold-ms": "5000"
+    }
+  }
+}

@@ -1,174 +1,144 @@
 # Coding Standards
 
-This document defines coding standards for the Jubilee eKYC platform.
-
----
-inclusion: always
----
+Guidelines for writing code in the Jubilee eKYC platform.
 
 ## Python Standards
 
 ### Style Guide
-- Follow PEP 8 style guide
+
+- Follow PEP 8
 - Use type hints for function signatures
 - Maximum line length: 120 characters
-- Use f-strings for string formatting
+- Use `snake_case` for functions and variables
+- Use `PascalCase` for classes
+- Use `UPPER_CASE` for constants
 
-### Imports
-```python
-# Standard library
-import json
-from datetime import datetime
-from typing import Dict, Any, Optional, List
+### Lambda Handler Pattern
 
-# Third-party
-from aws_lambda_powertools import Logger, Tracer, Metrics
-from aws_lambda_powertools.utilities.validation import validate
-
-# Local
-from serial_number_validator import validate_serial_number
-from normalizer import normalize_serial_number
-```
-
-### Type Hints
-```python
-def validate_serial_number(
-    extracted_serial: Optional[str],
-    iprs_serial: Optional[str]
-) -> SerialNumberValidationResult:
-    """Validate serial number with proper type hints."""
-    pass
-```
-
-### Dataclasses for Models
-```python
-from dataclasses import dataclass
-from typing import Optional
-
-@dataclass
-class SerialNumberValidationResult:
-    status: str
-    extracted_serial_number: Optional[str]
-    iprs_serial_number: Optional[str]
-    normalized_comparison: bool
-    reason: Optional[str] = None
-```
-
-### Enums for Constants
-```python
-from enum import Enum
-
-class ValidationStatus(Enum):
-    MATCH = "MATCH"
-    MISMATCH = "MISMATCH"
-    INCONCLUSIVE = "INCONCLUSIVE"
-```
-
-### Error Handling
-```python
-# Good: Specific exception handling with logging
-try:
-    result = external_api_call()
-except ConnectionError as e:
-    logger.warning(f"API connection failed: {e}")
-    return fallback_result()
-except Exception as e:
-    logger.error(f"Unexpected error: {e}")
-    raise
-
-# Bad: Bare except
-try:
-    result = external_api_call()
-except:
-    pass
-```
-
-### Logging
-```python
-from aws_lambda_powertools import Logger
-
-logger = Logger()
-
-# Good: Structured logging with context
-logger.info("Validation complete", extra={
-    "id_number": id_number,
-    "status": result.status,
-    "duration_ms": duration
-})
-
-# Bad: Unstructured logging
-print(f"Validation complete for {id_number}")
-```
-
-## Lambda Function Patterns
-
-### Handler Structure
 ```python
 from aws_lambda_powertools import Logger, Tracer
-from aws_lambda_powertools.utilities.typing import LambdaContext
+from aws_lambda_powertools.utilities.validation import validate
 
 logger = Logger()
 tracer = Tracer()
 
 @logger.inject_lambda_context
 @tracer.capture_lambda_handler
-def handler(event: dict, context: LambdaContext) -> dict:
-    """Lambda handler with proper decorators."""
-    logger.info("Processing request", extra={"event": event})
+def handler(event, context):
+    """Lambda handler with Powertools instrumentation."""
+    logger.info(f"Received event: {json.dumps(event)}")
     
     try:
-        result = process_request(event)
+        # Parse and validate input
+        data = parse_request(event)
+        
+        # Business logic
+        result = process(data)
+        
+        # Return response
         return make_response(200, result)
+        
     except ValidationError as e:
-        logger.warning(f"Validation failed: {e}")
+        logger.error(f"Validation error: {e}")
         return make_response(400, {"error": str(e)})
     except Exception as e:
-        logger.error(f"Handler failed: {e}")
+        logger.error(f"Unexpected error: {e}")
         return make_response(500, {"error": "Internal server error"})
 ```
 
 ### Response Format
+
 ```python
 def make_response(status_code: int, body: dict) -> dict:
     """Standard API Gateway response format."""
     return {
-        "statusCode": status_code,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            "Access-Control-Allow-Methods": "POST, OPTIONS"
+        'statusCode': status_code,
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Api-Key',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS'
         },
-        "body": json.dumps(body)
+        'body': json.dumps(body)
     }
 ```
+
+### Error Handling
+
+```python
+# Use specific exception types
+class ValidationError(Exception):
+    """Raised when input validation fails."""
+    pass
+
+class ExternalAPIError(Exception):
+    """Raised when external API call fails."""
+    pass
+
+# Catch and handle gracefully
+try:
+    result = external_api_call()
+except ExternalAPIError as e:
+    logger.warning(f"External API error: {e}")
+    return {"status": "INCONCLUSIVE", "reason": str(e)}
+```
+
+### Logging
+
+```python
+from aws_lambda_powertools import Logger
+
+logger = Logger()
+
+# Structured logging
+logger.info("Processing request", extra={
+    "action": action,
+    "request_id": context.aws_request_id
+})
+
+# Log levels
+logger.debug("Detailed debug info")
+logger.info("Normal operation")
+logger.warning("Potential issue - MISMATCH detected")
+logger.error("Error occurred")
+```
+
+---
 
 ## TypeScript Standards (Portal)
 
 ### Style Guide
-- Use TypeScript strict mode
-- Prefer `const` over `let`
-- Use interfaces for object shapes
-- Use async/await over raw promises
 
-### Component Structure
+- Use TypeScript strict mode
+- Use `camelCase` for functions and variables
+- Use `PascalCase` for components and types
+- Use `UPPER_CASE` for constants
+- Prefer `const` over `let`
+
+### Component Pattern
+
 ```typescript
-// Good: Typed props with interface
-interface ValidationResultProps {
-  status: 'MATCH' | 'MISMATCH' | 'INCONCLUSIVE';
-  reason?: string;
-  extractedValue: string | null;
-  iprsValue: string | null;
+'use client';
+
+import { useState, useEffect } from 'react';
+
+interface Props {
+  documentId: string;
+  onValidate: (result: ValidationResult) => void;
 }
 
-export function ValidationResult({ 
-  status, 
-  reason, 
-  extractedValue, 
-  iprsValue 
-}: ValidationResultProps) {
+export default function DocumentValidator({ documentId, onValidate }: Props) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Effect logic
+  }, [documentId]);
+
   return (
-    <div className="validation-result">
+    <div className="p-4">
+      {loading && <Spinner />}
+      {error && <ErrorAlert message={error} />}
       {/* Component content */}
     </div>
   );
@@ -176,28 +146,90 @@ export function ValidationResult({
 ```
 
 ### API Calls
-```typescript
-// Good: Typed API response
-interface SerialNumberValidation {
-  status: 'MATCH' | 'MISMATCH' | 'INCONCLUSIVE';
-  extractedSerialNumber: string | null;
-  iprsSerialNumber: string | null;
-  normalizedComparison: boolean;
-  reason?: string;
-}
 
-async function validateDocument(data: DocumentData): Promise<SerialNumberValidation> {
-  const response = await api.post('/kyc', {
-    action: 'validate_nationalid',
-    data
+```typescript
+import { API_BASE_URL } from '@/constants/api';
+
+export async function validateDocument(data: ValidationRequest): Promise<ValidationResponse> {
+  const response = await fetch(`${API_BASE_URL}/kyc`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      action: 'validate_nationalid',
+      data
+    })
   });
-  return response.data.serialNumberValidation;
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  return response.json();
 }
 ```
 
-## Documentation Standards
+---
 
-### Function Docstrings
+## Testing Standards
+
+### Unit Tests
+
+```python
+import pytest
+from unittest.mock import Mock, patch
+
+class TestSerialNumberValidator:
+    """Tests for serial number validation."""
+    
+    def test_match_identical_serials(self):
+        """MATCH when serial numbers are identical."""
+        result = validate_serial_number("12345ABC", "12345ABC")
+        assert result.status == ValidationStatus.MATCH
+    
+    def test_match_after_normalization(self):
+        """MATCH when serials match after normalization."""
+        result = validate_serial_number("12345-ABC", "12345 ABC")
+        assert result.status == ValidationStatus.MATCH
+    
+    def test_mismatch_different_serials(self):
+        """MISMATCH when serial numbers differ."""
+        result = validate_serial_number("12345ABC", "67890XYZ")
+        assert result.status == ValidationStatus.MISMATCH
+        assert result.reason is not None
+```
+
+### Property-Based Tests
+
+```python
+from hypothesis import given, strategies as st, settings
+
+@settings(max_examples=100)
+@given(st.text(min_size=1, max_size=20))
+def test_normalization_idempotence(serial):
+    """
+    Property 1: Normalization Idempotence
+    Validates: Requirements 1.2, 2.3
+    """
+    normalized = normalize_serial_number(serial)
+    if normalized is not None:
+        assert normalize_serial_number(normalized) == normalized
+```
+
+### Test File Location
+
+- Unit tests: `backend/core/functions/<function>/tests/`
+- E2E tests: `e2e/tests/`
+- Property tests: Same directory as unit tests, prefixed with `test_property_`
+
+---
+
+## Documentation
+
+### Docstrings
+
 ```python
 def validate_serial_number(
     extracted_serial: Optional[str],
@@ -206,9 +238,9 @@ def validate_serial_number(
     """
     Validate serial number by comparing document extraction with IPRS data.
     
-    Compares the serial number extracted from a document via Textract against
-    the serial number returned by the IPRS API. Both values are normalized
-    before comparison.
+    Compares the serial number extracted from a National ID document against
+    the latest serial number from IPRS. Both values are normalized before
+    comparison to handle formatting differences.
     
     Args:
         extracted_serial: Serial number extracted from document via Textract.
@@ -217,7 +249,7 @@ def validate_serial_number(
             May be None if IPRS lookup failed.
     
     Returns:
-        SerialNumberValidationResult containing:
+        SerialNumberValidationResult with:
         - status: MATCH, MISMATCH, or INCONCLUSIVE
         - extracted_serial_number: Normalized extracted serial
         - iprs_serial_number: Normalized IPRS serial
@@ -225,125 +257,19 @@ def validate_serial_number(
         - reason: Explanation for non-MATCH status
     
     Example:
-        >>> result = validate_serial_number("12345-ABC", "12345 ABC")
-        >>> result.status
-        ValidationStatus.MATCH
+        >>> validate_serial_number("12345-ABC", "12345 ABC")
+        SerialNumberValidationResult(status=MATCH, ...)
     """
-    pass
 ```
 
-### Module Docstrings
+### Comments
+
 ```python
-"""
-Serial Number Validator Module
+# Good: Explains WHY
+# IPRS returns dates in American format (M/D/YYYY), not D/M/YYYY
+date_formats = ['%m/%d/%Y', '%d/%m/%Y', ...]
 
-This module provides functionality for validating National ID serial numbers
-by comparing document-extracted values against IPRS government records.
-
-Key Components:
-    - ValidationStatus: Enum for validation outcomes
-    - SerialNumberValidationResult: Dataclass for validation results
-    - validate_serial_number: Main validation function
-
-Usage:
-    from serial_number_validator import validate_serial_number
-    
-    result = validate_serial_number(extracted_serial, iprs_serial)
-    if result.status == ValidationStatus.MISMATCH:
-        logger.warning("Potential fraud detected")
-
-Requirements:
-    - Requirements 1.2, 2.3, 3.1-3.4 from serial-number-validation spec
-"""
-```
-
-## Naming Conventions
-
-### Python
-- **Functions**: `snake_case` - `validate_serial_number()`
-- **Variables**: `snake_case` - `extracted_serial`
-- **Classes**: `PascalCase` - `SerialNumberValidator`
-- **Constants**: `UPPER_SNAKE_CASE` - `MAX_RETRIES`
-- **Private**: `_leading_underscore` - `_internal_method()`
-
-### TypeScript
-- **Functions**: `camelCase` - `validateSerialNumber()`
-- **Variables**: `camelCase` - `extractedSerial`
-- **Interfaces**: `PascalCase` - `SerialNumberValidation`
-- **Constants**: `UPPER_SNAKE_CASE` - `MAX_RETRIES`
-- **Components**: `PascalCase` - `ValidationResult`
-
-## Testing Standards
-
-### Test File Naming
-- Python: `test_<module_name>.py`
-- TypeScript: `<component>.test.tsx`
-
-### Test Function Naming
-```python
-# Good: Descriptive test names
-def test_normalize_removes_spaces_and_hyphens():
-    pass
-
-def test_validate_returns_match_for_identical_normalized_serials():
-    pass
-
-def test_validate_returns_inconclusive_when_iprs_unavailable():
-    pass
-
-# Bad: Vague test names
-def test_normalize():
-    pass
-
-def test_validate():
-    pass
-```
-
-### Property Test Naming
-```python
-def test_property_normalization_is_idempotent():
-    """
-    Feature: serial-number-validation, Property 1: Normalization Idempotence
-    Validates: Requirements 1.2, 2.3
-    """
-    pass
-```
-
-## Git Commit Standards
-
-### Commit Message Format
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-### Types
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation
-- `style`: Formatting
-- `refactor`: Code restructuring
-- `test`: Adding tests
-- `chore`: Maintenance
-
-### Examples
-```
-feat(serial-validation): add serial number normalizer module
-
-Implements normalize_serial_number function that:
-- Converts to uppercase
-- Removes spaces, hyphens, dots
-- Returns None for empty inputs
-
-Requirements: 1.2, 2.3, 8.3
-
-fix(iprs): handle missing serialNumber field gracefully
-
-Return INCONCLUSIVE status instead of raising exception
-when IPRS response is missing the serialNumber field.
-
-Fixes #123
+# Bad: Explains WHAT (obvious from code)
+# Loop through the list
+for item in items:
 ```

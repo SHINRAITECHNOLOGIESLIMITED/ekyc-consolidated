@@ -1,171 +1,126 @@
 # Jubilee eKYC Platform Overview
 
-This document provides an overview of the Jubilee eKYC platform architecture and technology stack.
-
----
-inclusion: always
----
+This document provides essential context for working on the Jubilee eKYC platform.
 
 ## Project Summary
 
-The Jubilee eKYC platform is a serverless Know Your Customer (KYC) solution built on AWS for Jubilee Insurance Company (Kenya). It automates identity verification for insurance customers and agents.
+A serverless AWS-based Know Your Customer (KYC) solution for Jubilee Insurance Company (Kenya). The platform validates customer identity documents, performs government verification, and conducts background checks.
 
-## Technology Stack
+## Tech Stack
 
-### Backend
-- **Runtime**: Python 3.11+
-- **Framework**: AWS SAM (Serverless Application Model)
-- **Compute**: AWS Lambda
-- **API**: Amazon API Gateway (REST)
-- **Database**: Amazon DynamoDB
-- **Storage**: Amazon S3
-- **Secrets**: AWS Secrets Manager
-- **Parameters**: AWS SSM Parameter Store
+| Layer | Technology |
+|-------|------------|
+| Backend | AWS SAM, Python 3.11, Lambda |
+| Frontend | AWS Amplify Gen 2, Next.js 14, React, TypeScript |
+| Database | DynamoDB, S3 |
+| AI/ML | AWS Textract (OCR), Rekognition (Face) |
+| External APIs | IPRS, KRA, LexisNexis via ESB |
+| Auth | AWS Cognito |
 
-### Frontend
-- **Framework**: Next.js 14+ with React
-- **Platform**: AWS Amplify Gen 2
-- **Auth**: Amazon Cognito
-- **API Client**: AWS Amplify client libraries
-
-### External Integrations
-- **IPRS**: Kenya's Integrated Population Registration System (via ESB)
-- **KRA**: Kenya Revenue Authority tax PIN validation (via ESB)
-- **LexisNexis**: Background checks and sanctions screening (via ESB)
-- **AWS Textract**: Document OCR and field extraction
-- **AWS Rekognition**: Face liveness detection and comparison
-
-## Architecture Overview
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Portal (Next.js)                         │
-│                      AWS Amplify Gen 2                          │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      API Gateway (REST)                         │
-│                    /kyc unified endpoint                        │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     KYC Orchestrator Lambda                     │
-│              Action-based routing to services                   │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-        ┌───────────────────────┼───────────────────────┐
-        ▼                       ▼                       ▼
-┌───────────────┐     ┌───────────────┐     ┌───────────────┐
-│   Document    │     │  Government   │     │    Face       │
-│  Validation   │     │ Verification  │     │  Liveness     │
-│    Lambda     │     │    Lambda     │     │   Lambda      │
-└───────────────┘     └───────────────┘     └───────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌───────────────┐     ┌───────────────┐     ┌───────────────┐
-│   Textract    │     │   ESB Layer   │     │  Rekognition  │
-│   (AWS)       │     │ (IPRS/KRA)    │     │    (AWS)      │
-└───────────────┘     └───────────────┘     └───────────────┘
+Portal (Next.js) → API Gateway → KYC Orchestrator → Feature Lambdas
+                                       ↓
+                              [Document Validation]
+                              [Government Verification]
+                              [Face Liveness]
+                              [Background Check]
+                              [Certification]
 ```
 
-## Key Components
-
-### KYC Orchestrator
-- **Location**: `backend/core/functions/kyc_orchestrator/`
-- **Purpose**: Unified `/kyc` endpoint with action-based routing
-- **Actions**: `validate_nationalid`, `validate_passport`, `verify_nationalid`, etc.
-
-### Document Validation
-- **Location**: `backend/core/functions/document_validation/`
-- **Purpose**: Extract and validate document fields using Textract
-- **Supports**: National ID, Passport, KRA PIN Certificate, CR12
-
-### Government Verification
-- **Location**: `backend/core/functions/government_verification/`
-- **Purpose**: Verify extracted data against IPRS/KRA government records
-
-### Face Liveness
-- **Location**: `backend/core/functions/face_liveness/`
-- **Purpose**: Detect live faces and prevent spoofing attacks
-
-### Background Check
-- **Location**: `backend/core/functions/background_check/`
-- **Purpose**: Sanctions screening via LexisNexis
-
-### ESB Layer
-- **Location**: `backend/core/layers/jubilee_esb_api_layer/`
-- **Purpose**: Shared layer for ESB API integration (IPRS, KRA, LexisNexis)
-
-## Directory Structure
+## Key Directories
 
 ```
 backend/
 ├── core/
-│   ├── functions/
-│   │   ├── document_validation/    # Textract-based validation
-│   │   ├── government_verification/ # IPRS/KRA verification
-│   │   ├── face_liveness/          # Rekognition liveness
-│   │   ├── background_check/       # LexisNexis screening
-│   │   ├── kyc_orchestrator/       # Unified API router
-│   │   └── certification/          # Certificate generation
-│   └── layers/
+│   ├── functions/           # Lambda functions
+│   │   ├── document_validation/   # Textract-based doc validation
+│   │   ├── government_verification/  # IPRS/KRA verification
+│   │   ├── face_liveness/         # Rekognition face liveness
+│   │   ├── background_check/      # LexisNexis screening
+│   │   ├── certification/         # Final KYC certification
+│   │   └── kyc_orchestrator/      # Unified /kyc endpoint
+│   └── layers/              # Shared Lambda layers
 │       ├── jubilee_esb_api_layer/  # ESB integration
 │       └── document_textract/      # Textract utilities
 ├── shared/
-│   ├── functions/
-│   │   └── authorizer/             # API authorization
-│   └── layers/
-│       └── portal_project/         # Portal integration
-└── template.yaml                   # SAM template
+│   ├── functions/authorizer/      # API Gateway authorizer
+│   └── layers/portal_project/     # Portal GraphQL client
+└── template.yaml            # SAM template
+
+portal/                      # Next.js frontend
+├── amplify/                 # Amplify Gen 2 config
+└── src/
+    ├── app/                 # Next.js app router pages
+    ├── components/          # React components
+    └── services/            # API clients
 ```
+
+## KYC Orchestrator Actions
+
+The `/kyc` endpoint routes requests based on `action` field:
+
+| Action | Lambda | Description |
+|--------|--------|-------------|
+| `validate_nationalid` | DocumentValidationFn | Validate National ID via Textract |
+| `validate_passport` | DocumentValidationFn | Validate Passport via Textract |
+| `validate_krapincertificate` | DocumentValidationFn | Validate KRA PIN certificate |
+| `verify_nationalid` | GovernmentVerificationFn | Verify ID against IPRS |
+| `verify_passport` | GovernmentVerificationFn | Verify passport against IPRS |
+| `verify_kra` | GovernmentVerificationFn | Verify KRA PIN |
+| `background_check` | BackgroundCheckFn | LexisNexis screening |
+| `create_liveness_session` | FaceLivenessFn | Start face liveness check |
+| `get_liveness_results` | FaceLivenessFn | Get liveness results |
 
 ## v1.2 Features (In Development)
 
-### 1. Face Matching Verification
-- 3-way comparison: Selfie ↔ ID Photo ↔ IPRS Photo
-- 70% auto-approval threshold
-- Manual review workflow for borderline cases
+| Feature | Status | Branch |
+|---------|--------|--------|
+| Face Matching (70% threshold) | Spec complete | `feature/face-matching-verification` |
+| Serial Number Validation | Spec complete | `feature/serial-number-validation` |
+| Gender Validation (IPRS) | Spec complete | `feature/gender-validation-iprs` |
 
-### 2. Serial Number Validation
-- Compare document serial against IPRS latest serial
-- Detect replaced/counterfeit IDs
-- Non-blocking validation
+### Integration Branch
 
-### 3. Gender Validation
-- Cross-validate gender from document against IPRS
-- Uses IPRS as authoritative source (NOT LexisNexis)
+All v1.2 features merge to `develop_v1.2` before final merge to `develop`.
 
-## Development Workflow
+## External API Dependencies
 
-1. **Feature Branches**: `feature/<feature-name>` from `develop`
-2. **Integration Branch**: `develop_v1.2` for v1.2 features
-3. **Production**: `main` branch
-4. **Specs**: `.kiro/specs/<feature-name>/` for requirements, design, tasks
+| Service | Provider | Purpose |
+|---------|----------|---------|
+| IPRS | Kenya Government | National ID/Passport verification |
+| KRA | Kenya Revenue Authority | Tax PIN validation |
+| LexisNexis | LexisNexis Risk Solutions | Background/sanctions screening |
+
+All external APIs accessed via Jubilee ESB gateway at `https://jubipay.jubileeinsurance.com`.
+
+## Environment Variables
+
+Key Lambda environment variables:
+- `JUBILEE_ESB_API_SECRET_ARN` - ESB credentials in Secrets Manager
+- `PORTAL_SECRET_ARN` - Portal GraphQL credentials
+- `DOCUMENT_VALIDATION_FN_ARN` - Document validation Lambda ARN
+- `GOVERNMENT_VERIFICATION_FN_ARN` - Government verification Lambda ARN
+
+## Testing
+
+```bash
+# Unit tests
+cd backend/core/functions/<function>/tests
+pytest
+
+# E2E tests
+cd e2e
+pytest tests/
+```
 
 ## Deployment
 
 ```bash
-# Build and deploy
 cd backend
 sam build
 sam deploy --guided
-
-# Deploy specific stack
-sam deploy --config-env dev
 ```
 
-## Testing
-
-- **Unit Tests**: pytest with moto for AWS mocking
-- **Property Tests**: Hypothesis library
-- **E2E Tests**: `e2e/tests/` directory
-- **Run Tests**: `pytest backend/core/functions/<function>/tests/`
-
-## Related Documentation
-
-- `esb-response-schemas.md` - ESB API response schemas
-- `iprs-integration.md` - IPRS integration patterns
-- `coding-standards.md` - Python/TypeScript style guide
-- `testing-guide.md` - Testing patterns and PBT guide
+See `backend/samconfig.toml` for deployment configuration.
