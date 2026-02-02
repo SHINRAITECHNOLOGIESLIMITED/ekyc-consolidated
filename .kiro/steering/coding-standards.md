@@ -1,37 +1,23 @@
 # Coding Standards
 
-This document defines coding standards for the Jubilee eKYC project.
+Guidelines for writing code in the Jubilee eKYC platform.
 
 ## Python Standards
 
 ### Style Guide
+
 - Follow PEP 8
-- Maximum line length: 100 characters
-- Use type hints for all function signatures
-- Document all public functions with docstrings
+- Use type hints for function signatures
+- Maximum line length: 120 characters
+- Use `snake_case` for functions and variables
+- Use `PascalCase` for classes
+- Use `UPPER_CASE` for constants
 
-### Import Order
-```python
-# Standard library
-import json
-import os
-from typing import Dict, Any, Optional
-
-# Third-party
-import boto3
-from aws_lambda_powertools import Logger, Tracer
-from hypothesis import given, strategies as st
-
-# Local
-from iprs import IPRS
-from portal import Portal
-```
-
-### Logging
-Use AWS Lambda Powertools for structured logging:
+### Lambda Handler Pattern
 
 ```python
 from aws_lambda_powertools import Logger, Tracer
+from aws_lambda_powertools.utilities.validation import validate
 
 logger = Logger()
 tracer = Tracer()
@@ -39,128 +25,251 @@ tracer = Tracer()
 @logger.inject_lambda_context
 @tracer.capture_lambda_handler
 def handler(event, context):
-    logger.info("Processing request", extra={"request_id": event.get("requestId")})
-```
-
-### Error Handling
-```python
-try:
-    result = process_data(data)
-except ValidationError as e:
-    logger.error(f"Validation failed: {e}")
-    return make_response(400, {"message": "Validation failed", "error": str(e)})
-except ExternalAPIError as e:
-    logger.error(f"External API error: {e}")
-    return make_response(503, {"message": "Service unavailable", "error": str(e)})
-except Exception as e:
-    logger.error(f"Unexpected error: {e}", exc_info=True)
-    return make_response(500, {"message": "Internal server error", "error": str(e)})
+    """Lambda handler with Powertools instrumentation."""
+    logger.info(f"Received event: {json.dumps(event)}")
+    
+    try:
+        # Parse and validate input
+        data = parse_request(event)
+        
+        # Business logic
+        result = process(data)
+        
+        # Return response
+        return make_response(200, result)
+        
+    except ValidationError as e:
+        logger.error(f"Validation error: {e}")
+        return make_response(400, {"error": str(e)})
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        return make_response(500, {"error": "Internal server error"})
 ```
 
 ### Response Format
-All Lambda responses must follow this structure:
 
 ```python
-def make_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
+def make_response(status_code: int, body: dict) -> dict:
+    """Standard API Gateway response format."""
     return {
-        "statusCode": status_code,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            "Access-Control-Allow-Methods": "POST, OPTIONS"
+        'statusCode': status_code,
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Api-Key',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS'
         },
-        "body": json.dumps(body)
+        'body': json.dumps(body)
     }
 ```
+
+### Error Handling
+
+```python
+# Use specific exception types
+class ValidationError(Exception):
+    """Raised when input validation fails."""
+    pass
+
+class ExternalAPIError(Exception):
+    """Raised when external API call fails."""
+    pass
+
+# Catch and handle gracefully
+try:
+    result = external_api_call()
+except ExternalAPIError as e:
+    logger.warning(f"External API error: {e}")
+    return {"status": "INCONCLUSIVE", "reason": str(e)}
+```
+
+### Logging
+
+```python
+from aws_lambda_powertools import Logger
+
+logger = Logger()
+
+# Structured logging
+logger.info("Processing request", extra={
+    "action": action,
+    "request_id": context.aws_request_id
+})
+
+# Log levels
+logger.debug("Detailed debug info")
+logger.info("Normal operation")
+logger.warning("Potential issue - MISMATCH detected")
+logger.error("Error occurred")
+```
+
+---
 
 ## TypeScript Standards (Portal)
 
 ### Style Guide
-- Use TypeScript strict mode
-- Prefer `const` over `let`
-- Use interfaces for object types
-- Use async/await over raw promises
 
-### Component Structure
+- Use TypeScript strict mode
+- Use `camelCase` for functions and variables
+- Use `PascalCase` for components and types
+- Use `UPPER_CASE` for constants
+- Prefer `const` over `let`
+
+### Component Pattern
+
 ```typescript
-// imports
+'use client';
+
 import { useState, useEffect } from 'react';
 
-// types
 interface Props {
-  customerId: string;
+  documentId: string;
+  onValidate: (result: ValidationResult) => void;
 }
 
-// component
-export const CustomerDetails: React.FC<Props> = ({ customerId }) => {
-  const [data, setData] = useState<Customer | null>(null);
-  
+export default function DocumentValidator({ documentId, onValidate }: Props) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    // fetch data
-  }, [customerId]);
-  
+    // Effect logic
+  }, [documentId]);
+
   return (
-    // JSX
+    <div className="p-4">
+      {loading && <Spinner />}
+      {error && <ErrorAlert message={error} />}
+      {/* Component content */}
+    </div>
   );
-};
+}
 ```
+
+### API Calls
+
+```typescript
+import { API_BASE_URL } from '@/constants/api';
+
+export async function validateDocument(data: ValidationRequest): Promise<ValidationResponse> {
+  const response = await fetch(`${API_BASE_URL}/kyc`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      action: 'validate_nationalid',
+      data
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  return response.json();
+}
+```
+
+---
 
 ## Testing Standards
 
 ### Unit Tests
-- Test file naming: `test_*.py` or `*_test.py`
-- Use pytest as the test framework
-- Aim for 80%+ code coverage
+
+```python
+import pytest
+from unittest.mock import Mock, patch
+
+class TestSerialNumberValidator:
+    """Tests for serial number validation."""
+    
+    def test_match_identical_serials(self):
+        """MATCH when serial numbers are identical."""
+        result = validate_serial_number("12345ABC", "12345ABC")
+        assert result.status == ValidationStatus.MATCH
+    
+    def test_match_after_normalization(self):
+        """MATCH when serials match after normalization."""
+        result = validate_serial_number("12345-ABC", "12345 ABC")
+        assert result.status == ValidationStatus.MATCH
+    
+    def test_mismatch_different_serials(self):
+        """MISMATCH when serial numbers differ."""
+        result = validate_serial_number("12345ABC", "67890XYZ")
+        assert result.status == ValidationStatus.MISMATCH
+        assert result.reason is not None
+```
 
 ### Property-Based Tests
-Use Hypothesis for property-based testing:
 
 ```python
 from hypothesis import given, strategies as st, settings
 
 @settings(max_examples=100)
 @given(st.text(min_size=1, max_size=20))
-def test_normalization_idempotent(input_str):
-    """Property: normalize(normalize(x)) == normalize(x)"""
-    result1 = normalize(input_str)
-    result2 = normalize(result1) if result1 else None
-    assert result1 == result2
+def test_normalization_idempotence(serial):
+    """
+    Property 1: Normalization Idempotence
+    Validates: Requirements 1.2, 2.3
+    """
+    normalized = normalize_serial_number(serial)
+    if normalized is not None:
+        assert normalize_serial_number(normalized) == normalized
 ```
 
-### Test Tagging
-Tag property tests with feature and requirement references:
+### Test File Location
+
+- Unit tests: `backend/core/functions/<function>/tests/`
+- E2E tests: `e2e/tests/`
+- Property tests: Same directory as unit tests, prefixed with `test_property_`
+
+---
+
+## Documentation
+
+### Docstrings
 
 ```python
-def test_property_name():
+def validate_serial_number(
+    extracted_serial: Optional[str],
+    iprs_serial: Optional[str]
+) -> SerialNumberValidationResult:
     """
-    Feature: feature-name, Property N: Property Title
-    Validates: Requirements X.Y
+    Validate serial number by comparing document extraction with IPRS data.
+    
+    Compares the serial number extracted from a National ID document against
+    the latest serial number from IPRS. Both values are normalized before
+    comparison to handle formatting differences.
+    
+    Args:
+        extracted_serial: Serial number extracted from document via Textract.
+            May be None if extraction failed.
+        iprs_serial: Serial number from IPRS API response.
+            May be None if IPRS lookup failed.
+    
+    Returns:
+        SerialNumberValidationResult with:
+        - status: MATCH, MISMATCH, or INCONCLUSIVE
+        - extracted_serial_number: Normalized extracted serial
+        - iprs_serial_number: Normalized IPRS serial
+        - normalized_comparison: True if comparison used normalized values
+        - reason: Explanation for non-MATCH status
+    
+    Example:
+        >>> validate_serial_number("12345-ABC", "12345 ABC")
+        SerialNumberValidationResult(status=MATCH, ...)
     """
-    pass
 ```
 
-## Git Conventions
+### Comments
 
-### Branch Naming
-- Feature branches: `feature/feature-name`
-- Bug fixes: `fix/bug-description`
-- Hotfixes: `hotfix/issue-description`
+```python
+# Good: Explains WHY
+# IPRS returns dates in American format (M/D/YYYY), not D/M/YYYY
+date_formats = ['%m/%d/%Y', '%d/%m/%Y', ...]
 
-### Commit Messages
-```
-type(scope): subject
-
-body (optional)
-
-footer (optional)
-```
-
-Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-
-Examples:
-```
-feat(kyc): add face matching verification
-fix(iprs): handle timeout errors gracefully
-docs(steering): add coding standards
+# Bad: Explains WHAT (obvious from code)
+# Loop through the list
+for item in items:
 ```

@@ -1,230 +1,318 @@
 # Testing Guide
 
-This document provides guidance for testing in the Jubilee eKYC project.
+Guidelines for testing the Jubilee eKYC platform, including property-based testing.
 
-## Test Structure
+## Testing Philosophy
 
-```
-backend/core/functions/{function_name}/
-├── src/
-│   └── app.py
-└── tests/
-    ├── __init__.py
-    ├── conftest.py
-    ├── pytest.ini
-    ├── requirements.txt
-    ├── test_app.py
-    └── test_properties.py
-```
+1. **Unit tests** verify specific examples and edge cases
+2. **Property tests** verify universal properties across all inputs
+3. **Integration tests** verify component interactions
+4. **E2E tests** verify complete user flows
 
-## Running Tests
+All v1.2 features require both unit tests AND property-based tests.
 
-```bash
-# Run all tests for a function
-cd backend/core/functions/{function_name}/tests
-python -m pytest
+---
 
-# Run with coverage
-python -m pytest --cov=src --cov-report=html
+## Property-Based Testing
 
-# Run specific test file
-python -m pytest test_app.py
+### What is Property-Based Testing?
 
-# Run tests matching pattern
-python -m pytest -k "test_validation"
-```
+Instead of testing specific examples, property-based testing:
+1. Defines properties that should ALWAYS hold true
+2. Generates random inputs to test those properties
+3. Shrinks failing cases to minimal counterexamples
 
-## Unit Tests
-
-### Basic Structure
-
-```python
-import pytest
-from unittest.mock import Mock, patch
-
-def test_validate_nationalid_success():
-    """Test successful national ID validation."""
-    data = {
-        'uploadedDocumentUrl': 's3://bucket/doc.pdf',
-        'idNumber': '12345678'
-    }
-    
-    with patch('app.extract') as mock_extract:
-        mock_extract.return_value = {'form': {'ID_NUMBER': {'value': '12345678'}}}
-        result = validate_nationalid(data)
-    
-    assert result['statusCode'] == 200
-    body = json.loads(result['body'])
-    assert 'matchResults' in body['results']
-```
-
-### Fixtures
-
-```python
-# conftest.py
-import pytest
-
-@pytest.fixture
-def sample_nationalid_data():
-    return {
-        'uploadedDocumentUrl': 's3://test-bucket/test.pdf',
-        'idNumber': '12345678',
-        'fullNames': 'John Doe',
-        'dateOfBirth': '1990-01-01'
-    }
-
-@pytest.fixture
-def mock_textract_response():
-    return {
-        'form': {
-            'ID_NUMBER': {'value': '12345678', 'confidence': 99.5},
-            'FULL_NAMES': {'value': 'John Doe', 'confidence': 98.2}
-        }
-    }
-```
-
-## Property-Based Tests
-
-### Setup
+### Library: Hypothesis
 
 ```python
 from hypothesis import given, strategies as st, settings
 
-# Configure Hypothesis
-settings.register_profile("ci", max_examples=100)
-settings.register_profile("dev", max_examples=10)
-settings.load_profile("dev")  # Use "ci" in CI/CD
-```
-
-### Writing Properties
-
-```python
-from hypothesis import given, strategies as st, settings
-
-# Property 1: Normalization Idempotence
 @settings(max_examples=100)
-@given(st.text(min_size=0, max_size=50))
-def test_normalization_idempotent(input_str):
+@given(st.text(min_size=1, max_size=20))
+def test_property_name(input_value):
     """
     Feature: serial-number-validation, Property 1: Normalization Idempotence
     Validates: Requirements 1.2, 2.3
     """
-    result1 = normalize_serial_number(input_str)
-    result2 = normalize_serial_number(result1) if result1 else None
-    assert result1 == result2
-
-# Property 2: Character Removal
-@settings(max_examples=100)
-@given(st.text(alphabet=st.characters(whitelist_categories=['L', 'N', 'P', 'Z'])))
-def test_normalization_removes_special_chars(input_str):
-    """
-    Feature: serial-number-validation, Property 3: Character Removal
-    Validates: Requirements 1.2, 2.3, 8.3
-    """
-    result = normalize_serial_number(input_str)
-    if result:
-        assert ' ' not in result
-        assert '-' not in result
-        assert '.' not in result
-        assert result == result.upper()
+    # Test the property
+    result = function_under_test(input_value)
+    assert property_holds(result)
 ```
 
-### Custom Strategies
+### Configuration
+
+```python
+from hypothesis import settings, Phase
+
+# Standard settings for all property tests
+test_settings = settings(
+    max_examples=100,           # Minimum 100 iterations
+    phases=[Phase.generate, Phase.target, Phase.shrink],
+    deadline=None               # No timeout
+)
+```
+
+### Tagging Convention
+
+Every property test MUST include a docstring tag:
+
+```python
+def test_normalization_idempotence():
+    """
+    Feature: serial-number-validation, Property 1: Normalization Idempotence
+    Validates: Requirements 1.2, 2.3
+    """
+```
+
+---
+
+## Test Generators
+
+### Serial Number Generators
 
 ```python
 from hypothesis import strategies as st
+import string
 
-# Generate valid serial numbers
+# Characters allowed in serial numbers
+serial_chars = string.ascii_uppercase + string.digits
+
+# Random serial number strings (may include formatting)
+serial_number = st.text(
+    alphabet=serial_chars + " -.",
+    min_size=1,
+    max_size=20
+)
+
+# Valid serial numbers (non-empty after normalization)
 valid_serial = st.text(
-    alphabet=st.characters(whitelist_categories=['L', 'N']),
+    alphabet=serial_chars,
     min_size=1,
     max_size=15
 )
 
-# Generate serial numbers with formatting
-formatted_serial = st.builds(
-    lambda base, sep: sep.join([base[i:i+4] for i in range(0, len(base), 4)]),
-    base=valid_serial,
-    sep=st.sampled_from([' ', '-', '.', ''])
+# Optional serial (including None)
+optional_serial = st.one_of(st.none(), valid_serial)
+
+# Pairs of matching serials (same base, different formatting)
+def add_formatting(base: str) -> str:
+    """Add random spaces/hyphens to a serial number."""
+    import random
+    result = list(base)
+    for _ in range(random.randint(0, 3)):
+        pos = random.randint(0, len(result))
+        char = random.choice([' ', '-', '.'])
+        result.insert(pos, char)
+    return ''.join(result)
+
+matching_pair = st.builds(
+    lambda base: (add_formatting(base), add_formatting(base)),
+    base=valid_serial
 )
 
-# Generate gender values
-valid_gender = st.sampled_from(['M', 'MALE', 'm', 'male', 'F', 'FEMALE', 'f', 'female'])
-invalid_gender = st.text().filter(lambda x: x.strip().upper() not in ['M', 'MALE', 'F', 'FEMALE'])
+# Pairs of non-matching serials
+non_matching_pair = st.tuples(valid_serial, valid_serial).filter(
+    lambda pair: pair[0] != pair[1]
+)
 ```
+
+### Gender Generators
+
+```python
+# Valid gender values
+valid_gender = st.sampled_from(['M', 'F', 'Male', 'Female', 'm', 'f'])
+
+# Invalid gender values
+invalid_gender = st.text(min_size=1, max_size=10).filter(
+    lambda x: x.upper() not in ['M', 'F', 'MALE', 'FEMALE']
+)
+```
+
+### Face Matching Score Generators
+
+```python
+# Similarity scores (0-100)
+similarity_score = st.floats(min_value=0.0, max_value=100.0)
+
+# Scores in specific bands
+approve_score = st.floats(min_value=70.0, max_value=100.0)
+review_score = st.floats(min_value=50.0, max_value=69.99)
+reject_score = st.floats(min_value=0.0, max_value=49.99)
+```
+
+---
 
 ## Mocking External Services
 
-### AWS Services
+### IPRS API Mock
 
 ```python
-from moto import mock_dynamodb, mock_s3
-import boto3
+from unittest.mock import Mock, patch
 
-@mock_dynamodb
-def test_dynamodb_operation():
-    # Create mock table
-    dynamodb = boto3.client('dynamodb', region_name='eu-west-1')
-    dynamodb.create_table(
-        TableName='TestTable',
-        KeySchema=[{'AttributeName': 'id', 'KeyType': 'HASH'}],
-        AttributeDefinitions=[{'AttributeName': 'id', 'AttributeType': 'S'}],
-        BillingMode='PAY_PER_REQUEST'
-    )
-    
-    # Run test
-    result = my_function()
-    assert result['statusCode'] == 200
-```
-
-### External APIs
-
-```python
-from unittest.mock import patch, Mock
-
-@patch('iprs.IPRS.search_generic')
-def test_iprs_integration(mock_search):
-    mock_search.return_value = {
-        'success': True,
-        'data': {
-            'firstName': 'John',
-            'surname': 'Doe',
-            'gender': 'M',
-            'serialNumber': '12345ABC'
+def create_iprs_mock(serial_number=None, gender=None, photo=None):
+    """Create a mock IPRS response."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "success": True,
+        "error": None,
+        "data": {
+            "idNumber": "12345678",
+            "serialNumber": serial_number or "217990310",
+            "gender": gender or "M",
+            "firstName": "JOHN",
+            "surname": "DOE",
+            "photo": photo
         }
     }
-    
-    result = verify_nationalid({'idNumber': '12345678'})
-    assert result['status'] == 'MATCH'
+    return mock_response
+
+@patch('jubilee_esb_api.JubileeESBAPI')
+def test_with_iprs_mock(mock_esb):
+    mock_esb.return_value.iprs.search_generic.return_value = create_iprs_mock(
+        serial_number="12345ABC"
+    )
+    # Test code here
 ```
 
-## Test Coverage Requirements
+### Textract Mock
 
-| Component | Target |
-|-----------|--------|
-| Core validation logic | 90%+ |
-| Error handling paths | 100% |
-| Property tests | All properties defined in design.md |
-| Integration points | 80%+ |
-
-## CI/CD Integration
-
-```yaml
-# Example GitHub Actions workflow
-test:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    - name: Install dependencies
-      run: pip install -r requirements.txt
-    - name: Run tests
-      run: |
-        cd backend/core/functions/document_validation/tests
-        python -m pytest --cov=src --cov-report=xml
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
+```python
+def create_textract_mock(serial_number=None, gender=None):
+    """Create a mock Textract extraction result."""
+    return {
+        "SERIAL_NUMBER": serial_number or "12345-ABC",
+        "GENDER": gender or "M",
+        "ID_NUMBER": "12345678",
+        "FIRST_NAME": "JOHN",
+        "LAST_NAME": "DOE"
+    }
 ```
+
+### Rekognition Mock
+
+```python
+def create_rekognition_mock(similarity=85.0):
+    """Create a mock Rekognition CompareFaces result."""
+    return {
+        "FaceMatches": [{
+            "Similarity": similarity,
+            "Face": {
+                "BoundingBox": {...},
+                "Confidence": 99.9
+            }
+        }],
+        "UnmatchedFaces": []
+    }
+```
+
+---
+
+## Test File Structure
+
+```
+backend/core/functions/document_validation/
+├── src/
+│   ├── app.py
+│   ├── normalizer.py
+│   └── serial_number_validator.py
+└── tests/
+    ├── __init__.py
+    ├── conftest.py              # Shared fixtures
+    ├── test_normalizer.py       # Unit tests
+    ├── test_property_normalizer.py  # Property tests
+    ├── test_serial_number_validator.py
+    └── test_property_serial_number_validator.py
+```
+
+---
+
+## Running Tests
+
+### Unit Tests
+
+```bash
+cd backend/core/functions/document_validation/tests
+pytest -v
+
+# With coverage
+pytest --cov=src --cov-report=html
+```
+
+### Property Tests Only
+
+```bash
+pytest -v -k "property"
+```
+
+### E2E Tests
+
+```bash
+cd e2e
+pytest tests/verification/test_verify_nationalid.py -v
+```
+
+### All Tests with Verbose Output
+
+```bash
+pytest -v --tb=short
+```
+
+---
+
+## Coverage Requirements
+
+| Module | Minimum Coverage |
+|--------|-----------------|
+| normalizer.py | 95% |
+| serial_number_validator.py | 90% |
+| gender_validator.py | 90% |
+| face_matching.py | 85% |
+
+### Checking Coverage
+
+```bash
+pytest --cov=src --cov-report=term-missing --cov-fail-under=90
+```
+
+---
+
+## Triaging Property Test Failures
+
+When a property test fails, you get a counterexample. Determine:
+
+1. **Test is incorrect** → Fix the test
+2. **Code has a bug** → Fix the code
+3. **Specification is incomplete** → Ask user to clarify requirements
+
+```python
+# Example failure output
+Falsifying example: test_normalization_idempotence(
+    serial='\x00'  # Null character
+)
+
+# Analysis: Should null characters be stripped?
+# Action: Ask user or update spec
+```
+
+---
+
+## Test Data
+
+### Known Test IDs
+
+From `e2e/tests/verification/test_verify_nationalid.py`:
+
+| ID Number | Serial Number | Name | Gender |
+|-----------|---------------|------|--------|
+| 23667272 | 217934147 | JANE WAIRIMU MAINA | F |
+| 32140017 | 702945559 | EFFIE NJOKI NYAMBURA | F |
+| 36296352 | 244772451 | JOEL MUUO | M |
+| 23224868 | 229769449 | STEPHEN BIKO NYAMAI | M |
+
+### Test Documents
+
+Located in `design and requirements/sample-kyc-documents/`:
+- Sample_Kenyan National ID.pdf
+- Sample_Kenyan Passport.pdf
+- Sample KRA PIN.pdf

@@ -1,115 +1,126 @@
-# Jubilee eKYC Project Overview
+# Jubilee eKYC Platform Overview
 
-This document provides technical context for the Jubilee eKYC platform.
+This document provides essential context for working on the Jubilee eKYC platform.
 
-## Architecture Summary
+## Project Summary
 
-The Jubilee eKYC platform is a serverless AWS-based Know Your Customer (KYC) solution for Jubilee Insurance Company in Kenya.
+A serverless AWS-based Know Your Customer (KYC) solution for Jubilee Insurance Company (Kenya). The platform validates customer identity documents, performs government verification, and conducts background checks.
 
-### Technology Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
 | Backend | AWS SAM, Python 3.11, Lambda |
-| Frontend | AWS Amplify Gen 2, Next.js, React, TypeScript |
-| Database | DynamoDB |
-| Storage | S3 |
-| Auth | Cognito |
-| Document Processing | AWS Textract |
-| Face Detection | AWS Rekognition |
+| Frontend | AWS Amplify Gen 2, Next.js 14, React, TypeScript |
+| Database | DynamoDB, S3 |
+| AI/ML | AWS Textract (OCR), Rekognition (Face) |
 | External APIs | IPRS, KRA, LexisNexis via ESB |
+| Auth | AWS Cognito |
 
-### Project Structure
+## Architecture
 
 ```
-├── backend/                    # AWS SAM serverless backend
-│   ├── core/                   # Core KYC functions
-│   │   ├── functions/          # Lambda functions
-│   │   └── layers/             # Shared Lambda layers
-│   ├── process/                # Workflow functions
-│   │   ├── functions/          # Registration handlers
-│   │   └── state_machines/     # Step Functions definitions
-│   └── shared/                 # Shared utilities
-├── portal/                     # Next.js admin portal
-│   ├── amplify/                # Amplify Gen 2 config
-│   └── src/                    # React application
-├── e2e/                        # End-to-end tests
-└── .kiro/                      # Kiro specs and steering
-    ├── specs/                  # Feature specifications
-    └── steering/               # Technical guidance
+Portal (Next.js) → API Gateway → KYC Orchestrator → Feature Lambdas
+                                       ↓
+                              [Document Validation]
+                              [Government Verification]
+                              [Face Liveness]
+                              [Background Check]
+                              [Certification]
 ```
 
-## Core Lambda Functions
+## Key Directories
 
-| Function | Purpose | Endpoint |
-|----------|---------|----------|
-| KYCOrchestratorFn | Unified KYC endpoint | `/kyc` |
-| DocumentValidationFn | Document OCR validation | `/document/*` |
-| GovernmentVerificationFn | IPRS/KRA verification | `/government/*` |
-| BackgroundChecksFn | LexisNexis checks | `/backgroundcheck` |
-| FaceLivenessFn | Face liveness detection | `/faceliveness` |
-| CertificationFn | PDF certificate generation | - |
-| RegistrationFn | Customer/Agent registration | `/agent-registration`, `/customer-registration` |
-| DocumentStreamingFn | S3 document streaming | `/stream/*` |
+```
+backend/
+├── core/
+│   ├── functions/           # Lambda functions
+│   │   ├── document_validation/   # Textract-based doc validation
+│   │   ├── government_verification/  # IPRS/KRA verification
+│   │   ├── face_liveness/         # Rekognition face liveness
+│   │   ├── background_check/      # LexisNexis screening
+│   │   ├── certification/         # Final KYC certification
+│   │   └── kyc_orchestrator/      # Unified /kyc endpoint
+│   └── layers/              # Shared Lambda layers
+│       ├── jubilee_esb_api_layer/  # ESB integration
+│       └── document_textract/      # Textract utilities
+├── shared/
+│   ├── functions/authorizer/      # API Gateway authorizer
+│   └── layers/portal_project/     # Portal GraphQL client
+└── template.yaml            # SAM template
+
+portal/                      # Next.js frontend
+├── amplify/                 # Amplify Gen 2 config
+└── src/
+    ├── app/                 # Next.js app router pages
+    ├── components/          # React components
+    └── services/            # API clients
+```
 
 ## KYC Orchestrator Actions
 
-The unified `/kyc` endpoint uses action-based routing:
+The `/kyc` endpoint routes requests based on `action` field:
 
-```python
-# Document Validation Actions
-'validate_nationalid'
-'validate_passport'
-'validate_krapincertificate'
-'validate_cr12'
+| Action | Lambda | Description |
+|--------|--------|-------------|
+| `validate_nationalid` | DocumentValidationFn | Validate National ID via Textract |
+| `validate_passport` | DocumentValidationFn | Validate Passport via Textract |
+| `validate_krapincertificate` | DocumentValidationFn | Validate KRA PIN certificate |
+| `verify_nationalid` | GovernmentVerificationFn | Verify ID against IPRS |
+| `verify_passport` | GovernmentVerificationFn | Verify passport against IPRS |
+| `verify_kra` | GovernmentVerificationFn | Verify KRA PIN |
+| `background_check` | BackgroundCheckFn | LexisNexis screening |
+| `create_liveness_session` | FaceLivenessFn | Start face liveness check |
+| `get_liveness_results` | FaceLivenessFn | Get liveness results |
 
-# Government Verification Actions
-'government_verify_nationalid'
-'government_verify_passport'
-'government_verify_kra'
+## v1.2 Features (In Development)
 
-# Other KYC Operations
-'background_check'
-'face_liveness'
-'agent_registration'
-'customer_registration'
-'stream_document'
-'get_certificate'
-'generate_certificate'
-'get_kyc_status'
-```
+| Feature | Status | Branch |
+|---------|--------|--------|
+| Face Matching (70% threshold) | Spec complete | `feature/face-matching-verification` |
+| Serial Number Validation | Spec complete | `feature/serial-number-validation` |
+| Gender Validation (IPRS) | Spec complete | `feature/gender-validation-iprs` |
 
-## External API Integrations
+### Integration Branch
 
-### IPRS (Integrated Population Registration System)
-- Kenya's official government identity database
-- Accessed via Jubilee ESB layer
-- Methods: `search_generic`, `search_passport_number`, `search_alien_id`
+All v1.2 features merge to `develop_v1.2` before final merge to `develop`.
 
-### KRA (Kenya Revenue Authority)
-- Tax PIN verification
-- Accessed via Jubilee ESB layer
+## External API Dependencies
 
-### LexisNexis
-- Background checks and sanctions screening
-- Accessed via Jubilee ESB layer
+| Service | Provider | Purpose |
+|---------|----------|---------|
+| IPRS | Kenya Government | National ID/Passport verification |
+| KRA | Kenya Revenue Authority | Tax PIN validation |
+| LexisNexis | LexisNexis Risk Solutions | Background/sanctions screening |
 
-## Development Commands
+All external APIs accessed via Jubilee ESB gateway at `https://jubipay.jubileeinsurance.com`.
+
+## Environment Variables
+
+Key Lambda environment variables:
+- `JUBILEE_ESB_API_SECRET_ARN` - ESB credentials in Secrets Manager
+- `PORTAL_SECRET_ARN` - Portal GraphQL credentials
+- `DOCUMENT_VALIDATION_FN_ARN` - Document validation Lambda ARN
+- `GOVERNMENT_VERIFICATION_FN_ARN` - Government verification Lambda ARN
+
+## Testing
 
 ```bash
-# Build
-sam build
+# Unit tests
+cd backend/core/functions/<function>/tests
+pytest
 
-# Local testing
-sam local invoke FunctionName -e event.json
-sam local start-api
-
-# Deploy
-sam validate --lint
-sam build
-sam deploy
-
-# Tests
-cd backend/core/functions/*/tests
-python -m pytest
+# E2E tests
+cd e2e
+pytest tests/
 ```
+
+## Deployment
+
+```bash
+cd backend
+sam build
+sam deploy --guided
+```
+
+See `backend/samconfig.toml` for deployment configuration.

@@ -4,6 +4,8 @@ __pycache__/
 *.pyo
 *.egg
 *.egg-info
+esb_credentials
+Current_ESB_APIs_EKYC
 dist/
 build/
 sdist/
