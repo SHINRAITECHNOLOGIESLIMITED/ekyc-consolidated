@@ -322,6 +322,12 @@ Resources:
           KYCDOCUMENTSBUCKET_ARN: !GetAtt KYCDocumentsBucket.Arn
           AMPLIFY_S3_BUCKET_NAME: !Ref AmplifyS3BucketName
           PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+          # v1.2 Feature: IPRS validation for serial number and gender
+          JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
+          ENABLE_IPRS_VALIDATION: 'true'
+          # Required by JubileeESBAPILayer for caching
+          JUBILEEAPICACHE_TABLE_NAME: !Ref JubileeApiCache
+          JUBILEEAPICACHE_TABLE_ARN: !GetAtt JubileeApiCache.Arn
       Events:
         ApiGatewayPOSTKRA:
           Type: Api
@@ -354,6 +360,7 @@ Resources:
                 - secretsmanager:GetSecretValue
               Resource:
                 - !Ref PortalGraphQLSecret
+                - !Ref JubileeESBAPISecret
         - AWSLambdaBasicExecutionRole
         - Statement:
             - Effect: Allow
@@ -408,9 +415,12 @@ Resources:
                 - textract:GetDocumentAnalysis
                 - textract:GetDocumentTextDetection
               Resource: '*'
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JubileeApiCache
       Layers:
         - !Ref PortalProjectionLayer
         - !Ref DocumentTextractLayer
+        - !Ref JubileeESBAPILayer
   DocumentValidationFnLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain

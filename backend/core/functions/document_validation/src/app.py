@@ -1,12 +1,14 @@
 import io
 import json
 import os
+import time
 from io import BytesIO
 
 import boto3
 import requests
 from PIL import Image
-from aws_lambda_powertools import Logger, Tracer
+from aws_lambda_powertools import Logger, Tracer, Metrics
+from aws_lambda_powertools.metrics import MetricUnit
 from aws_lambda_powertools.utilities.validation import validate
 from botocore.exceptions import ClientError
 from reportlab.pdfgen import canvas
@@ -15,15 +17,35 @@ from datetime import datetime
 
 from portal import Portal,DOCUMENT_TYPE
 
+# v1.2 Feature imports - Serial Number and Gender Validation
+from serial_number_validator import validate_serial_number, ValidationStatus
+from gender_validator import validate_gender, GenderValidationStatus
+from iprs_schema import validate_iprs_response_schema, check_schema_compatibility, IPRS_SCHEMA_VERSION, emit_schema_validation_metric
+
 KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
 assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
 
 SETTING_NATIONAL_ID_USE_ADAPTER = False
 
+# v1.2 Feature flag - Enable IPRS validation for serial number and gender
+ENABLE_IPRS_VALIDATION = os.environ.get('ENABLE_IPRS_VALIDATION', 'true').lower() == 'true'
+
 logger = Logger()
 tracer = Tracer()
+metrics = Metrics(namespace="JubileeEKYC/DocumentValidation")
 portal = Portal()
 s3_client = boto3.client('s3')
+
+# Initialize IPRS client for v1.2 validation features
+# Import is conditional to avoid breaking existing deployments without ESB layer
+try:
+    from jubilee_esb_api import JubileeESBAPI
+    esb_client = JubileeESBAPI(portal)
+    IPRS_CLIENT_AVAILABLE = True
+except ImportError:
+    logger.warning("JubileeESBAPI not available - IPRS validation disabled")
+    esb_client = None
+    IPRS_CLIENT_AVAILABLE = False
 
 
 def convert_to_pdf(file_name, content_type):
@@ -134,6 +156,7 @@ def copy_to_s3(url, object_key):
 
 @logger.inject_lambda_context
 @tracer.capture_lambda_handler
+@metrics.log_metrics(capture_cold_start_metric=True)
 def handler(event, context):
     """
     Lambda handler for document validation endpoints.
@@ -299,6 +322,155 @@ def rate(matchResults):
     return confidence,validation_accuracy,processing_accuracy
 
 
+def fetch_iprs_data(id_number: str) -> dict:
+    """
+    Fetch IPRS data for a given ID number.
+    
+    Returns a dict with serialNumber and gender from IPRS, or None values if unavailable.
+    This is a non-blocking operation - errors are logged but don't fail the validation.
+    
+    Args:
+        id_number: The national ID number to look up
+        
+    Returns:
+        dict with keys: serialNumber, gender, success, error, schema_valid
+    """
+    result = {
+        "serialNumber": None,
+        "gender": None,
+        "success": False,
+        "error": None,
+        "schema_valid": False,
+        "schema_version": IPRS_SCHEMA_VERSION
+    }
+    
+    if not IPRS_CLIENT_AVAILABLE or not ENABLE_IPRS_VALIDATION:
+        result["error"] = "IPRS validation disabled"
+        logger.info("IPRS validation skipped - client not available or disabled")
+        return result
+    
+    try:
+        logger.info("Fetching IPRS data for validation", extra={
+            "id_number_masked": f"***{id_number[-4:]}" if len(id_number) >= 4 else "***"
+        })
+        
+        # Track IPRS API latency
+        start_time = time.time()
+        
+        response = esb_client.iprs.search_generic({
+            "identifier": "ID_NUMBER",
+            "value": id_number
+        })
+        
+        # Emit IPRS API latency metric
+        latency_ms = (time.time() - start_time) * 1000
+        metrics.add_metric(name="IPRSAPILatency", unit=MetricUnit.Milliseconds, value=latency_ms)
+        
+        if response.status_code >= 400:
+            result["error"] = f"IPRS API error: {response.status_code}"
+            logger.warning("IPRS API returned error", extra={
+                "status_code": response.status_code
+            })
+            metrics.add_metric(name="IPRSAPIError", unit=MetricUnit.Count, value=1)
+            return result
+        
+        api_result = response.json()
+        
+        if not api_result.get("success"):
+            result["error"] = "IPRS lookup unsuccessful"
+            logger.warning("IPRS lookup unsuccessful", extra={
+                "response": api_result
+            })
+            return result
+        
+        # Validate schema before extracting data
+        schema_valid, missing_fields, schema_error = validate_iprs_response_schema(api_result)
+        result["schema_valid"] = schema_valid
+        
+        # Emit schema validation metric
+        emit_schema_validation_metric(metrics, schema_valid, missing_fields)
+        
+        if not schema_valid:
+            result["error"] = f"IPRS schema validation failed: {schema_error}"
+            logger.warning("IPRS schema validation failed", extra={
+                "missing_fields": missing_fields,
+                "schema_version": IPRS_SCHEMA_VERSION
+            })
+            # Continue anyway - extract what we can
+        
+        data = api_result.get("data", {})
+        result["serialNumber"] = data.get("serialNumber")
+        result["gender"] = data.get("gender")
+        result["success"] = True
+        
+        logger.info("IPRS data retrieved successfully", extra={
+            "has_serial": result["serialNumber"] is not None,
+            "has_gender": result["gender"] is not None,
+            "schema_valid": schema_valid
+        })
+        
+        return result
+        
+    except Exception as e:
+        result["error"] = f"IPRS lookup failed: {str(e)}"
+        logger.error("IPRS lookup exception", extra={
+            "error": str(e)
+        })
+        metrics.add_metric(name="IPRSAPIError", unit=MetricUnit.Count, value=1)
+        return result
+
+
+def _emit_validation_metrics(serial_result, gender_result):
+    """
+    Emit CloudWatch metrics for serial number and gender validation outcomes.
+    
+    Emits counters for MATCH, MISMATCH, and INCONCLUSIVE outcomes for both
+    serial number and gender validation.
+    
+    Args:
+        serial_result: SerialNumberValidationResult from validate_serial_number
+        gender_result: GenderValidationResult from validate_gender
+    """
+    try:
+        # Serial Number Validation Metrics
+        metrics.add_dimension(name="ValidationType", value="SerialNumber")
+        
+        if serial_result.status == ValidationStatus.MATCH:
+            metrics.add_metric(name="ValidationMatch", unit=MetricUnit.Count, value=1)
+            metrics.add_metric(name="ValidationMismatch", unit=MetricUnit.Count, value=0)
+            metrics.add_metric(name="ValidationInconclusive", unit=MetricUnit.Count, value=0)
+        elif serial_result.status == ValidationStatus.MISMATCH:
+            metrics.add_metric(name="ValidationMatch", unit=MetricUnit.Count, value=0)
+            metrics.add_metric(name="ValidationMismatch", unit=MetricUnit.Count, value=1)
+            metrics.add_metric(name="ValidationInconclusive", unit=MetricUnit.Count, value=0)
+        else:  # INCONCLUSIVE
+            metrics.add_metric(name="ValidationMatch", unit=MetricUnit.Count, value=0)
+            metrics.add_metric(name="ValidationMismatch", unit=MetricUnit.Count, value=0)
+            metrics.add_metric(name="ValidationInconclusive", unit=MetricUnit.Count, value=1)
+        
+        # Gender Validation Metrics
+        metrics.add_dimension(name="ValidationType", value="Gender")
+        
+        if gender_result.status == GenderValidationStatus.MATCH:
+            metrics.add_metric(name="ValidationMatch", unit=MetricUnit.Count, value=1)
+            metrics.add_metric(name="ValidationMismatch", unit=MetricUnit.Count, value=0)
+            metrics.add_metric(name="ValidationInconclusive", unit=MetricUnit.Count, value=0)
+        elif gender_result.status == GenderValidationStatus.MISMATCH:
+            metrics.add_metric(name="ValidationMatch", unit=MetricUnit.Count, value=0)
+            metrics.add_metric(name="ValidationMismatch", unit=MetricUnit.Count, value=1)
+            metrics.add_metric(name="ValidationInconclusive", unit=MetricUnit.Count, value=0)
+        else:  # INCONCLUSIVE
+            metrics.add_metric(name="ValidationMatch", unit=MetricUnit.Count, value=0)
+            metrics.add_metric(name="ValidationMismatch", unit=MetricUnit.Count, value=0)
+            metrics.add_metric(name="ValidationInconclusive", unit=MetricUnit.Count, value=1)
+            
+    except Exception as e:
+        # Don't fail validation due to metrics emission error
+        logger.error("Failed to emit validation metrics", extra={
+            "error": str(e)
+        })
+
+
 def validate_nationalid(data):
     schema = {
         "type": "object",
@@ -385,6 +557,46 @@ def validate_nationalid(data):
                             districtOfBirth=districtOfBirthMatchResult,
                             placeOfIssue=placeOfIssueMatchResult,
                             )
+        
+        # v1.2 Feature: IPRS Validation for Serial Number and Gender
+        # Fetch IPRS data and validate against extracted values
+        iprs_data = fetch_iprs_data(data['idNumber'])
+        
+        # Extract serial number from Textract for IPRS comparison
+        extracted_serial = None
+        if 'SERIAL_NUMBER' in extracted_form and extracted_form['SERIAL_NUMBER'].get('value'):
+            extracted_serial = extracted_form['SERIAL_NUMBER']['value']
+        
+        # Extract gender from Textract for IPRS comparison
+        extracted_gender = None
+        if 'SEX' in extracted_form and extracted_form['SEX'].get('value'):
+            extracted_gender = extracted_form['SEX']['value']
+        
+        # Perform IPRS validations (non-blocking)
+        serial_validation_result = validate_serial_number(
+            extracted_serial=extracted_serial,
+            iprs_serial=iprs_data.get("serialNumber")
+        )
+        
+        gender_validation_result = validate_gender(
+            extracted_gender=extracted_gender,
+            iprs_gender=iprs_data.get("gender")
+        )
+        
+        # Add IPRS validation results to matchResults
+        matchResults['serialNumberValidation'] = serial_validation_result.to_dict()
+        matchResults['genderValidation'] = gender_validation_result.to_dict()
+        
+        # Log validation outcomes for monitoring
+        logger.info("IPRS validation completed", extra={
+            "serial_status": serial_validation_result.status.value,
+            "gender_status": gender_validation_result.status.value,
+            "iprs_available": iprs_data.get("success", False)
+        })
+        
+        # Emit validation outcome metrics
+        _emit_validation_metrics(serial_validation_result, gender_validation_result)
+        
         _documentType=DOCUMENT_TYPE.NATIONAL_ID
         _documentIdentifier=data['idNumber']
 

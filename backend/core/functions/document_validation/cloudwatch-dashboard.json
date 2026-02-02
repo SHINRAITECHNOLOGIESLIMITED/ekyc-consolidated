@@ -1,0 +1,137 @@
+{
+  "widgets": [
+    {
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "# Serial Number & Gender Validation Dashboard\nv1.2 IPRS Validation Metrics"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 1,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "Serial Number Validation Outcomes",
+        "view": "pie",
+        "metrics": [
+          ["JubileeEKYC/DocumentValidation", "ValidationMatch", "ValidationType", "SerialNumber"],
+          [".", "ValidationMismatch", ".", "."],
+          [".", "ValidationInconclusive", ".", "."]
+        ],
+        "region": "${AWS::Region}",
+        "period": 86400
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 1,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "Gender Validation Outcomes",
+        "view": "pie",
+        "metrics": [
+          ["JubileeEKYC/DocumentValidation", "ValidationMatch", "ValidationType", "Gender"],
+          [".", "ValidationMismatch", ".", "."],
+          [".", "ValidationInconclusive", ".", "."]
+        ],
+        "region": "${AWS::Region}",
+        "period": 86400
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 1,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "IPRS Schema Validation",
+        "view": "pie",
+        "metrics": [
+          ["JubileeEKYC/DocumentValidation", "IPRSSchemaValidation"],
+          [".", "IPRSSchemaMismatch"]
+        ],
+        "region": "${AWS::Region}",
+        "period": 86400
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 7,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "IPRS API Latency (ms)",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          ["JubileeEKYC/DocumentValidation", "IPRSAPILatency", {"stat": "Average"}],
+          ["...", {"stat": "p99"}],
+          ["...", {"stat": "Maximum"}]
+        ],
+        "region": "${AWS::Region}",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 7,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "IPRS API Errors",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          ["JubileeEKYC/DocumentValidation", "IPRSAPIError", {"stat": "Sum"}]
+        ],
+        "region": "${AWS::Region}",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 13,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Serial Number MISMATCH Rate (Hourly)",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          ["JubileeEKYC/DocumentValidation", "ValidationMismatch", "ValidationType", "SerialNumber", {"stat": "Sum"}]
+        ],
+        "region": "${AWS::Region}",
+        "period": 3600
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 13,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Gender MISMATCH Rate (Hourly)",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          ["JubileeEKYC/DocumentValidation", "ValidationMismatch", "ValidationType", "Gender", {"stat": "Sum"}]
+        ],
+        "region": "${AWS::Region}",
+        "period": 3600
+      }
+    }
+  ]
+}

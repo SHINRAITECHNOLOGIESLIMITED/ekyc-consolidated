@@ -1,9 +1,9 @@
 {
   "auth": {
-    "user_pool_id": "eu-west-1_zn9jaZ2zR",
+    "user_pool_id": "eu-west-1_81h5Vhkvx",
     "aws_region": "eu-west-1",
-    "user_pool_client_id": "1lr603ioq647928qppd8qcp7hl",
-    "identity_pool_id": "eu-west-1:05c00f30-d686-462b-be4f-e037ec97f70b",
+    "user_pool_client_id": "j0fmbt43c2rh4qmg7rio85f6o",
+    "identity_pool_id": "eu-west-1:7b93dc1d-757f-413b-8797-dc94dda877c6",
     "mfa_methods": [],
     "standard_required_attributes": [
       "email"
@@ -26,9 +26,9 @@
     "unauthenticated_identities_enabled": true
   },
   "data": {
-    "url": "https://kecaujqapfcwzjqxjx6bnzzcz4.appsync-api.eu-west-1.amazonaws.com/graphql",
+    "url": "https://dwx47oyx7nahjdo2gakplo7c3a.appsync-api.eu-west-1.amazonaws.com/graphql",
     "aws_region": "eu-west-1",
-    "api_key": "da2-v5mubzskdjexfobs25qtpl7a5y",
+    "api_key": "da2-65dhbvdwkfcopcuavrs3fgezke",
     "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
       "API_KEY",
@@ -1010,11 +1010,11 @@
   },
   "storage": {
     "aws_region": "eu-west-1",
-    "bucket_name": "amplify-dnw02dhxhpu7h-mai-kycdocumentsbucketa4bf11-wxhjqijfdzdz",
+    "bucket_name": "amplify-jubileeekycportal-kycdocumentsbucketa4bf11-ic5wfd1bnnw8",
     "buckets": [
       {
         "name": "kyc_documents",
-        "bucket_name": "amplify-dnw02dhxhpu7h-mai-kycdocumentsbucketa4bf11-wxhjqijfdzdz",
+        "bucket_name": "amplify-jubileeekycportal-kycdocumentsbucketa4bf11-ic5wfd1bnnw8",
         "aws_region": "eu-west-1",
         "paths": {
           "uploaded_kyc_docs/${cognito:sub}/*": {
