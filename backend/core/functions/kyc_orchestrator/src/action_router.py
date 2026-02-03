@@ -88,6 +88,10 @@ class ActionRouter:
             # Try idNumber or userId
             identifier = data.get('idNumber') or data.get('userId')
             identifier_type = 'id' if data.get('idNumber') else 'user'
+        elif action == 'face_matching':
+            # Use customer_id or idNumber
+            identifier = data.get('customer_id') or data.get('idNumber') or data.get('iprs_id_number')
+            identifier_type = 'id'
 
         if not identifier:
             logger.warning(f"No identifier found for action {action}")
@@ -332,6 +336,7 @@ class ActionRouter:
             # Other KYC Operations (4 operations)
             'background_check': self._handle_background_check,
             'face_liveness': self._handle_face_liveness,
+            'face_matching': self._handle_face_matching,
             'agent_registration': self._handle_agent_registration,
             'customer_registration': self._handle_customer_registration,
 
@@ -566,6 +571,17 @@ class ActionRouter:
                 'properties': {
                     'faceImageUrl': {'type': 'string', 'format': 'uri'},
                     'sessionId': {'type': 'string'}
+                }
+            },
+            'face_matching': {
+                'type': 'object',
+                'required': ['customer_id', 'customer_photo_key', 'id_document_key', 'iprs_id_number'],
+                'properties': {
+                    'customer_id': {'type': 'string', 'description': 'Customer identifier'},
+                    'customer_photo_key': {'type': 'string', 'description': 'S3 key for customer selfie'},
+                    'id_document_key': {'type': 'string', 'description': 'S3 key for ID document'},
+                    'iprs_id_number': {'type': 'string', 'description': 'ID number for IPRS photo lookup'},
+                    'request_id': {'type': 'string', 'description': 'Optional request tracking ID'}
                 }
             },
             'agent_registration': {
@@ -1245,6 +1261,83 @@ class ActionRouter:
                 request_id=context.get('request_id') if context else None
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('face_liveness', error_response)
+            return secure_response_factory(status_code, error_response)
+
+    def _handle_face_matching(self, data: Dict[str, Any],
+                             context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Handle face matching verification (3-way comparison).
+        
+        Compares customer selfie against ID document photo and IPRS photo
+        using AWS Rekognition CompareFaces API.
+        
+        Args:
+            data: Face matching request data containing:
+                - customer_id: Customer identifier
+                - customer_photo_key: S3 key for customer selfie
+                - id_document_key: S3 key for ID document
+                - iprs_id_number: ID number for IPRS photo lookup
+            context: Optional request context
+            
+        Returns:
+            Standardized response with match status and scores
+        """
+        logger.info("Processing face matching verification")
+
+        try:
+            # Extract natural identifier for storage
+            entity_id, entity_type = self._extract_natural_identifier('face_matching', data)
+
+            # Invoke face matching Lambda
+            result = self.lambda_service.invoke_face_matching(data)
+
+            if not result['success']:
+                logger.error(f"Face matching failed: {result['error']}")
+                error_response = create_standardized_response(
+                    action='face_matching',
+                    success=False,
+                    error=result['error'],
+                    request_id=context.get('request_id') if context else None
+                )
+                status_code = HTTPStatusMapper.map_result_to_status_code('face_matching', error_response)
+                return secure_response_factory(status_code, error_response)
+
+            matching_response = result['response']
+
+            # Store verification result in DynamoDB if entity ID provided
+            if entity_id and entity_type:
+                try:
+                    normalized = normalize_verification_response(
+                        action='face_matching',
+                        raw_response=matching_response,
+                        entity_type=entity_type,
+                        entity_id=entity_id
+                    )
+                    self._store_verification_result(entity_type, entity_id, normalized, registration_data=data)
+                except Exception as storage_error:
+                    logger.warning(f"Failed to store face matching result: {storage_error}")
+
+            standardized_result = create_standardized_response(
+                action='face_matching',
+                success=True,
+                result=matching_response,
+                request_id=context.get('request_id') if context else None
+            )
+            status_code = HTTPStatusMapper.map_result_to_status_code('face_matching', standardized_result)
+            return secure_response_factory(status_code, standardized_result)
+
+        except Exception as e:
+            logger.error(f"Error in face matching: {e}")
+            error_response = create_standardized_response(
+                action='face_matching',
+                success=False,
+                error={
+                    'message': f'Face matching processing error: {str(e)}',
+                    'error_code': 'FACE_MATCHING_PROCESSING_ERROR'
+                },
+                request_id=context.get('request_id') if context else None
+            )
+            status_code = HTTPStatusMapper.map_result_to_status_code('face_matching', error_response)
             return secure_response_factory(status_code, error_response)
 
     def _handle_agent_registration(self, data: Dict[str, Any],

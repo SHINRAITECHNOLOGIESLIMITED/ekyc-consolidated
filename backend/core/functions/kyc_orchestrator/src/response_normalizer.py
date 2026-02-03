@@ -45,6 +45,8 @@ def normalize_verification_response(
         return _normalize_background_check(parsed_response, entity_type, entity_id)
     elif action == 'face_liveness':
         return _normalize_face_liveness(parsed_response, entity_type, entity_id)
+    elif action == 'face_matching':
+        return _normalize_face_matching(parsed_response, entity_type, entity_id)
     else:
         raise ValueError(f"Unknown action type: {action}")
 
@@ -307,6 +309,71 @@ def _normalize_face_liveness(
     }
 
 
+def _normalize_face_matching(
+    response: Dict[str, Any],
+    entity_type: str,
+    entity_id: str
+) -> Dict[str, Any]:
+    """
+    Normalize face matching responses.
+
+    Structure:
+    {
+        "success": true,
+        "action": "face_matching",
+        "data": {
+            "request_id": "...",
+            "customer_id": "...",
+            "match_status": "APPROVED|MANUAL_REVIEW|REJECTED",
+            "comparison_mode": "THREE_WAY|TWO_WAY",
+            "comparisons": [...],
+            "quality_metrics": {...},
+            "decision": {...},
+            "thresholds_used": {...},
+            "processing_time_ms": 1234.56
+        }
+    }
+    """
+    # Parse nested data if present
+    data = response.get('data', response)
+    
+    match_status = data.get('match_status', 'UNKNOWN')
+    comparison_mode = data.get('comparison_mode', 'UNKNOWN')
+    comparisons = data.get('comparisons', [])
+    decision = data.get('decision', {})
+    thresholds = data.get('thresholds_used', {})
+    processing_time = data.get('processing_time_ms')
+    
+    # Extract scores from comparisons
+    scores = {}
+    for comparison in comparisons:
+        name = comparison.get('comparison_name', 'unknown')
+        scores[name] = comparison.get('similarity_score')
+    
+    # Map match_status to verification status
+    status_mapping = {
+        'APPROVED': 'VERIFIED',
+        'MANUAL_REVIEW': 'PENDING_REVIEW',
+        'REJECTED': 'FAILED'
+    }
+    
+    return {
+        'verificationType': 'face_matching',
+        'action': 'face_matching',
+        'timestamp': datetime.utcnow().isoformat(),
+        'status': status_mapping.get(match_status, 'UNKNOWN'),
+        'matchStatus': match_status,
+        'comparisonMode': comparison_mode,
+        'scores': scores,
+        'decision': decision,
+        'thresholds': thresholds,
+        'processingTimeMs': processing_time,
+        'rawResponse': response,
+        'entityType': entity_type,
+        'entityId': entity_id
+    }
+
+
 def _action_to_verification_type(action: str) -> str:
     """
     Map action names to verification type categories.
@@ -326,7 +393,8 @@ def _action_to_verification_type(action: str) -> str:
         'government_verify_kra': 'kra_verification',
         'validate_cr12': 'cr12_validation',
         'background_check': 'background_check',
-        'face_liveness': 'liveness'
+        'face_liveness': 'liveness',
+        'face_matching': 'face_matching'
     }
 
     return mapping.get(action, action)

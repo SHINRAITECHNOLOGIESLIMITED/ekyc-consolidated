@@ -214,6 +214,7 @@ Resources:
           GOVERNMENT_VERIFICATION_FUNCTION: !Ref GovernmentVerificationFn
           BACKGROUND_CHECK_FUNCTION: !Ref BackgroundChecksFn
           FACE_LIVENESS_FUNCTION: !Ref FaceLivenessFn
+          FACE_MATCHING_FUNCTION: !Ref FaceMatchingFn
           CERTIFICATION_FUNCTION: !Ref CertificationFn
           REGISTRATION_FUNCTION: !Ref RegistrationFn
           DOCUMENT_STREAMING_FUNCTION: !Ref DocumentStreamingFn
@@ -246,6 +247,7 @@ Resources:
                 - !GetAtt GovernmentVerificationFn.Arn
                 - !GetAtt BackgroundChecksFn.Arn
                 - !GetAtt FaceLivenessFn.Arn
+                - !GetAtt FaceMatchingFn.Arn
                 - !GetAtt CertificationFn.Arn
                 - !GetAtt RegistrationFn.Arn
                 - !GetAtt DocumentStreamingFn.Arn
@@ -658,6 +660,112 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${FaceLivenessFn}
       RetentionInDays: 30
+  # v1.2 Feature: Face Matching Verification
+  FaceMatchingFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Face matching verification - 3-way comparison using AWS Rekognition
+      CodeUri: core/functions/face_matching/src
+      Handler: app.handler
+      MemorySize: 512
+      Timeout: 60
+      Environment:
+        Variables:
+          FACE_MATCHING_RESULTS_TABLE_NAME: FaceMatchingResults
+          MANUAL_REVIEW_TABLE: FaceMatchingManualReview
+          FACE_LIVENESS_CAPTURES_BUCKET: !Ref FaceLivenessCaptureBucket
+          AMPLIFY_S3_BUCKET_NAME: !Ref AmplifyS3BucketName
+          JUBILEE_ESB_API_SECRET_ARN: !Ref JubileeESBAPISecret
+          JUBILEEAPICACHE_TABLE_NAME: !Ref JubileeApiCache
+          PORTAL_GRAPHQL_SECRET_ARN: !Ref PortalGraphQLSecret
+          CUSTOMER_TABLE_NAME: !Ref CustomerTable
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        # Rekognition CompareFaces permission
+        - Statement:
+            - Sid: RekognitionCompareFaces
+              Effect: Allow
+              Action:
+                - rekognition:CompareFaces
+                - rekognition:DetectFaces
+              Resource: '*'
+        # SSM Parameter Store for thresholds
+        - Statement:
+            - Sid: SSMParameterAccess
+              Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ekyc/face-matching/*
+        # DynamoDB for results storage
+        - Statement:
+            - Sid: FaceMatchingResultsTable
+              Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:Query
+                - dynamodb:UpdateItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/FaceMatchingResults
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/FaceMatchingResults/index/*
+        # DynamoDB for manual review tasks
+        - Statement:
+            - Sid: ManualReviewTable
+              Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:Query
+                - dynamodb:UpdateItem
+                - dynamodb:Scan
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/FaceMatchingManualReview
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/FaceMatchingManualReview/index/*
+        # Customer table for KYC status updates
+        - Statement:
+            - Sid: CustomerTableAccess
+              Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt CustomerTable.Arn
+        # S3 access for customer photos
+        - Statement:
+            - Sid: S3PhotoAccess
+              Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:HeadObject
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::${FaceLivenessCaptureBucket}/*
+                - !Sub arn:${AWS::Partition}:s3:::${AmplifyS3BucketName}/*
+        # Secrets Manager for ESB credentials
+        - Statement:
+            - Sid: SecretsManagerAccess
+              Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JubileeESBAPISecret
+                - !Ref PortalGraphQLSecret
+        # API cache for IPRS responses
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JubileeApiCache
+      Layers:
+        - !Ref PortalProjectionLayer
+        - !Ref JubileeESBAPILayer
+
+  FaceMatchingFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${FaceMatchingFn}
+      RetentionInDays: 30
+
   DocumentStreamingFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -939,3 +1047,9 @@ Outputs:
   RegistrationFnLogGroup:
     Description: Registration log group
     Value: !Ref RegistrationFnLogGroup
+  FaceMatchingFnLogGroup:
+    Description: Face matching verification log group
+    Value: !Ref FaceMatchingFnLogGroup
+  FaceMatchingFnArn:
+    Description: Face matching Lambda function ARN
+    Value: !GetAtt FaceMatchingFn.Arn

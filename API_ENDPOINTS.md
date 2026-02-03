@@ -207,6 +207,23 @@ curl -X POST https://6corkstod4.execute-api.eu-west-1.amazonaws.com/Stage/docume
 
 ---
 
+## Known Issues
+
+### Passport Verification - False Positive Bug (ESB)
+**Status**: OPEN - Escalate to ESB Team
+
+The `/government/passport` endpoint (which calls ESB `/iprs/searchUsingPassportNumber`) returns a false positive when:
+- A valid passport number is provided
+- An ID number that does NOT belong to the passport holder is provided
+
+**Expected behavior**: API should return error 417 or `success: false` when passport and ID don't match.
+
+**Actual behavior**: API returns `success: true` with passport data, even when the ID doesn't belong to the passport holder.
+
+**Impact**: Critical - This allows fraudulent verification of passports with mismatched IDs.
+
+---
+
 ## Running E2E Tests
 
 ```bash

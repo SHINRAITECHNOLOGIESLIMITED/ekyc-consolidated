@@ -29,7 +29,7 @@ def upload_to_s3(file_path: str, bucket: str, key: str) -> str:
     session = boto3.Session(profile_name=AWS_PROFILE, region_name=AWS_REGION)
     s3_client = session.client('s3')
     
-    print(f"📤 Uploading {os.path.basename(file_path)} to S3...")
+    print(f"[UPLOAD] Uploading {os.path.basename(file_path)} to S3...")
     
     # Determine content type
     if file_path.lower().endswith('.jpg') or file_path.lower().endswith('.jpeg'):
@@ -49,7 +49,7 @@ def upload_to_s3(file_path: str, bucket: str, key: str) -> str:
     )
     
     s3_uri = f"s3://{bucket}/{key}"
-    print(f"✅ Uploaded to: {s3_uri}")
+    print(f"[OK] Uploaded to: {s3_uri}")
     return s3_uri
 
 
@@ -72,7 +72,7 @@ def validate_nationalid(s3_uri: str, id_data: dict) -> dict:
         **id_data
     }
     
-    print(f"\n🔍 Validating National ID...")
+    print(f"\n[VALIDATE] Validating National ID...")
     print(f"   URL: {url}")
     print(f"   ID Number: {id_data.get('idNumber', 'N/A')}")
     
@@ -93,13 +93,13 @@ def analyze_results(results: dict):
     print("=" * 70)
     
     if "results" not in results:
-        print("❌ No results in response")
+        print("[FAIL] No results in response")
         return
     
     match_results = results["results"].get("matchResults", {})
     
     # Standard field matching
-    print("\n📋 Standard Field Matching:")
+    print("\n[INFO] Standard Field Matching:")
     standard_fields = ['serialNumber', 'idNumber', 'fullNames', 'dateOfBirth', 
                        'dateOfIssue', 'gender', 'districtOfBirth', 'placeOfIssue']
     
@@ -108,47 +108,47 @@ def analyze_results(results: dict):
             result = match_results[field]
             status = result.get('status', 'Unknown')
             if status == 'Matched':
-                print(f"   ✅ {field}: {status}")
+                print(f"   [OK] {field}: {status}")
             elif status == 'Not Matched':
                 details = result.get('details', {})
-                print(f"   ❌ {field}: {status}")
+                print(f"   [FAIL] {field}: {status}")
                 print(f"      Expected: {details.get('expected', 'N/A')}")
                 print(f"      Actual: {details.get('actual', 'N/A')}")
             else:
-                print(f"   ⚠️  {field}: {status}")
+                print(f"   [WARN] {field}: {status}")
     
     # v1.2 IPRS Validation Results
-    print("\n📋 v1.2 IPRS Validation:")
+    print("\n[INFO] v1.2 IPRS Validation:")
     
     if 'serialNumberValidation' in match_results:
         sn_result = match_results['serialNumberValidation']
         status = sn_result.get('status', 'Unknown')
-        icon = '✅' if status == 'MATCH' else '❌' if status == 'MISMATCH' else '⚠️'
+        icon = '[OK]' if status == 'MATCH' else '[FAIL]' if status == 'MISMATCH' else '[WARN]'
         print(f"   {icon} Serial Number Validation: {status}")
         print(f"      Document: {sn_result.get('extracted_serial_number', 'N/A')}")
         print(f"      IPRS: {sn_result.get('iprs_serial_number', 'N/A')}")
         if sn_result.get('reason'):
             print(f"      Reason: {sn_result.get('reason')}")
     else:
-        print("   ⚠️  Serial Number Validation: Not present in response")
+        print("   [WARN] Serial Number Validation: Not present in response")
     
     if 'genderValidation' in match_results:
         g_result = match_results['genderValidation']
         status = g_result.get('status', 'Unknown')
-        icon = '✅' if status == 'MATCH' else '❌' if status == 'MISMATCH' else '⚠️'
+        icon = '[OK]' if status == 'MATCH' else '[FAIL]' if status == 'MISMATCH' else '[WARN]'
         print(f"   {icon} Gender Validation: {status}")
         print(f"      Document: {g_result.get('extracted_gender', 'N/A')}")
         print(f"      IPRS: {g_result.get('iprs_gender', 'N/A')}")
         if g_result.get('reason'):
             print(f"      Reason: {g_result.get('reason')}")
     else:
-        print("   ⚠️  Gender Validation: Not present in response")
+        print("   [WARN] Gender Validation: Not present in response")
     
     # Keywords checks
     if "keywords_checks" in results["results"]:
-        print("\n📋 Keyword Checks:")
+        print("\n[INFO] Keyword Checks:")
         for check in results["results"]["keywords_checks"]:
-            icon = '✅' if check.get('result') else '❌'
+            icon = '[OK]' if check.get('result') else '[FAIL]'
             print(f"   {icon} {check.get('check')}")
 
 
@@ -159,10 +159,10 @@ def main():
     
     # Check if image exists
     if not os.path.exists(IMAGE_PATH):
-        print(f"❌ Image not found: {IMAGE_PATH}")
+        print(f"[FAIL] Image not found: {IMAGE_PATH}")
         return 1
     
-    print(f"📁 Image: {IMAGE_PATH}")
+    print(f"[FILE] Image: {IMAGE_PATH}")
     
     # ID data for TIM.jpg - ID number 26465570
     id_data = {
@@ -174,7 +174,7 @@ def main():
     try:
         s3_uri = upload_to_s3(IMAGE_PATH, S3_BUCKET, s3_key)
     except Exception as e:
-        print(f"❌ Failed to upload to S3: {e}")
+        print(f"[FAIL] Failed to upload to S3: {e}")
         return 1
     
     # Validate
@@ -183,7 +183,7 @@ def main():
         
         if response.status_code == 200:
             results = response.json()
-            print("\n✅ Validation completed successfully!")
+            print("\n[OK] Validation completed successfully!")
             analyze_results(results)
             
             # Print full response for debugging
@@ -192,12 +192,12 @@ def main():
             print("=" * 70)
             pprint(results)
         else:
-            print(f"\n❌ Validation failed with status {response.status_code}")
+            print(f"\n[FAIL] Validation failed with status {response.status_code}")
             print(response.text)
             return 1
             
     except Exception as e:
-        print(f"❌ Error during validation: {e}")
+        print(f"[FAIL] Error during validation: {e}")
         return 1
     
     return 0

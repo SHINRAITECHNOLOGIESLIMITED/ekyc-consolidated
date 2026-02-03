@@ -148,45 +148,45 @@ This implementation plan breaks down the Face Matching Verification feature into
 - [x] 7. Checkpoint - Verify decision calculator functionality
   - Ensure all decision calculator tests pass, ask the user if questions arise.
 
-- [ ] 8. Implement Image Acquisition module
-  - [ ] 8.1 Implement customer photo retrieval from S3
+- [x] 8. Implement Image Acquisition module
+  - [x] 8.1 Implement customer photo retrieval from S3
     - Create `ImageAcquisition` class
     - Implement `get_customer_photo()` method
     - Validate image meets quality requirements before returning
     - _Requirements: 1.1_
 
-  - [ ] 8.2 Write property test for image validation
+  - [x] 8.2 Write property test for image validation
     - **Property 1: Image Validation Correctness**
     - **Validates: Requirements 1.1, 1.4**
 
-  - [ ] 8.3 Implement ID document photo extraction
+  - [x] 8.3 Implement ID document photo extraction
     - Implement `extract_id_document_photo()` method
     - Integrate with existing Textract AnalyzeID functionality
     - Extract face region from document
     - _Requirements: 1.2_
 
-  - [ ] 8.4 Implement IPRS photo retrieval
+  - [x] 8.4 Implement IPRS photo retrieval
     - Implement `get_iprs_photo()` method
     - Parse IPRS API response for photo field
     - Handle missing photo gracefully (return None)
     - _Requirements: 1.3_
 
-  - [ ] 8.5 Write property test for IPRS photo extraction
+  - [x] 8.5 Write property test for IPRS photo extraction
     - **Property 2: IPRS Photo Extraction**
     - **Validates: Requirements 1.3**
 
-- [ ] 9. Implement main Face Matching Lambda handler
-  - [ ] 9.1 Create main handler with request parsing
+- [x] 9. Implement main Face Matching Lambda handler
+  - [x] 9.1 Create main handler with request parsing
     - Implement `handler()` function in `app.py`
     - Parse and validate incoming request
     - Initialize all component classes
     - _Requirements: 6.1_
 
-  - [ ] 9.2 Write property test for input validation
+  - [x] 9.2 Write property test for input validation
     - **Property 17: Input Validation**
     - **Validates: Requirements 8.6**
 
-  - [ ] 9.3 Implement orchestration logic
+  - [x] 9.3 Implement orchestration logic
     - Implement `process_face_matching()` function
     - Coordinate image acquisition from all sources
     - Execute preprocessing on all images
@@ -194,147 +194,147 @@ This implementation plan breaks down the Face Matching Verification feature into
     - Calculate decision and build response
     - _Requirements: 3.4, 4.1, 4.2, 4.3_
 
-  - [ ] 9.4 Write property test for response structure
+  - [x] 9.4 Write property test for response structure
     - **Property 11: Response Structure Completeness**
     - **Validates: Requirements 5.1, 5.2, 5.3, 5.4, 5.5**
 
-  - [ ] 9.5 Implement DynamoDB result storage
+  - [x] 9.5 Implement DynamoDB result storage
     - Create `ResultStorage` class
     - Implement `store_result()` method
     - Store all required audit fields
     - _Requirements: 6.3, 7.4_
 
-  - [ ] 9.6 Write property test for audit trail storage
+  - [x] 9.6 Write property test for audit trail storage
     - **Property 13: Audit Trail Storage**
     - **Validates: Requirements 6.3, 7.4**
 
-  - [ ] 9.7 Implement KYC status update
+  - [x] 9.7 Implement KYC status update
     - Implement `update_kyc_status()` method
     - Map MatchStatus to KYC status values
     - Update customer record in DynamoDB
     - _Requirements: 6.4_
 
-  - [ ] 9.8 Write property test for KYC status update
+  - [x] 9.8 Write property test for KYC status update
     - **Property 14: KYC Status Update Consistency**
     - **Validates: Requirements 6.4**
 
-- [ ] 10. Checkpoint - Verify Lambda handler functionality
+- [x] 10. Checkpoint - Verify Lambda handler functionality
   - Ensure all handler tests pass, ask the user if questions arise.
 
-- [ ] 11. Integrate with KYC Orchestrator
-  - [ ] 11.1 Add face_matching action to ActionRouter
+- [x] 11. Integrate with KYC Orchestrator
+  - [x] 11.1 Add face_matching action to ActionRouter
     - Add `'face_matching': self._handle_face_matching` to action_handlers dict
     - Implement `_handle_face_matching()` method
     - Route request to Face Matching Lambda
     - _Requirements: 6.1, 6.2_
 
-  - [ ] 11.2 Add face_matching schema to PayloadValidator
+  - [x] 11.2 Add face_matching schema to PayloadValidator
     - Define JSON schema for face_matching action data
     - Add schema to PayloadValidator schemas dict
     - _Requirements: 8.6_
 
-  - [ ] 11.3 Implement error response handling
+  - [x] 11.3 Implement error response handling
     - Map Face Matching errors to standardized responses
     - Ensure error_code and message are included
     - _Requirements: 6.5_
 
-  - [ ] 11.4 Write integration tests for action routing
+  - [x] 11.4 Write integration tests for action routing
     - Test face_matching action is recognized
     - Test request is routed to correct handler
     - Test error responses are properly formatted
     - _Requirements: 6.1, 6.2, 6.5_
 
-- [ ] 12. Configure infrastructure
-  - [ ] 12.1 Create SSM parameters for thresholds
+- [x] 12. Configure infrastructure
+  - [x] 12.1 Create SSM parameters for thresholds
     - Create `/ekyc/face-matching/approval-threshold` parameter (default: 70)
     - Create `/ekyc/face-matching/rejection-threshold` parameter (default: 50)
     - _Requirements: 4.5_
 
-  - [ ] 12.2 Create DynamoDB table for results
+  - [x] 12.2 Create DynamoDB table for results
     - Create FaceMatchingResults table with request_id as partition key
     - Create GSI on customer_id with timestamp as sort key
     - Configure TTL for 30-day retention
     - _Requirements: 6.3_
 
-  - [ ] 12.3 Update Lambda IAM permissions
+  - [x] 12.3 Update Lambda IAM permissions
     - Add Rekognition CompareFaces permission
     - Add SSM GetParameter permission
     - Add DynamoDB read/write permissions for results table
     - Add S3 read permission for customer photos bucket
     - _Requirements: 3.1, 4.5, 6.3_
 
-- [ ] 13. Final checkpoint - End-to-end verification
+- [x] 13. Final checkpoint - End-to-end verification
   - Ensure all tests pass, ask the user if questions arise.
   - Verify face_matching action works through KYC Orchestrator
   - Verify results are stored in DynamoDB
   - Verify KYC status is updated correctly
 
-- [ ] 14. Implement Metrics and Observability
-  - [ ] 14.1 Create CloudWatch metrics emitter
+- [x] 14. Implement Metrics and Observability
+  - [x] 14.1 Create CloudWatch metrics emitter
     - Implement `MetricsEmitter` class using aws-lambda-powertools
     - Emit counters for APPROVED, MANUAL_REVIEW, REJECTED outcomes
     - Calculate and emit manual review percentage
     - _Requirements: 9.1, 9.2_
 
-  - [ ] 14.2 Implement latency metrics
+  - [x] 14.2 Implement latency metrics
     - Add timing instrumentation around each comparison
     - Emit `FaceMatching.ComparisonLatency` metric
     - _Requirements: 9.4_
 
-  - [ ] 14.3 Implement quality gate metrics
+  - [x] 14.3 Implement quality gate metrics
     - Emit metrics for image quality failures
     - Track poor selfie quality, low resolution rejections
     - _Requirements: 9.5_
 
-  - [ ] 14.4 Create CloudWatch dashboard
+  - [x] 14.4 Create CloudWatch dashboard
     - Create dashboard with approval/rejection rates
     - Add manual review queue depth widget
     - Add latency percentile charts
     - _Requirements: 9.6_
 
-  - [ ] 14.5 Implement ROC metrics logging for UAT
+  - [x] 14.5 Implement ROC metrics logging for UAT
     - Log false accept/reject indicators during UAT
     - Enable threshold tuning based on metrics
     - _Requirements: 9.3_
 
-- [ ] 15. Implement Feature Flags
-  - [ ] 15.1 Create feature flag configuration
+- [x] 15. Implement Feature Flags
+  - [x] 15.1 Create feature flag configuration
     - Set up AWS AppConfig or SSM Parameter Store for feature flags
     - Create flags for threshold values
     - Create flag for aggregation rule selection
     - _Requirements: 10.1, 10.2, 10.3_
 
-  - [ ] 15.2 Implement aggregation rule selector
+  - [x] 15.2 Implement aggregation rule selector
     - Support fail-fast, minimum score, and weighted average rules
     - Read aggregation rule from feature flag
     - _Requirements: 10.5_
 
-  - [ ] 15.3 Implement third comparison toggle
+  - [x] 15.3 Implement third comparison toggle
     - Add feature flag to enable/disable ID ↔ IPRS comparison
     - Default to enabled
     - _Requirements: 10.4_
 
-  - [ ] 15.4 Implement configuration change logging
+  - [x] 15.4 Implement configuration change logging
     - Log threshold changes with timestamp and previous values
     - _Requirements: 10.6_
 
-- [ ] 16. Implement Manual Review Workflow
-  - [ ] 16.1 Create review task queue integration
+- [x] 16. Implement Manual Review Workflow
+  - [x] 16.1 Create review task queue integration
     - Create review task when Match_Status is MANUAL_REVIEW
     - Include all scores, image references, quality metrics
     - _Requirements: 11.1, 11.2_
 
-  - [ ] 16.2 Implement SLA tracking
+  - [x] 16.2 Implement SLA tracking
     - Configure SLA thresholds for review completion
     - Emit metrics for queue depth and resolution time
     - _Requirements: 11.3, 11.4_
 
-  - [ ] 16.3 Implement reviewer audit logging
+  - [x] 16.3 Implement reviewer audit logging
     - Log manual review decisions with reviewer ID
     - Include timestamp and decision rationale
     - _Requirements: 11.6_
 
-- [ ] 17. Final integration checkpoint
+- [x] 17. Final integration checkpoint
   - Verify metrics are emitting to CloudWatch
   - Verify feature flags are working
   - Verify manual review workflow integration

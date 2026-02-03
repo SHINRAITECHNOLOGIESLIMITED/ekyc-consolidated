@@ -27,10 +27,20 @@ from decision_calculator import DecisionCalculator
 from image_acquisition import ImageAcquisition
 from result_storage import ResultStorage
 from config import ConfigManager
+from metrics import (
+    emit_decision_metric,
+    emit_latency_metric,
+    emit_quality_failure,
+    emit_comparison_mode,
+    emit_error_metric,
+    time_operation,
+    MetricName
+)
+from manual_review import create_review_task
 
 logger = Logger()
 tracer = Tracer()
-metrics = Metrics()
+metrics = Metrics(namespace="JubileeEKYC/FaceMatching")
 
 
 @logger.inject_lambda_context
@@ -161,6 +171,28 @@ def process_face_matching(request: FaceMatchingRequest) -> FaceMatchingResult:
     # Update KYC status
     storage.update_kyc_status(request.customer_id, decision.status)
     
+    # Create manual review task if needed
+    if decision.status == MatchStatus.MANUAL_REVIEW:
+        try:
+            scores = {c.comparison_name: c.similarity_score for c in result.comparisons}
+            create_review_task(
+                request_id=request.request_id,
+                customer_id=request.customer_id,
+                comparison_scores=scores,
+                quality_metrics=quality_metrics,
+                thresholds_used=result.thresholds_used,
+                comparison_mode=comparison_mode.value,
+                customer_photo_key=request.customer_photo_key,
+                id_document_key=request.id_document_key,
+                iprs_photo_available='iprs' in preprocessed
+            )
+            logger.info("Created manual review task for request", extra={
+                "request_id": request.request_id,
+                "customer_id": request.customer_id
+            })
+        except Exception as e:
+            logger.warning(f"Failed to create manual review task: {e}")
+    
     return result
 
 
@@ -190,14 +222,30 @@ def _parse_request(body: dict) -> FaceMatchingRequest | dict:
 
 def _emit_metrics(result: FaceMatchingResult, processing_time_ms: float):
     """Emit CloudWatch metrics for the face matching operation."""
-    # Outcome metrics
+    # Extract scores for metrics
+    scores = {}
+    for comparison in result.comparisons:
+        scores[comparison.comparison_name] = comparison.similarity_score
+    
+    # Emit decision metric with scores
+    emit_decision_metric(result.match_status.value, scores)
+    
+    # Emit latency metric
+    emit_latency_metric(
+        MetricName.TOTAL_PROCESSING_TIME.value,
+        processing_time_ms
+    )
+    
+    # Emit comparison mode metric
+    emit_comparison_mode(result.comparison_mode.value)
+    
+    # Legacy metrics for backward compatibility
     metrics.add_metric(
         name=f"FaceMatching.{result.match_status.value}",
         unit=MetricUnit.Count,
         value=1
     )
     
-    # Latency metric
     metrics.add_metric(
         name="FaceMatching.ProcessingTime",
         unit=MetricUnit.Milliseconds,
