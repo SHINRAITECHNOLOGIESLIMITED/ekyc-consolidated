@@ -27,6 +27,7 @@ class FeatureFlag(Enum):
     GOVERNMENT_VERIFICATION_ACTIONS = "government_verification_actions"
     BACKGROUND_CHECK_ACTION = "background_check_action"
     FACE_LIVENESS_ACTION = "face_liveness_action"
+    FACE_MATCH_ACTION = "face_match_action"
     REGISTRATION_ACTIONS = "registration_actions"
     DOCUMENT_STREAMING_ACTION = "document_streaming_action"
 
@@ -363,13 +364,17 @@ def is_action_enabled(action: str, context: Optional[Dict[str, Any]] = None) -> 
         'validate_passport': FeatureFlag.DOCUMENT_VALIDATION_ACTIONS,
         'validate_krapincertificate': FeatureFlag.DOCUMENT_VALIDATION_ACTIONS,
         'validate_cr12': FeatureFlag.DOCUMENT_VALIDATION_ACTIONS,
+        'validate_alienid': FeatureFlag.DOCUMENT_VALIDATION_ACTIONS,
+        'validate_militaryid': FeatureFlag.DOCUMENT_VALIDATION_ACTIONS,
 
         'government_verify_nationalid': FeatureFlag.GOVERNMENT_VERIFICATION_ACTIONS,
         'government_verify_passport': FeatureFlag.GOVERNMENT_VERIFICATION_ACTIONS,
         'government_verify_kra': FeatureFlag.GOVERNMENT_VERIFICATION_ACTIONS,
+        'government_verify_alienid': FeatureFlag.GOVERNMENT_VERIFICATION_ACTIONS,
 
         'background_check': FeatureFlag.BACKGROUND_CHECK_ACTION,
         'face_liveness': FeatureFlag.FACE_LIVENESS_ACTION,
+        'face_match': FeatureFlag.FACE_MATCH_ACTION,
 
         'agent_registration': FeatureFlag.REGISTRATION_ACTIONS,
         'customer_registration': FeatureFlag.REGISTRATION_ACTIONS,

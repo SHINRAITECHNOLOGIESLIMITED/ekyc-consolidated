@@ -84,13 +84,18 @@ class ActionRouter:
         elif action == 'background_check':
             identifier = data.get('nationalIdentificationNumber') or data.get('idNumber')
             identifier_type = 'id'
+        elif action in ['validate_alienid', 'government_verify_alienid']:
+            identifier = data.get('alienIdNumber')
+            identifier_type = 'alien_id'
+        elif action == 'validate_militaryid':
+            identifier = data.get('serviceNumber') or data.get('idNumber')
+            identifier_type = 'id' if data.get('idNumber') else 'service'
         elif action == 'face_liveness':
             # Try idNumber or userId
             identifier = data.get('idNumber') or data.get('userId')
             identifier_type = 'id' if data.get('idNumber') else 'user'
-        elif action == 'face_matching':
-            # Use customer_id or idNumber
-            identifier = data.get('customer_id') or data.get('idNumber') or data.get('iprs_id_number')
+        elif action == 'face_match':
+            identifier = data.get('idNumber')
             identifier_type = 'id'
 
         if not identifier:
@@ -327,16 +332,19 @@ class ActionRouter:
             'validate_passport': self._handle_passport_validation,
             'validate_krapincertificate': self._handle_kra_validation,
             'validate_cr12': self._handle_cr12_validation,
+            'validate_alienid': self._handle_alienid_validation,
+            'validate_militaryid': self._handle_militaryid_validation,
 
             # Government Verification Actions (3 operations)
             'government_verify_nationalid': self._handle_nationalid_verification,
             'government_verify_passport': self._handle_passport_verification,
             'government_verify_kra': self._handle_kra_verification,
+            'government_verify_alienid': self._handle_alienid_verification,
 
             # Other KYC Operations (4 operations)
             'background_check': self._handle_background_check,
             'face_liveness': self._handle_face_liveness,
-            'face_matching': self._handle_face_matching,
+            'face_match': self._handle_face_match,
             'agent_registration': self._handle_agent_registration,
             'customer_registration': self._handle_customer_registration,
 
@@ -535,6 +543,45 @@ class ActionRouter:
                     }
                 }
             },
+            'validate_alienid': {
+                'type': 'object',
+                'required': ['alienIdUrl', 'personalData'],
+                'properties': {
+                    'alienIdUrl': {'type': 'string', 'format': 'uri'},
+                    'personalData': {
+                        'type': 'object',
+                        'required': ['alienIdNumber'],
+                        'properties': {
+                            'alienIdNumber': {'type': 'string'},
+                            'fullNames': {'type': 'string'},
+                            'gender': {'type': 'string'},
+                            'dateOfBirth': {'type': 'string', 'format': 'date'},
+                            'nationality': {'type': 'string'},
+                            'serialNumber': {'type': 'string'}
+                        }
+                    }
+                }
+            },
+            'validate_militaryid': {
+                'type': 'object',
+                'required': ['militaryIdUrl', 'personalData'],
+                'properties': {
+                    'militaryIdUrl': {'type': 'string', 'format': 'uri'},
+                    'personalData': {
+                        'type': 'object',
+                        'required': ['serviceNumber'],
+                        'properties': {
+                            'serviceNumber': {'type': 'string'},
+                            'idNumber': {'type': 'string'},
+                            'fullNames': {'type': 'string'},
+                            'gender': {'type': 'string'},
+                            'dateOfBirth': {'type': 'string', 'format': 'date'},
+                            'serialNumber': {'type': 'string'},
+                            'rank': {'type': 'string'}
+                        }
+                    }
+                }
+            },
             'government_verify_nationalid': {
                 'type': 'object',
                 'required': ['personalData'],
@@ -545,6 +592,21 @@ class ActionRouter:
                         'properties': {
                             'name': {'type': 'string'},
                             'idNumber': {'type': 'string'},
+                            'dateOfBirth': {'type': 'string', 'format': 'date'}
+                        }
+                    }
+                }
+            },
+            'government_verify_alienid': {
+                'type': 'object',
+                'required': ['personalData'],
+                'properties': {
+                    'personalData': {
+                        'type': 'object',
+                        'required': ['alienIdNumber'],
+                        'properties': {
+                            'alienIdNumber': {'type': 'string'},
+                            'fullNames': {'type': 'string'},
                             'dateOfBirth': {'type': 'string', 'format': 'date'}
                         }
                     }
@@ -571,17 +633,6 @@ class ActionRouter:
                 'properties': {
                     'faceImageUrl': {'type': 'string', 'format': 'uri'},
                     'sessionId': {'type': 'string'}
-                }
-            },
-            'face_matching': {
-                'type': 'object',
-                'required': ['customer_id', 'customer_photo_key', 'id_document_key', 'iprs_id_number'],
-                'properties': {
-                    'customer_id': {'type': 'string', 'description': 'Customer identifier'},
-                    'customer_photo_key': {'type': 'string', 'description': 'S3 key for customer selfie'},
-                    'id_document_key': {'type': 'string', 'description': 'S3 key for ID document'},
-                    'iprs_id_number': {'type': 'string', 'description': 'ID number for IPRS photo lookup'},
-                    'request_id': {'type': 'string', 'description': 'Optional request tracking ID'}
                 }
             },
             'agent_registration': {
@@ -963,6 +1014,122 @@ class ActionRouter:
             status_code = HTTPStatusMapper.map_result_to_status_code('validate_cr12', error_response)
             return secure_response_factory(status_code, error_response)
 
+    def _handle_alienid_validation(self, data: Dict[str, Any],
+                                   context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Handle alien ID document validation."""
+        logger.info("Processing alien ID validation")
+
+        try:
+            entity_id, entity_type = self._extract_natural_identifier('validate_alienid', data)
+
+            result = self.lambda_service.invoke_document_validation('alienid', data)
+
+            if not result['success']:
+                logger.error(f"Alien ID validation failed: {result['error']}")
+                error_response = create_standardized_response(
+                    action='validate_alienid',
+                    success=False,
+                    error=result['error'],
+                    request_id=context.get('request_id') if context else None
+                )
+                status_code = HTTPStatusMapper.map_result_to_status_code('validate_alienid', error_response)
+                return secure_response_factory(status_code, error_response)
+
+            validation_response = result['response']
+
+            if entity_id and entity_type:
+                try:
+                    normalized = normalize_verification_response(
+                        action='validate_alienid',
+                        raw_response=validation_response,
+                        entity_type=entity_type,
+                        entity_id=entity_id
+                    )
+                    self._store_verification_result(entity_type, entity_id, normalized, registration_data=data)
+                except Exception as storage_error:
+                    logger.warning(f"Failed to store verification result: {storage_error}")
+
+            standardized_result = create_standardized_response(
+                action='validate_alienid',
+                success=True,
+                result=validation_response,
+                request_id=context.get('request_id') if context else None
+            )
+            status_code = HTTPStatusMapper.map_result_to_status_code('validate_alienid', standardized_result)
+            return secure_response_factory(status_code, standardized_result)
+
+        except Exception as e:
+            logger.error(f"Error in alien ID validation: {e}")
+            error_response = create_standardized_response(
+                action='validate_alienid',
+                success=False,
+                error={
+                    'message': f'Validation processing error: {str(e)}',
+                    'error_code': 'VALIDATION_PROCESSING_ERROR'
+                },
+                request_id=context.get('request_id') if context else None
+            )
+            status_code = HTTPStatusMapper.map_result_to_status_code('validate_alienid', error_response)
+            return secure_response_factory(status_code, error_response)
+
+    def _handle_militaryid_validation(self, data: Dict[str, Any],
+                                      context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Handle military ID document validation."""
+        logger.info("Processing military ID validation")
+
+        try:
+            entity_id, entity_type = self._extract_natural_identifier('validate_militaryid', data)
+
+            result = self.lambda_service.invoke_document_validation('militaryid', data)
+
+            if not result['success']:
+                logger.error(f"Military ID validation failed: {result['error']}")
+                error_response = create_standardized_response(
+                    action='validate_militaryid',
+                    success=False,
+                    error=result['error'],
+                    request_id=context.get('request_id') if context else None
+                )
+                status_code = HTTPStatusMapper.map_result_to_status_code('validate_militaryid', error_response)
+                return secure_response_factory(status_code, error_response)
+
+            validation_response = result['response']
+
+            if entity_id and entity_type:
+                try:
+                    normalized = normalize_verification_response(
+                        action='validate_militaryid',
+                        raw_response=validation_response,
+                        entity_type=entity_type,
+                        entity_id=entity_id
+                    )
+                    self._store_verification_result(entity_type, entity_id, normalized, registration_data=data)
+                except Exception as storage_error:
+                    logger.warning(f"Failed to store verification result: {storage_error}")
+
+            standardized_result = create_standardized_response(
+                action='validate_militaryid',
+                success=True,
+                result=validation_response,
+                request_id=context.get('request_id') if context else None
+            )
+            status_code = HTTPStatusMapper.map_result_to_status_code('validate_militaryid', standardized_result)
+            return secure_response_factory(status_code, standardized_result)
+
+        except Exception as e:
+            logger.error(f"Error in military ID validation: {e}")
+            error_response = create_standardized_response(
+                action='validate_militaryid',
+                success=False,
+                error={
+                    'message': f'Validation processing error: {str(e)}',
+                    'error_code': 'VALIDATION_PROCESSING_ERROR'
+                },
+                request_id=context.get('request_id') if context else None
+            )
+            status_code = HTTPStatusMapper.map_result_to_status_code('validate_militaryid', error_response)
+            return secure_response_factory(status_code, error_response)
+
     def _handle_nationalid_verification(self, data: Dict[str, Any],
                                       context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Handle government national ID verification."""
@@ -1143,6 +1310,70 @@ class ActionRouter:
             status_code = HTTPStatusMapper.map_result_to_status_code('government_verify_kra', error_response)
             return secure_response_factory(status_code, error_response)
 
+    def _handle_alienid_verification(self, data: Dict[str, Any],
+                                     context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Handle government alien ID verification via IPRS."""
+        logger.info("Processing government alien ID verification")
+
+        try:
+            entity_id, entity_type = self._extract_natural_identifier('government_verify_alienid', data)
+
+            result = self.lambda_service.invoke_government_verification('alienid', data)
+
+            if not result['success']:
+                logger.error(f"Government alien ID verification failed: {result['error']}")
+                error_response = create_standardized_response(
+                    action='government_verify_alienid',
+                    success=False,
+                    error=result['error'],
+                    request_id=context.get('request_id') if context else None
+                )
+                status_code = HTTPStatusMapper.map_result_to_status_code(
+                    'government_verify_alienid', error_response
+                )
+                return secure_response_factory(status_code, error_response)
+
+            verification_response = result['response']
+
+            if entity_id and entity_type:
+                try:
+                    normalized = normalize_verification_response(
+                        action='government_verify_alienid',
+                        raw_response=verification_response,
+                        entity_type=entity_type,
+                        entity_id=entity_id
+                    )
+                    self._store_verification_result(entity_type, entity_id, normalized, registration_data=data)
+                except Exception as storage_error:
+                    logger.warning(f"Failed to store verification result: {storage_error}")
+
+            standardized_result = create_standardized_response(
+                action='government_verify_alienid',
+                success=True,
+                result=verification_response,
+                request_id=context.get('request_id') if context else None
+            )
+            status_code = HTTPStatusMapper.map_result_to_status_code(
+                'government_verify_alienid', standardized_result
+            )
+            return secure_response_factory(status_code, standardized_result)
+
+        except Exception as e:
+            logger.error(f"Error in government alien ID verification: {e}")
+            error_response = create_standardized_response(
+                action='government_verify_alienid',
+                success=False,
+                error={
+                    'message': f'Verification processing error: {str(e)}',
+                    'error_code': 'VERIFICATION_PROCESSING_ERROR'
+                },
+                request_id=context.get('request_id') if context else None
+            )
+            status_code = HTTPStatusMapper.map_result_to_status_code(
+                'government_verify_alienid', error_response
+            )
+            return secure_response_factory(status_code, error_response)
+
     def _handle_background_check(self, data: Dict[str, Any],
                                context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Handle background check operation."""
@@ -1263,82 +1494,97 @@ class ActionRouter:
             status_code = HTTPStatusMapper.map_result_to_status_code('face_liveness', error_response)
             return secure_response_factory(status_code, error_response)
 
-    def _handle_face_matching(self, data: Dict[str, Any],
-                             context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Handle face matching verification (3-way comparison).
-        
-        Compares customer selfie against ID document photo and IPRS photo
-        using AWS Rekognition CompareFaces API.
-        
-        Args:
-            data: Face matching request data containing:
-                - customer_id: Customer identifier
-                - customer_photo_key: S3 key for customer selfie
-                - id_document_key: S3 key for ID document
-                - iprs_id_number: ID number for IPRS photo lookup
-            context: Optional request context
-            
-        Returns:
-            Standardized response with match status and scores
-        """
-        logger.info("Processing face matching verification")
+    def _handle_face_match(self, data: Dict[str, Any],
+                           context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Handle face matching verification (3-way comparison)."""
+        logger.info("Processing face match")
 
         try:
+            # Import here to avoid circular imports and keep it isolated
+            from face_match_service import FaceMatchService
+
             # Extract natural identifier for storage
-            entity_id, entity_type = self._extract_natural_identifier('face_matching', data)
+            entity_id, entity_type = self._extract_natural_identifier('face_match', data)
 
-            # Invoke face matching Lambda
-            result = self.lambda_service.invoke_face_matching(data)
+            # Read thresholds from environment
+            auto_approve = float(os.environ.get('FACE_MATCH_AUTO_APPROVE_THRESHOLD', 70))
+            manual_review = float(os.environ.get('FACE_MATCH_MANUAL_REVIEW_THRESHOLD', 50))
 
-            if not result['success']:
-                logger.error(f"Face matching failed: {result['error']}")
-                error_response = create_standardized_response(
-                    action='face_matching',
-                    success=False,
-                    error=result['error'],
+            # Check if feature is enabled
+            enabled = os.environ.get('FACE_MATCH_ENABLED', 'true').lower() == 'true'
+            if not enabled:
+                disabled_response = create_standardized_response(
+                    action='face_match',
+                    success=True,
+                    result={'overall_decision': 'DISABLED', 'message': 'Face matching is disabled'},
                     request_id=context.get('request_id') if context else None
                 )
-                status_code = HTTPStatusMapper.map_result_to_status_code('face_matching', error_response)
-                return secure_response_factory(status_code, error_response)
+                return secure_response_factory(200, disabled_response)
 
-            matching_response = result['response']
+            service = FaceMatchService(
+                auto_approve_threshold=auto_approve,
+                manual_review_threshold=manual_review,
+            )
+
+            result = service.execute_face_match(
+                session_id=data['sessionId'],
+                document_type=data['documentType'],
+                document_s3_path=data['documentS3Path'],
+                id_number=data['idNumber'],
+                iprs_verification_response=data.get('iprsVerificationResponse'),
+            )
+
+            face_match_response = result.to_dict()
+
+            # Check if there was an error
+            if result.error:
+                error_response = create_standardized_response(
+                    action='face_match',
+                    success=False,
+                    error={
+                        'message': result.error,
+                        'error_code': 'FACE_MATCH_ERROR'
+                    },
+                    request_id=context.get('request_id') if context else None
+                )
+                return secure_response_factory(500, error_response)
 
             # Store verification result in DynamoDB if entity ID provided
             if entity_id and entity_type:
                 try:
                     normalized = normalize_verification_response(
-                        action='face_matching',
-                        raw_response=matching_response,
+                        action='face_match',
+                        raw_response=face_match_response,
                         entity_type=entity_type,
                         entity_id=entity_id
                     )
                     self._store_verification_result(entity_type, entity_id, normalized, registration_data=data)
                 except Exception as storage_error:
-                    logger.warning(f"Failed to store face matching result: {storage_error}")
+                    logger.warning(f"Failed to store face match result: {storage_error}")
 
             standardized_result = create_standardized_response(
-                action='face_matching',
+                action='face_match',
                 success=True,
-                result=matching_response,
+                result=face_match_response,
                 request_id=context.get('request_id') if context else None
             )
-            status_code = HTTPStatusMapper.map_result_to_status_code('face_matching', standardized_result)
+            status_code = HTTPStatusMapper.map_result_to_status_code('face_match', standardized_result)
             return secure_response_factory(status_code, standardized_result)
 
         except Exception as e:
-            logger.error(f"Error in face matching: {e}")
+            logger.error(f"Error in face match: {e}")
             error_response = create_standardized_response(
-                action='face_matching',
+                action='face_match',
                 success=False,
                 error={
-                    'message': f'Face matching processing error: {str(e)}',
-                    'error_code': 'FACE_MATCHING_PROCESSING_ERROR'
+                    'message': f'Face match processing error: {str(e)}',
+                    'error_code': 'FACE_MATCH_PROCESSING_ERROR'
                 },
                 request_id=context.get('request_id') if context else None
             )
-            status_code = HTTPStatusMapper.map_result_to_status_code('face_matching', error_response)
+            status_code = HTTPStatusMapper.map_result_to_status_code('face_match', error_response)
             return secure_response_factory(status_code, error_response)
+
 
     def _handle_agent_registration(self, data: Dict[str, Any],
                                  context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

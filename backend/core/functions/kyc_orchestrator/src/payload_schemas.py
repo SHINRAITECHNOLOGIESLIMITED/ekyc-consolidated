@@ -17,15 +17,19 @@ class KYCAction(Enum):
     VALIDATE_PASSPORT = "validate_passport"
     VALIDATE_KRA = "validate_krapincertificate"
     VALIDATE_CR12 = "validate_cr12"
+    VALIDATE_ALIENID = "validate_alienid"
+    VALIDATE_MILITARYID = "validate_militaryid"
 
     # Government verification actions
     GOVERNMENT_VERIFY_NATIONALID = "government_verify_nationalid"
     GOVERNMENT_VERIFY_PASSPORT = "government_verify_passport"
     GOVERNMENT_VERIFY_KRA = "government_verify_kra"
+    GOVERNMENT_VERIFY_ALIENID = "government_verify_alienid"
 
     # Other KYC operations
     BACKGROUND_CHECK = "background_check"
     FACE_LIVENESS = "face_liveness"
+    FACE_MATCH = "face_match"
     AGENT_REGISTRATION = "agent_registration"
     CUSTOMER_REGISTRATION = "customer_registration"
 
@@ -265,6 +269,55 @@ class PayloadValidator:
                 }
             },
 
+            "validate_alienid": {
+                "type": "object",
+                "required": ["alienIdUrl", "personalData"],
+                "properties": {
+                    "alienIdUrl": {
+                        "type": "string",
+                        "format": "uri",
+                        "description": "S3 URL or public URL of the alien ID document"
+                    },
+                    "personalData": {
+                        "type": "object",
+                        "required": ["alienIdNumber"],
+                        "properties": {
+                            "alienIdNumber": {"type": "string", "minLength": 1},
+                            "fullNames": {"type": "string"},
+                            "gender": {"type": "string"},
+                            "dateOfBirth": {"type": "string", "format": "date"},
+                            "nationality": {"type": "string"},
+                            "serialNumber": {"type": "string"}
+                        }
+                    }
+                }
+            },
+
+            "validate_militaryid": {
+                "type": "object",
+                "required": ["militaryIdUrl", "personalData"],
+                "properties": {
+                    "militaryIdUrl": {
+                        "type": "string",
+                        "format": "uri",
+                        "description": "S3 URL or public URL of the military ID document"
+                    },
+                    "personalData": {
+                        "type": "object",
+                        "required": ["serviceNumber"],
+                        "properties": {
+                            "serviceNumber": {"type": "string", "minLength": 1},
+                            "idNumber": {"type": "string"},
+                            "fullNames": {"type": "string"},
+                            "gender": {"type": "string"},
+                            "dateOfBirth": {"type": "string", "format": "date"},
+                            "serialNumber": {"type": "string"},
+                            "rank": {"type": "string"}
+                        }
+                    }
+                }
+            },
+
             "government_verify_nationalid": {
                 "type": "object",
                 "required": ["personalData"],
@@ -282,6 +335,22 @@ class PayloadValidator:
                         "type": "string",
                         "enum": ["basic", "standard", "enhanced"],
                         "default": "standard"
+                    }
+                }
+            },
+
+            "government_verify_alienid": {
+                "type": "object",
+                "required": ["personalData"],
+                "properties": {
+                    "personalData": {
+                        "type": "object",
+                        "required": ["alienIdNumber"],
+                        "properties": {
+                            "alienIdNumber": {"type": "string", "minLength": 1},
+                            "fullNames": {"type": "string"},
+                            "dateOfBirth": {"type": "string", "format": "date"}
+                        }
                     }
                 }
             },
@@ -328,6 +397,44 @@ class PayloadValidator:
                         "type": "string",
                         "enum": ["passive", "active"],
                         "default": "passive"
+                    }
+                }
+            },
+
+            "face_match": {
+                "type": "object",
+                "required": ["sessionId", "documentType", "documentS3Path", "idNumber"],
+                "properties": {
+                    "sessionId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Liveness session ID from Rekognition"
+                    },
+                    "documentType": {
+                        "type": "string",
+                        "enum": ["national_id", "alien_id", "passport", "military_id"],
+                        "description": "Type of identity document"
+                    },
+                    "documentS3Path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "S3 key for the uploaded document"
+                    },
+                    "idNumber": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Customer ID number"
+                    },
+                    "iprsVerificationResponse": {
+                        "type": "object",
+                        "description": "Previous IPRS verification result containing photo"
+                    },
+                    "personalData": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "idNumber": {"type": "string"}
+                        }
                     }
                 }
             },

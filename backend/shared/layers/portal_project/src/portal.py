@@ -21,8 +21,10 @@ tracer = Tracer()
 class DOCUMENT_TYPE(Enum):
     PASSPORT = "Passport"
     NATIONAL_ID = "NationalID"
-    KRA_PIN_CERTIFICATE ="KRAPinCertificate"
+    KRA_PIN_CERTIFICATE = "KRAPinCertificate"
     CERTIFICATE_OF_INCORPORATION = "CR12"
+    ALIEN_ID = "AlienID"
+    MILITARY_ID = "MilitaryID"
 
 SUPPORTED_DOCUMENT_TYPES = [e.value for e in DOCUMENT_TYPE]    
     

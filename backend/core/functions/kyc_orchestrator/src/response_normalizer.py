@@ -45,8 +45,8 @@ def normalize_verification_response(
         return _normalize_background_check(parsed_response, entity_type, entity_id)
     elif action == 'face_liveness':
         return _normalize_face_liveness(parsed_response, entity_type, entity_id)
-    elif action == 'face_matching':
-        return _normalize_face_matching(parsed_response, entity_type, entity_id)
+    elif action == 'face_match':
+        return _normalize_face_match(parsed_response, entity_type, entity_id)
     else:
         raise ValueError(f"Unknown action type: {action}")
 
@@ -308,70 +308,48 @@ def _normalize_face_liveness(
         'entityId': entity_id
     }
 
-
-def _normalize_face_matching(
+def _normalize_face_match(
     response: Dict[str, Any],
     entity_type: str,
     entity_id: str
 ) -> Dict[str, Any]:
     """
-    Normalize face matching responses.
+    Normalize face match responses.
 
-    Structure:
-    {
-        "success": true,
-        "action": "face_matching",
-        "data": {
-            "request_id": "...",
-            "customer_id": "...",
-            "match_status": "APPROVED|MANUAL_REVIEW|REJECTED",
-            "comparison_mode": "THREE_WAY|TWO_WAY",
-            "comparisons": [...],
-            "quality_metrics": {...},
-            "decision": {...},
-            "thresholds_used": {...},
-            "processing_time_ms": 1234.56
-        }
-    }
+    Extracts comparison scores, overall decision, and manual review flag.
     """
-    # Parse nested data if present
-    data = response.get('data', response)
-    
-    match_status = data.get('match_status', 'UNKNOWN')
-    comparison_mode = data.get('comparison_mode', 'UNKNOWN')
-    comparisons = data.get('comparisons', [])
-    decision = data.get('decision', {})
-    thresholds = data.get('thresholds_used', {})
-    processing_time = data.get('processing_time_ms')
-    
-    # Extract scores from comparisons
-    scores = {}
-    for comparison in comparisons:
-        name = comparison.get('comparison_name', 'unknown')
-        scores[name] = comparison.get('similarity_score')
-    
-    # Map match_status to verification status
-    status_mapping = {
-        'APPROVED': 'VERIFIED',
+    overall_decision = response.get('overall_decision', 'ERROR')
+    comparisons = response.get('comparisons', {})
+    lowest_score = response.get('lowest_score')
+    iprs_photo_available = response.get('iprs_photo_available', False)
+    requires_manual_review = response.get('requires_manual_review', False)
+
+    # Determine status based on decision
+    status_map = {
+        'AUTO_APPROVED': 'VERIFIED',
         'MANUAL_REVIEW': 'PENDING_REVIEW',
-        'REJECTED': 'FAILED'
+        'AUTO_REJECTED': 'FAILED',
+        'PARTIAL_MATCH': 'PENDING_REVIEW',
+        'ERROR': 'FAILED',
     }
-    
+    status = status_map.get(overall_decision, 'FAILED')
+
     return {
-        'verificationType': 'face_matching',
-        'action': 'face_matching',
+        'verificationType': 'face_match',
+        'action': 'face_match',
         'timestamp': datetime.utcnow().isoformat(),
-        'status': status_mapping.get(match_status, 'UNKNOWN'),
-        'matchStatus': match_status,
-        'comparisonMode': comparison_mode,
-        'scores': scores,
-        'decision': decision,
-        'thresholds': thresholds,
-        'processingTimeMs': processing_time,
+        'status': status,
+        'overallDecision': overall_decision,
+        'comparisons': comparisons,
+        'lowestScore': lowest_score,
+        'iprsPhotoAvailable': iprs_photo_available,
+        'requiresManualReview': requires_manual_review,
+        'thresholds': response.get('thresholds', {}),
         'rawResponse': response,
         'entityType': entity_type,
         'entityId': entity_id
     }
+
 
 
 def _action_to_verification_type(action: str) -> str:
@@ -392,9 +370,12 @@ def _action_to_verification_type(action: str) -> str:
         'validate_krapincertificate': 'kra_validation',
         'government_verify_kra': 'kra_verification',
         'validate_cr12': 'cr12_validation',
+        'validate_alienid': 'alien_id_validation',
+        'government_verify_alienid': 'alien_id_verification',
+        'validate_militaryid': 'military_id_validation',
         'background_check': 'background_check',
         'face_liveness': 'liveness',
-        'face_matching': 'face_matching'
+        'face_match': 'face_match'
     }
 
     return mapping.get(action, action)

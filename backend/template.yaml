@@ -223,6 +223,12 @@ Resources:
           AMPLIFY_DYNAMODB_CUSTOMER_TABLE: !Ref CustomerTable
           AMPLIFY_DYNAMODB_AGENT_TABLE: !Ref AgentTable
           CERTIFICATION_BUCKET_NAME: !Ref CertificationBucket
+          LIVENESSCAPTUREBUCKET_BUCKET_NAME: !Ref FaceLivenessCaptureBucket
+          KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
+          FACE_MATCH_AUTO_APPROVE_THRESHOLD: 70
+          FACE_MATCH_MANUAL_REVIEW_THRESHOLD: 50
+          FACE_MATCH_ENABLED: 'true'
+          FACE_MATCH_REQUIRE_IPRS_PHOTO: 'false'
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -282,6 +288,27 @@ Resources:
                 - s3:HeadObject
               Resource:
                 - !Sub arn:aws:s3:::${CertificationBucket}/*
+            - Sid: FaceMatchRekognitionAccess
+              Effect: Allow
+              Action:
+                - rekognition:CompareFaces
+                - rekognition:DetectFaces
+              Resource: '*'
+            - Sid: FaceMatchS3ReadAccess
+              Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:HeadObject
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::${FaceLivenessCaptureBucket}/*
+                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}/*
+            - Sid: FaceMatchS3ListAccess
+              Effect: Allow
+              Action:
+                - s3:ListBucket
+              Resource:
+                - !Sub arn:${AWS::Partition}:s3:::${FaceLivenessCaptureBucket}
+                - !Sub arn:${AWS::Partition}:s3:::${KYCDocumentsBucket}
       Events:
         ApiGatewayPOSTKYCProcess:
           Type: Api
@@ -318,6 +345,8 @@ Resources:
       Description: Validating that uploaded documents match the provided data
       CodeUri: core/functions/document_validation/src
       Handler: app.handler
+      MemorySize: 512
+      Timeout: 60
       Environment:
         Variables:
           KYCDOCUMENTSBUCKET_NAME: !Ref KYCDocumentsBucket
@@ -330,6 +359,8 @@ Resources:
           # Required by JubileeESBAPILayer for caching
           JUBILEEAPICACHE_TABLE_NAME: !Ref JubileeApiCache
           JUBILEEAPICACHE_TABLE_ARN: !GetAtt JubileeApiCache.Arn
+          # Bedrock model for Alien ID extraction (Claude Vision)
+          BEDROCK_MODEL_ID: 'anthropic.claude-sonnet-4-20250514-v1:0'
       Events:
         ApiGatewayPOSTKRA:
           Type: Api
@@ -353,6 +384,20 @@ Resources:
           Type: Api
           Properties:
             Path: /document/cr12
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        # v1.2 Feature: Alien ID validation with IPRS cross-validation
+        ApiGatewayPOSTAlienID:
+          Type: Api
+          Properties:
+            Path: /document/alienid
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        # v1.2 Feature: Military ID validation with IPRS cross-validation
+        ApiGatewayPOSTMilitaryID:
+          Type: Api
+          Properties:
+            Path: /document/militaryid
             Method: POST
             RestApiId: !Ref ApiGateway
       Policies:
@@ -414,9 +459,20 @@ Resources:
               Action:
                 - textract:AnalyzeDocument
                 - textract:DetectDocumentText
+                - textract:StartDocumentAnalysis
                 - textract:GetDocumentAnalysis
                 - textract:GetDocumentTextDetection
               Resource: '*'
+        # Bedrock permissions for Alien ID extraction using Claude Vision
+        - Statement:
+            - Sid: BedrockInvokeModel
+              Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource:
+                - !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0
+                - !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-5-sonnet*
+                - !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-sonnet*
         - DynamoDBCrudPolicy:
             TableName: !Ref JubileeApiCache
       Layers:
@@ -460,6 +516,12 @@ Resources:
           Type: Api
           Properties:
             Path: /government/passport
+            Method: POST
+            RestApiId: !Ref ApiGateway
+        ApiGatewayPOSTAlienID:
+          Type: Api
+          Properties:
+            Path: /government/alienid
             Method: POST
             RestApiId: !Ref ApiGateway
       Policies:

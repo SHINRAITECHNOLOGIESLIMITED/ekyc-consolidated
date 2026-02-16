@@ -1,0 +1,5 @@
+{
+  "httpMethod": "POST",
+  "path": "/document/passport",
+  "body": "{\"uploadedDocumentUrl\":\"s3://kyc-raw-documents-jubilee-ekyc-dev-686255958278/test_docs/Passport1.pdf\",\"passportNumber\":\"BK080411\"}"
+}

@@ -2,57 +2,21 @@
 
 ## Overview
 
-The Face Matching Verification feature implements a 3-way face comparison system for the Jubilee eKYC platform. The system compares faces from three sources: customer-uploaded photos, photos extracted from National ID documents, and photos retrieved from the IPRS API. Using AWS Rekognition CompareFaces API, the system performs pairwise comparisons and applies configurable thresholds to determine verification outcomes.
+The Face Matching Verification feature adds 3-way face comparison to the Jubilee eKYC platform using AWS Rekognition CompareFaces. It compares three face images — a liveness reference image (from an existing face liveness session stored in S3), a document photo (extracted from the uploaded ID document), and an IPRS government photo (base64-encoded from the ESB API) — to verify that the person completing KYC matches both the document and government records.
 
-The feature integrates with the existing KYC Orchestrator as a new `face_matching` action, following the established action-based routing pattern. It leverages existing infrastructure including AWS Rekognition (already used for face liveness), Textract (for document processing), and the IPRS API integration.
+The feature integrates into the KYC Orchestrator Lambda as a new `face_match` action, following the existing action-based routing pattern. When all three images are available, three pairwise comparisons are performed; when the IPRS photo is unavailable (e.g., Alien ID, Military ID, or missing data), a 2-way comparison is performed and the result is always MANUAL_REVIEW since the verification is inconclusive without the government photo. The minimum similarity score across all comparisons determines the outcome using configurable decision bands (AUTO_APPROVED ≥70%, MANUAL_REVIEW 50–69%, AUTO_REJECTED <50%).
 
 ### Key Design Decisions
 
-1. **Pairwise Comparison Strategy**: Rather than a single multi-face comparison, we perform three pairwise comparisons to get granular similarity scores and identify which specific pair fails if verification is rejected.
+1. **Integration Point**: Add a new `face_match` action to the KYC Orchestrator rather than creating a separate Lambda. This keeps the routing centralized and reuses existing infrastructure (S3 access, IPRS layer, feature flags).
 
-2. **Graceful Degradation**: When IPRS photo is unavailable, the system falls back to 2-way comparison with automatic manual review flagging, ensuring the KYC process can continue.
+2. **Fail-Fast Minimum Score Aggregation**: Use the minimum score across all comparisons as the single decision input. This is the most conservative approach — a single weak match pulls the overall decision down, preventing fraud where one image pair matches but another doesn't.
 
-3. **Configurable Thresholds via SSM**: Thresholds are stored in SSM Parameter Store for runtime configurability without code deployment.
+3. **MANUAL_REVIEW for Missing IPRS Photo**: When the IPRS photo is unavailable, the system performs 2-way comparison and returns MANUAL_REVIEW regardless of the 2-way scores. Without the government photo, the verification is inconclusive and requires human review.
 
-4. **Parallel Comparison Execution**: All three comparisons are executed in parallel to meet the <500ms per comparison performance target.
+4. **Non-Blocking Design**: Face matching errors (Rekognition failures, S3 issues, extraction failures) return structured error responses rather than exceptions, ensuring the overall KYC process continues.
 
-5. **Explicit Aggregation Rule**: The decision algorithm uses a **fail-fast minimum score** approach - the lowest score among all comparisons determines the outcome. This is configurable via feature flags.
-
-### 3-Way Comparison Logic (Explicit)
-
-The system performs exactly three pairwise comparisons:
-
-| Comparison | Source | Target | Purpose |
-|------------|--------|--------|---------|
-| **Selfie ↔ ID** | Customer selfie | ID document photo | Verify person matches their ID |
-| **Selfie ↔ IPRS** | Customer selfie | IPRS government photo | Verify person matches government records |
-| **ID ↔ IPRS** | ID document photo | IPRS government photo | Verify document photo matches government records |
-
-**Aggregation Rules** (configurable via feature flag):
-
-1. **Fail-Fast (default)**: If ANY comparison score < rejection_threshold → REJECTED
-2. **Minimum Score**: Overall decision based on MIN(all scores)
-3. **Weighted Average**: Weighted average with configurable weights per comparison
-
-**Decision Bands**:
-- **≥70%** (all comparisons): Auto-approve → `APPROVED`
-- **50-69%** (any comparison): Manual review → `MANUAL_REVIEW`
-- **<50%** (any comparison): Auto-reject → `REJECTED`
-
-### Metrics Strategy (Day One)
-
-The following metrics are instrumented from initial deployment:
-
-| Metric | Type | Purpose |
-|--------|------|---------|
-| `FaceMatching.Approved` | Counter | Track auto-approval rate |
-| `FaceMatching.ManualReview` | Counter | Track manual review rate |
-| `FaceMatching.Rejected` | Counter | Track rejection rate |
-| `FaceMatching.ManualReviewPercentage` | Gauge | % routed to manual review |
-| `FaceMatching.ComparisonLatency` | Timer | Per-comparison latency |
-| `FaceMatching.QualityGateFailures` | Counter | Poor image quality rejections |
-| `FaceMatching.FalseAcceptRate` | Gauge | UAT metric for threshold tuning |
-| `FaceMatching.FalseRejectRate` | Gauge | UAT metric for threshold tuning |
+5. **Document Photo Extraction via Rekognition DetectFaces**: Rather than relying on document-type-specific coordinate-based cropping (which is brittle), use Rekognition DetectFaces to locate the face bounding box in any document type, then crop with 20% padding. This approach is document-type-agnostic and handles varying layouts.
 
 ## Architecture
 
@@ -64,46 +28,38 @@ flowchart TB
 
     subgraph API["API Layer"]
         APIGW[API Gateway]
-        KYC[KYC Orchestrator]
+        KYC[KYC Orchestrator Lambda]
     end
 
-    subgraph FaceMatching["Face Matching Service"]
-        FM[Face Matching Lambda]
-        IP[Image Preprocessor]
-        DC[Decision Calculator]
+    subgraph FaceMatch["Face Match Components"]
+        FMS[FaceMatchService]
+        DPE[DocumentPhotoExtractor]
     end
 
-    subgraph ImageSources["Image Sources"]
-        S3[S3 - Customer Photos]
-        TX[Textract - ID Photo Extraction]
-        IPRS[IPRS API - Government Photo]
+    subgraph External["External Services"]
+        REK[AWS Rekognition]
+        IPRS[IPRS API via ESB]
     end
 
-    subgraph AWS["AWS Services"]
-        REK[Rekognition CompareFaces]
-        SSM[SSM Parameter Store]
-        DDB[DynamoDB - Results]
-        CW[CloudWatch Logs]
+    subgraph Storage["Storage"]
+        S3L[S3 - LivenessCaptureBucket]
+        S3D[S3 - KYC Documents Bucket]
+        CW[CloudWatch Logs & Metrics]
     end
 
-    UI -->|Upload Photo| APIGW
-    APIGW -->|face_matching action| KYC
-    KYC -->|Route| FM
-    
-    FM -->|Fetch| S3
-    FM -->|Extract| TX
-    FM -->|Retrieve| IPRS
-    
-    FM -->|Preprocess| IP
-    IP -->|Compare| REK
-    
-    FM -->|Get Thresholds| SSM
-    FM -->|Calculate| DC
-    
-    FM -->|Store Results| DDB
-    FM -->|Log| CW
-    
-    FM -->|Response| KYC
+    UI -->|face_match action| APIGW
+    APIGW -->|Route| KYC
+    KYC -->|face_match| FMS
+
+    FMS -->|Get reference image| S3L
+    FMS -->|Get document| S3D
+    FMS -->|Extract face| DPE
+    DPE -->|DetectFaces| REK
+    FMS -->|CompareFaces x3| REK
+    FMS -->|Get IPRS photo| IPRS
+
+    FMS -->|Log & Metrics| CW
+    FMS -->|Response| KYC
     KYC -->|Response| APIGW
     APIGW -->|Result| UI
 ```
@@ -114,585 +70,413 @@ flowchart TB
 sequenceDiagram
     participant P as Portal
     participant O as KYC Orchestrator
-    participant F as Face Matching Service
-    participant S3 as S3 Bucket
-    participant TX as Textract
+    participant FMS as FaceMatchService
+    participant DPE as DocumentPhotoExtractor
+    participant S3 as S3 Buckets
+    participant REK as Rekognition
     participant IPRS as IPRS API
-    participant R as Rekognition
-    participant SSM as SSM Parameter Store
-    participant DB as DynamoDB
 
-    P->>O: POST /kyc {action: "face_matching", data: {...}}
-    O->>F: Route to face_matching handler
-    
-    F->>SSM: Get thresholds (approval, rejection)
-    SSM-->>F: {approval: 70, rejection: 50}
-    
-    par Fetch Images
-        F->>S3: Get customer photo
-        S3-->>F: Customer image bytes
-    and
-        F->>TX: Extract ID document photo
-        TX-->>F: ID photo bytes
-    and
-        F->>IPRS: Get IPRS photo
-        IPRS-->>F: IPRS photo bytes (or null)
+    P->>O: POST /kyc {action: "face_match", data: {...}}
+    O->>FMS: execute_face_match(data)
+
+    FMS->>S3: get_object(LivenessCaptureBucket, {sessionId}/reference_image.jpg)
+    S3-->>FMS: Liveness reference image bytes
+
+    FMS->>S3: get_object(KYCDocsBucket, documentS3Path)
+    S3-->>FMS: Document file bytes
+
+    FMS->>DPE: extract_face(document_bytes, document_type)
+    DPE->>REK: DetectFaces(document_image)
+    REK-->>DPE: Face bounding box
+    DPE-->>FMS: Cropped face image bytes
+
+    FMS->>IPRS: get photo from iprsVerificationResponse
+    Note over FMS,IPRS: Photo may be unavailable
+
+    FMS->>REK: CompareFaces(liveness, document_photo)
+    REK-->>FMS: Similarity: 85.2%
+
+    alt IPRS photo available
+        FMS->>REK: CompareFaces(liveness, iprs_photo)
+        REK-->>FMS: Similarity: 78.1%
+        FMS->>REK: CompareFaces(document_photo, iprs_photo)
+        REK-->>FMS: Similarity: 82.5%
+        Note over FMS: Min score = 78.1% → AUTO_APPROVED
+    else IPRS photo unavailable
+        Note over FMS: Only 1 comparison → PARTIAL_MATCH
     end
-    
-    F->>F: Preprocess all images
-    
-    par Execute Comparisons
-        F->>R: CompareFaces(customer, id_doc)
-        R-->>F: {similarity: 85.2, confidence: 99.1}
-    and
-        F->>R: CompareFaces(customer, iprs)
-        R-->>F: {similarity: 82.7, confidence: 98.5}
-    and
-        F->>R: CompareFaces(id_doc, iprs)
-        R-->>F: {similarity: 88.1, confidence: 99.3}
-    end
-    
-    F->>F: Calculate decision (all >= 70% → APPROVED)
-    F->>DB: Store verification result
-    F-->>O: {status: APPROVED, scores: [...]}
-    O-->>P: Response with match results
+
+    FMS-->>O: {overall_decision, comparisons, lowest_score, ...}
+    O-->>P: Standardized response
 ```
 
 ## Components and Interfaces
 
-### 1. Face Matching Lambda Function
+### 1. FaceMatchService
 
-**Location**: `backend/core/functions/face_matching/src/app.py`
-
-**Responsibilities**:
-- Handle `face_matching` action requests from KYC Orchestrator
-- Coordinate image acquisition from multiple sources
-- Orchestrate preprocessing and comparison operations
-- Apply decision algorithm and return results
-
-**Interface**:
-```python
-def handler(event: dict, context: LambdaContext) -> dict:
-    """
-    Main Lambda handler for face matching requests.
-    
-    Args:
-        event: API Gateway event with face matching request
-        context: Lambda context
-        
-    Returns:
-        API Gateway response with match results
-    """
-    pass
-
-def process_face_matching(data: FaceMatchingRequest) -> FaceMatchingResult:
-    """
-    Process a face matching verification request.
-    
-    Args:
-        data: Request containing customer_id, customer_photo_key, 
-              id_document_key, and optional iprs_data
-              
-    Returns:
-        FaceMatchingResult with scores, status, and quality metrics
-    """
-    pass
-```
-
-### 2. Image Preprocessor Module
-
-**Location**: `backend/core/functions/face_matching/src/image_preprocessor.py`
+**Location**: `backend/core/functions/kyc_orchestrator/src/face_match_service.py`
 
 **Responsibilities**:
-- Standardize image format (convert to JPEG)
-- Resize images while maintaining aspect ratio
-- Apply orientation correction using EXIF data
-- Calculate quality metrics (brightness, sharpness, face confidence)
+- Orchestrate the full face matching workflow
+- Retrieve liveness reference image from S3
+- Retrieve and decode IPRS photo from verification response
+- Invoke DocumentPhotoExtractor for document face extraction
+- Call Rekognition CompareFaces for each comparison pair
+- Apply decision algorithm based on minimum score and thresholds
+- Return structured result with all comparison details
 
 **Interface**:
-```python
-class ImagePreprocessor:
-    def preprocess(self, image_bytes: bytes, source_type: str) -> PreprocessedImage:
-        """
-        Preprocess an image for face comparison.
-        
-        Args:
-            image_bytes: Raw image bytes
-            source_type: One of 'customer', 'id_document', 'iprs'
-            
-        Returns:
-            PreprocessedImage with standardized bytes and quality metrics
-        """
-        pass
-    
-    def calculate_quality_metrics(self, image_bytes: bytes) -> QualityMetrics:
-        """
-        Calculate quality metrics for an image.
-        
-        Returns:
-            QualityMetrics with brightness, sharpness, face_confidence scores
-        """
-        pass
-```
-
-### 3. Face Comparator Module
-
-**Location**: `backend/core/functions/face_matching/src/face_comparator.py`
-
-**Responsibilities**:
-- Execute Rekognition CompareFaces API calls
-- Handle retry logic with exponential backoff
-- Validate comparison results
-
-**Interface**:
-```python
-class FaceComparator:
-    def __init__(self, rekognition_client: boto3.client):
-        self.client = rekognition_client
-        
-    def compare_faces(
-        self, 
-        source_image: bytes, 
-        target_image: bytes,
-        similarity_threshold: float = 0.0
-    ) -> ComparisonResult:
-        """
-        Compare two face images using Rekognition.
-        
-        Args:
-            source_image: Source face image bytes
-            target_image: Target face image bytes
-            similarity_threshold: Minimum similarity to return matches
-            
-        Returns:
-            ComparisonResult with similarity score and confidence
-            
-        Raises:
-            NoFaceDetectedError: If no face found in either image
-            MultipleFacesError: If multiple faces detected
-            ComparisonError: If Rekognition API fails
-        """
-        pass
-    
-    async def compare_faces_parallel(
-        self,
-        comparisons: list[tuple[bytes, bytes, str]]
-    ) -> dict[str, ComparisonResult]:
-        """
-        Execute multiple face comparisons in parallel.
-        
-        Args:
-            comparisons: List of (source, target, comparison_name) tuples
-            
-        Returns:
-            Dict mapping comparison_name to ComparisonResult
-        """
-        pass
-```
-
-### 4. Decision Calculator Module
-
-**Location**: `backend/core/functions/face_matching/src/decision_calculator.py`
-
-**Responsibilities**:
-- Apply threshold-based decision logic
-- Determine overall match status
-- Generate reasons for non-approval outcomes
-
-**Interface**:
-```python
-class DecisionCalculator:
-    def __init__(self, approval_threshold: float, rejection_threshold: float):
-        self.approval_threshold = approval_threshold
-        self.rejection_threshold = rejection_threshold
-        
-    def calculate_decision(
-        self,
-        comparison_results: dict[str, ComparisonResult],
-        comparison_mode: str
-    ) -> MatchDecision:
-        """
-        Calculate the overall match decision based on comparison results.
-        
-        Args:
-            comparison_results: Dict of comparison name to result
-            comparison_mode: '3-way' or '2-way'
-            
-        Returns:
-            MatchDecision with status, reasons, and detailed breakdown
-        """
-        pass
-```
-
-### 5. Action Router Integration
-
-**Location**: `backend/core/functions/kyc_orchestrator/src/action_router.py`
-
-**Changes Required**:
-- Add `face_matching` action to action handlers
-- Implement `_handle_face_matching` method
-
-**Interface**:
-```python
-# Addition to ActionRouter class
-def _handle_face_matching(
-    self, 
-    data: dict, 
-    request_context: dict
-) -> dict:
-    """
-    Handle face matching verification action.
-    
-    Args:
-        data: Request data with customer_id, photo references
-        request_context: Request context from API Gateway
-        
-    Returns:
-        Standardized response with match results
-    """
-    pass
-```
-
-## Data Models
-
-### Request Models
-
 ```python
 from dataclasses import dataclass
-from typing import Optional
 from enum import Enum
+from typing import Optional, Dict, Any, List
 
-class ImageSource(Enum):
-    CUSTOMER = "customer"
-    ID_DOCUMENT = "id_document"
-    IPRS = "iprs"
-
-@dataclass
-class FaceMatchingRequest:
-    """Request payload for face matching verification."""
-    customer_id: str
-    customer_photo_key: str  # S3 key for customer uploaded photo
-    id_document_key: str     # S3 key for ID document
-    iprs_id_number: str      # ID number for IPRS lookup
-    request_id: Optional[str] = None
-
-@dataclass
-class PreprocessedImage:
-    """Preprocessed image ready for comparison."""
-    image_bytes: bytes
-    source_type: ImageSource
-    quality_metrics: 'QualityMetrics'
-    original_format: str
-    dimensions: tuple[int, int]
-
-@dataclass
-class QualityMetrics:
-    """Image quality measurements."""
-    brightness_score: float      # 0-100
-    sharpness_score: float       # 0-100
-    face_confidence: float       # 0-100 from Rekognition
-    face_bounding_box: dict      # {left, top, width, height}
-```
-
-### Response Models
-
-```python
-from dataclasses import dataclass
-from typing import Optional
-from enum import Enum
-from datetime import datetime
-
-class MatchStatus(Enum):
-    APPROVED = "APPROVED"
+class FaceMatchDecision(Enum):
+    AUTO_APPROVED = "AUTO_APPROVED"
     MANUAL_REVIEW = "MANUAL_REVIEW"
-    REJECTED = "REJECTED"
-
-class ComparisonMode(Enum):
-    THREE_WAY = "3-way"
-    TWO_WAY = "2-way"
+    AUTO_REJECTED = "AUTO_REJECTED"
+    PARTIAL_MATCH = "PARTIAL_MATCH"
 
 @dataclass
 class ComparisonResult:
-    """Result of a single face comparison."""
-    comparison_name: str         # e.g., "customer_vs_id_document"
-    similarity_score: float      # 0-100
-    confidence: float            # 0-100
-    source_face_confidence: float
-    target_face_confidence: float
+    pair_name: str          # e.g. "liveness_vs_document"
+    similarity: float       # 0.0 - 100.0
+    matched: bool           # True if similarity >= auto_approve_threshold
+    error: Optional[str] = None
 
 @dataclass
-class MatchDecision:
-    """Overall match decision with reasoning."""
-    status: MatchStatus
-    reasons: list[str]           # Empty for APPROVED
-    comparison_breakdown: dict[str, str]  # comparison_name -> "PASS"/"FAIL"/"REVIEW"
+class FaceMatchResult:
+    overall_decision: FaceMatchDecision
+    comparisons: Dict[str, ComparisonResult]
+    lowest_score: Optional[float]
+    iprs_photo_available: bool
+    document_type: str
+    thresholds: Dict[str, float]
+    requires_manual_review: bool = False  # True when IPRS photo unavailable (PARTIAL_MATCH)
+    error: Optional[str] = None
 
-@dataclass
-class FaceMatchingResult:
-    """Complete face matching verification result."""
-    request_id: str
-    customer_id: str
-    match_status: MatchStatus
-    comparison_mode: ComparisonMode
-    comparisons: list[ComparisonResult]
-    quality_metrics: dict[str, QualityMetrics]  # source_type -> metrics
-    decision: MatchDecision
-    thresholds_used: dict[str, float]  # approval, rejection thresholds
-    timestamp: datetime
-    processing_time_ms: float
+class FaceMatchService:
+    def __init__(
+        self,
+        rekognition_client,
+        s3_client,
+        liveness_bucket: str,
+        documents_bucket: str,
+        auto_approve_threshold: float = 70.0,
+        manual_review_threshold: float = 50.0
+    ):
+        ...
 
-@dataclass
-class FaceMatchingError:
-    """Error response for face matching failures."""
-    error_code: str
-    message: str
-    details: Optional[dict] = None
-    failed_source: Optional[str] = None  # Which image source failed
+    def execute_face_match(
+        self,
+        session_id: str,
+        document_type: str,
+        document_s3_path: str,
+        id_number: str,
+        iprs_verification_response: Optional[Dict[str, Any]] = None
+    ) -> FaceMatchResult:
+        """Execute the full face matching workflow."""
+        ...
+
+    def compare_faces(
+        self,
+        source_image: bytes,
+        target_image: bytes,
+        pair_name: str
+    ) -> ComparisonResult:
+        """Compare two face images using Rekognition CompareFaces."""
+        ...
+
+    def get_liveness_reference_image(self, session_id: str) -> bytes:
+        """Retrieve liveness reference image from S3."""
+        ...
+
+    def get_iprs_photo(
+        self,
+        iprs_verification_response: Optional[Dict[str, Any]]
+    ) -> Optional[bytes]:
+        """Extract and decode IPRS photo from verification response."""
+        ...
+
+    def determine_decision(
+        self,
+        comparisons: List[ComparisonResult],
+        iprs_photo_available: bool
+    ) -> tuple[FaceMatchDecision, Optional[float]]:
+        """Apply decision algorithm based on minimum score."""
+        ...
 ```
 
-### DynamoDB Schema
+### 2. DocumentPhotoExtractor
+
+**Location**: `backend/core/functions/kyc_orchestrator/src/document_photo_extractor.py`
+
+**Responsibilities**:
+- Convert PDF documents to images
+- Use Rekognition DetectFaces to locate face bounding box
+- Crop face region with 20% padding
+- Handle different document types
+
+**Interface**:
+```python
+from typing import Optional
+
+class DocumentPhotoExtractor:
+    def __init__(self, rekognition_client):
+        ...
+
+    def extract_face(
+        self,
+        document_bytes: bytes,
+        document_type: str
+    ) -> bytes:
+        """
+        Extract face photo from document image.
+
+        Args:
+            document_bytes: Raw document file bytes (PDF or image)
+            document_type: One of national_id, alien_id, passport, military_id
+
+        Returns:
+            Cropped face image bytes (JPEG)
+
+        Raises:
+            DocumentPhotoExtractionError: If face cannot be extracted
+        """
+        ...
+
+    def _convert_pdf_to_image(self, pdf_bytes: bytes) -> bytes:
+        """Convert first page of PDF to JPEG image bytes."""
+        ...
+
+    def _detect_and_crop_face(
+        self,
+        image_bytes: bytes,
+        padding_percent: float = 0.20
+    ) -> bytes:
+        """Detect face using Rekognition and crop with padding."""
+        ...
+```
+
+### 3. Action Router Integration
+
+**Location**: `backend/core/functions/kyc_orchestrator/src/action_router.py`
+
+**Changes**:
+- Add `face_match` to `_initialize_action_handlers` mapping
+- Add `_handle_face_match` method that instantiates FaceMatchService and delegates
+- Add identifier extraction for `face_match` action in `_extract_natural_identifier`
+
+### 4. Payload Schema Addition
+
+**Location**: `backend/core/functions/kyc_orchestrator/src/payload_schemas.py`
+
+**Changes**:
+- Add `FACE_MATCH = "face_match"` to `KYCAction` enum
+- Add `face_match` data schema to `get_action_data_schemas()`
+
+### 5. Feature Flag Addition
+
+**Location**: `backend/core/functions/kyc_orchestrator/src/feature_flags.py`
+
+**Changes**:
+- Add `FACE_MATCH_ACTION = "face_match_action"` to `FeatureFlag` enum
+- Add `face_match` mapping in `is_action_enabled`
+
+### 6. Response Normalizer Addition
+
+**Location**: `backend/core/functions/kyc_orchestrator/src/response_normalizer.py`
+
+**Changes**:
+- Add `_normalize_face_match` function
+- Add `face_match` routing in `normalize_verification_response`
+- Add `face_match` mapping in `_action_to_verification_type`
+
+## Data Models
+
+### Request Model
 
 ```python
-# Face Matching Results Table Schema
+@dataclass
+class FaceMatchRequest:
+    """Face match action request payload."""
+    session_id: str                                    # Liveness session ID
+    document_type: str                                 # national_id, alien_id, passport, military_id
+    document_s3_path: str                              # S3 key for uploaded document
+    id_number: str                                     # Customer ID number
+    iprs_verification_response: Optional[Dict] = None  # Previous IPRS verification result
+    personal_data: Optional[Dict] = None               # Customer personal data
+```
+
+### Response Model
+
+```python
+@dataclass
+class FaceMatchResponse:
+    """Face match action response."""
+    overall_decision: str       # AUTO_APPROVED, MANUAL_REVIEW, AUTO_REJECTED, PARTIAL_MATCH
+    comparisons: Dict[str, Any] # Per-comparison results
+    lowest_score: Optional[float]
+    iprs_photo_available: bool
+    document_type: str
+    thresholds: Dict[str, float]  # {auto_approve: 70, manual_review: 50}
+    requires_manual_review: bool  # True when IPRS photo unavailable (PARTIAL_MATCH)
+
+# Example response (3-way, all images available):
 {
-    "TableName": "FaceMatchingResults",
-    "KeySchema": [
-        {"AttributeName": "request_id", "KeyType": "HASH"}
-    ],
-    "GlobalSecondaryIndexes": [
-        {
-            "IndexName": "customer-index",
-            "KeySchema": [
-                {"AttributeName": "customer_id", "KeyType": "HASH"},
-                {"AttributeName": "timestamp", "KeyType": "RANGE"}
-            ]
-        }
-    ],
-    "AttributeDefinitions": [
-        {"AttributeName": "request_id", "AttributeType": "S"},
-        {"AttributeName": "customer_id", "AttributeType": "S"},
-        {"AttributeName": "timestamp", "AttributeType": "S"}
-    ]
+    "overall_decision": "AUTO_APPROVED",
+    "comparisons": {
+        "liveness_vs_document": {"similarity": 85.2, "matched": True},
+        "liveness_vs_iprs": {"similarity": 78.1, "matched": True},
+        "document_vs_iprs": {"similarity": 82.5, "matched": True}
+    },
+    "lowest_score": 78.1,
+    "iprs_photo_available": True,
+    "document_type": "national_id",
+    "thresholds": {"auto_approve": 70.0, "manual_review": 50.0},
+    "requires_manual_review": False
 }
 
-# Item Structure
+# Example response (2-way, IPRS photo unavailable):
 {
-    "request_id": "uuid-string",
-    "customer_id": "customer-uuid",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "match_status": "APPROVED",
-    "comparison_mode": "3-way",
+    "overall_decision": "PARTIAL_MATCH",
     "comparisons": {
-        "customer_vs_id_document": {
-            "similarity_score": 85.2,
-            "confidence": 99.1
-        },
-        "customer_vs_iprs": {
-            "similarity_score": 82.7,
-            "confidence": 98.5
-        },
-        "id_document_vs_iprs": {
-            "similarity_score": 88.1,
-            "confidence": 99.3
-        }
+        "liveness_vs_document": {"similarity": 85.2, "matched": True}
     },
-    "quality_metrics": {
-        "customer": {"brightness": 75, "sharpness": 82, "face_confidence": 99.5},
-        "id_document": {"brightness": 68, "sharpness": 71, "face_confidence": 98.2},
-        "iprs": {"brightness": 70, "sharpness": 75, "face_confidence": 97.8}
-    },
-    "thresholds": {
-        "approval": 70,
-        "rejection": 50
-    },
-    "image_references": {
-        "customer_photo": "s3://bucket/customer/photo.jpg",
-        "id_document": "s3://bucket/documents/id.pdf",
-        "iprs_reference": "iprs:12345678"
-    },
-    "processing_time_ms": 1250,
-    "ttl": 1705312200  # 30 days retention
+    "lowest_score": 85.2,
+    "iprs_photo_available": False,
+    "document_type": "alien_id",
+    "thresholds": {"auto_approve": 70.0, "manual_review": 50.0},
+    "requires_manual_review": True
 }
+```
+
+### Internal Models
+
+```python
+class DocumentPhotoExtractionError(Exception):
+    """Raised when face extraction from document fails."""
+    pass
+
+class FaceMatchError(Exception):
+    """Raised when face matching encounters a critical error."""
+    pass
+
+@dataclass
+class ThresholdConfig:
+    """Face matching threshold configuration."""
+    auto_approve: float = 70.0
+    manual_review: float = 50.0
+    enabled: bool = True
+    require_iprs_photo: bool = False
+
+    def validate(self) -> bool:
+        """Return True if thresholds are valid (auto_approve > manual_review)."""
+        return self.auto_approve > self.manual_review
 ```
 
 
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
 
-Based on the prework analysis of acceptance criteria, the following correctness properties have been identified for property-based testing:
+Based on the prework analysis and property reflection, the following consolidated correctness properties have been identified:
 
-### Property 1: Image Validation Correctness
+### Property 1: S3 Path Construction
 
-*For any* customer photo input, the validation function SHALL correctly accept images that meet all quality requirements (resolution ≥ 480x480, format in {JPEG, PNG}, exactly one face detected) and reject images that fail any requirement, returning specific quality issues for rejected images.
+*For any* valid session ID string, the constructed S3 key for the liveness reference image SHALL equal `{sessionId}/reference_image.jpg`.
 
-**Validates: Requirements 1.1, 1.4**
+**Validates: Requirements 1.1**
 
-### Property 2: IPRS Photo Extraction
+### Property 2: Bounding Box Padding Calculation
 
-*For any* valid IPRS API response containing a photo field, the extraction function SHALL correctly retrieve the photo bytes; for any response missing the photo field, the function SHALL return null to trigger 2-way fallback mode.
+*For any* face bounding box within an image of known dimensions, the padded crop region SHALL extend 20% of the bounding box width/height on each side, clamped to the image boundaries (0 ≤ x ≤ width, 0 ≤ y ≤ height), and the resulting crop SHALL always be at least as large as the original bounding box.
 
-**Validates: Requirements 1.3**
+**Validates: Requirements 2.4**
 
-### Property 3: Graceful Degradation to 2-Way Mode
+### Property 3: Comparison Count Based on IPRS Availability
 
-*For any* face matching request where IPRS photo is unavailable, the system SHALL execute only the Customer ↔ ID Document comparison, return exactly one comparison result, set comparison_mode to "2-way", and set Match_Status to MANUAL_REVIEW regardless of the similarity score (if above rejection threshold).
+*For any* face match request, when all three images (liveness, document, IPRS) are available, exactly 3 comparisons SHALL be performed; when the IPRS photo is unavailable (missing from response, Alien ID, or Military ID), exactly 1 comparison SHALL be performed.
 
-**Validates: Requirements 1.6, 3.5, 4.4**
+**Validates: Requirements 3.3, 3.5, 4.1, 4.2**
 
-### Property 4: Image Format Standardization
+### Property 4: Liveness vs Document Comparison Invariant
 
-*For any* input image in a supported format (JPEG, PNG), the Image_Preprocessor SHALL output a valid JPEG image that can be successfully decoded.
-
-**Validates: Requirements 2.1**
-
-### Property 5: Aspect Ratio Preservation
-
-*For any* input image with dimensions (w, h), after preprocessing the output image dimensions (w', h') SHALL satisfy: |w/h - w'/h'| < 0.01 (aspect ratio preserved within 1% tolerance).
-
-**Validates: Requirements 2.2**
-
-### Property 6: Quality Metrics Completeness
-
-*For any* successfully preprocessed image, the returned QualityMetrics SHALL contain brightness_score, sharpness_score, and face_confidence, all within the range [0, 100].
-
-**Validates: Requirements 2.5**
-
-### Property 7: Comparison Completeness
-
-*For any* face matching request with all three images available (customer, ID document, IPRS), the system SHALL return exactly three comparison results: customer_vs_id_document, customer_vs_iprs, and id_document_vs_iprs, each with a similarity_score and confidence value.
-
-**Validates: Requirements 3.1, 3.2, 3.3, 3.4**
-
-### Property 8: Decision Algorithm - Approval
-
-*For any* set of comparison results where ALL similarity scores are ≥ approval_threshold, the DecisionCalculator SHALL return Match_Status = APPROVED with an empty reasons array.
-
-**Validates: Requirements 4.1**
-
-### Property 9: Decision Algorithm - Manual Review
-
-*For any* set of comparison results where at least one similarity score is in the range [rejection_threshold, approval_threshold) and no score is below rejection_threshold, the DecisionCalculator SHALL return Match_Status = MANUAL_REVIEW with a non-empty reasons array identifying the borderline comparisons.
-
-**Validates: Requirements 4.2**
-
-### Property 10: Decision Algorithm - Rejection
-
-*For any* set of comparison results where at least one similarity score is < rejection_threshold, the DecisionCalculator SHALL return Match_Status = REJECTED with a non-empty reasons array identifying the failed comparisons.
+*For any* successful face match result (regardless of IPRS photo availability or document type), the `liveness_vs_document` comparison SHALL always be present in the comparisons dictionary.
 
 **Validates: Requirements 4.3**
 
-### Property 11: Response Structure Completeness
+### Property 5: Minimum Score Correctness
 
-*For any* successful face matching operation, the response SHALL contain: match_status (one of APPROVED, MANUAL_REVIEW, REJECTED), comparison_mode (one of "3-way", "2-way"), an array of comparisons each with similarity_score and confidence, and quality_metrics for each input image source.
+*For any* face match result with one or more successful comparisons, the `lowest_score` field SHALL equal the mathematical minimum of all `similarity` values in the comparisons dictionary.
 
-**Validates: Requirements 5.1, 5.2, 5.3, 5.4, 5.5**
+**Validates: Requirements 5.1**
 
-### Property 12: Reasons for Non-Approval
+### Property 6: Decision Band Correctness
 
-*For any* face matching result where Match_Status is MANUAL_REVIEW or REJECTED, the response SHALL contain a non-empty reasons array with at least one string explaining which comparison(s) triggered the status.
+*For any* set of comparison similarity scores and valid threshold configuration (auto_approve > manual_review), when IPRS photo is available: if the minimum score ≥ auto_approve_threshold then the decision SHALL be AUTO_APPROVED; if the minimum score < manual_review_threshold then the decision SHALL be AUTO_REJECTED; otherwise the decision SHALL be MANUAL_REVIEW.
 
-**Validates: Requirements 5.6**
+**Validates: Requirements 5.2, 5.3, 5.4**
 
-### Property 13: Audit Trail Storage
+### Property 7: PARTIAL_MATCH When IPRS Photo Unavailable
 
-*For any* completed face matching operation (success or failure), the stored DynamoDB record SHALL contain: request_id, customer_id, timestamp, match_status, all comparison scores, thresholds used, and S3 references to images (not image bytes).
+*For any* face match request where the IPRS photo is unavailable, the overall_decision SHALL be PARTIAL_MATCH with `requires_manual_review` set to true, regardless of the similarity scores from the 2-way comparison.
 
-**Validates: Requirements 6.3, 7.4**
+**Validates: Requirements 5.5**
 
-### Property 14: KYC Status Update Consistency
+### Property 8: Response Structure Completeness
 
-*For any* face matching result, the customer's KYC status in DynamoDB SHALL be updated to reflect the match outcome: APPROVED → "Verified", MANUAL_REVIEW → "PendingReview", REJECTED → "Failed".
+*For any* face match result, the response SHALL contain all required fields: overall_decision (one of AUTO_APPROVED, MANUAL_REVIEW, AUTO_REJECTED, PARTIAL_MATCH), comparisons (dict), lowest_score (float or None), iprs_photo_available (bool), document_type (string), thresholds (dict with auto_approve and manual_review keys), and requires_manual_review (bool). Each comparison entry SHALL contain similarity (float) and matched (bool) fields.
 
-**Validates: Requirements 6.4**
+**Validates: Requirements 4.5, 5.6, 8.1, 8.2, 8.3, 8.4, 8.5**
 
-### Property 15: Error Response Format
+### Property 9: Non-Blocking Error Handling
 
-*For any* error condition (no face detected, multiple faces, unsupported format, API failure), the error response SHALL contain error_code (matching the specific error type), message (human-readable description), and failed_source (identifying which image caused the error when applicable).
+*For any* exception raised during face match processing (Rekognition errors, S3 errors, extraction errors), the service SHALL return a structured FaceMatchResult or error dict rather than propagating an unhandled exception.
 
-**Validates: Requirements 6.5, 8.2, 8.3, 8.4**
+**Validates: Requirements 9.2, 9.3, 9.5**
 
-### Property 16: Retry Behavior
+### Property 10: Required Payload Field Validation
 
-*For any* Rekognition API call that fails with a retryable error, the system SHALL retry exactly once with exponential backoff before returning an error; if the retry succeeds, the comparison result SHALL be returned normally.
+*For any* face match request payload missing one or more required fields (sessionId, documentType, documentS3Path, idNumber), the payload validation SHALL reject the request.
 
-**Validates: Requirements 8.1**
-
-### Property 17: Input Validation
-
-*For any* face matching request with invalid input parameters (missing required fields, invalid formats, empty values), the system SHALL return a validation error response with field-level details identifying each invalid field and the specific validation failure.
-
-**Validates: Requirements 8.6**
+**Validates: Requirements 7.2, 7.3**
 
 ## Error Handling
 
-### Error Categories and Codes
+### Error Categories and Handling
 
-| Error Code | Category | Description | HTTP Status |
-|------------|----------|-------------|-------------|
-| `VALIDATION_ERROR` | Input | Request payload validation failed | 400 |
-| `NO_FACE_DETECTED` | Image | No face found in source image | 400 |
-| `MULTIPLE_FACES_DETECTED` | Image | More than one face in source image | 400 |
-| `UNSUPPORTED_FORMAT` | Image | Image format not supported | 400 |
-| `IMAGE_TOO_SMALL` | Image | Image resolution below minimum | 400 |
-| `PREPROCESSING_FAILED` | Processing | Image preprocessing error | 500 |
-| `COMPARISON_FAILED` | Processing | Rekognition API error | 500 |
-| `IPRS_UNAVAILABLE` | External | IPRS API not responding | 503 |
-| `TEXTRACT_FAILED` | External | Document photo extraction failed | 500 |
-| `SSM_UNAVAILABLE` | Config | Cannot read thresholds (uses defaults) | N/A |
-| `TIMEOUT` | Processing | Operation exceeded time limit | 504 |
-| `STORAGE_FAILED` | Storage | DynamoDB write failed | 500 |
+| Error Condition | Response Behavior | Logging Level |
+|-----------------|-------------------|---------------|
+| Feature disabled (FACE_MATCH_ENABLED=false) | Return disabled status, no comparisons | INFO |
+| Liveness image not found in S3 | Return error with "Liveness session image not found" | ERROR |
+| S3 connectivity/permission error | Return error with failure details | ERROR |
+| No face detected in document | Return error with "No face found in document" | WARNING |
+| PDF conversion failure | Return error with "Document format error" | ERROR |
+| IPRS photo field missing | Proceed with 2-way comparison, PARTIAL_MATCH + requires_manual_review | INFO |
+| IPRS photo base64 decode failure | Proceed with 2-way comparison, log warning | WARNING |
+| Rekognition CompareFaces error (single pair) | Mark comparison as failed, continue others | WARNING |
+| Rekognition CompareFaces error (all pairs) | Return error response | ERROR |
+| Invalid threshold configuration | Use defaults (70/50), log error | ERROR |
+| Missing required payload fields | Return 400 validation error | WARNING |
+| Unexpected exception | Return structured error, log full traceback | ERROR |
 
-### Error Response Structure
+### Graceful Degradation Strategy
 
-```python
-{
-    "success": False,
-    "action": "face_matching",
-    "error": {
-        "error_code": "NO_FACE_DETECTED",
-        "message": "No face detected in the customer photo",
-        "details": {
-            "failed_source": "customer",
-            "suggestion": "Please upload a clear photo with your face visible"
-        }
-    },
-    "timestamp": "2024-01-15T10:30:00Z",
-    "request_id": "uuid-string"
-}
-```
-
-### Retry Strategy
-
-```python
-RETRY_CONFIG = {
-    "max_retries": 1,
-    "base_delay_ms": 100,
-    "max_delay_ms": 1000,
-    "retryable_errors": [
-        "ThrottlingException",
-        "ProvisionedThroughputExceededException",
-        "ServiceUnavailableException"
-    ]
-}
-```
-
-### Graceful Degradation Scenarios
-
-1. **IPRS Unavailable**: Continue with 2-way comparison, flag for manual review
-2. **SSM Unavailable**: Use default thresholds (70% approval, 50% rejection)
-3. **Partial Timeout**: Return completed comparisons with timeout indicator
-4. **DynamoDB Write Failure**: Log error, return success to client (audit gap acceptable)
+1. **IPRS Photo Unavailable**: Fall back to 2-way comparison with PARTIAL_MATCH decision and `requires_manual_review: true` — verification is inconclusive without the government photo
+2. **Single Comparison Failure**: Continue with remaining comparisons, exclude failed pair from minimum score calculation
+3. **Feature Disabled**: Return immediately with disabled status, zero processing cost
+4. **Invalid Thresholds**: Fall back to safe defaults rather than failing
 
 ## Testing Strategy
 
 ### Dual Testing Approach
 
-This feature requires both unit tests and property-based tests for comprehensive coverage:
+This feature requires both unit tests and property-based tests:
 
-- **Unit Tests**: Verify specific examples, edge cases, integration points, and error conditions
-- **Property Tests**: Verify universal properties across randomly generated inputs
+- **Unit tests**: Verify specific examples, edge cases, error conditions, integration points, and mocked AWS service interactions
+- **Property tests**: Verify universal properties across randomly generated inputs (scores, thresholds, document types, comparison sets)
 
 ### Property-Based Testing Configuration
 
@@ -702,11 +486,10 @@ This feature requires both unit tests and property-based tests for comprehensive
 ```python
 from hypothesis import settings, Phase
 
-# Minimum 100 iterations per property test
 test_settings = settings(
     max_examples=100,
     phases=[Phase.generate, Phase.target, Phase.shrink],
-    deadline=None  # Disable deadline for API-dependent tests
+    deadline=None
 )
 ```
 
@@ -719,105 +502,137 @@ def test_property_name():
     """
 ```
 
+**Each correctness property MUST be implemented by a SINGLE property-based test.**
+
 ### Test Categories
 
-#### Unit Tests (Specific Examples)
+#### Unit Tests (Specific Examples and Edge Cases)
 
-1. **Image Validation**
-   - Valid JPEG 640x480 with single face → Accept
-   - PNG 1920x1080 with single face → Accept
-   - JPEG 320x240 (too small) → Reject with IMAGE_TOO_SMALL
-   - Image with no face → Reject with NO_FACE_DETECTED
-   - Image with 3 faces → Reject with MULTIPLE_FACES_DETECTED
+1. **Liveness Image Retrieval**
+   - Successful retrieval from S3
+   - S3 NoSuchKey error → error response
+   - S3 connectivity error → error response
 
-2. **Decision Algorithm Edge Cases**
-   - All scores exactly at 70% threshold → APPROVED
-   - One score at 69.9%, others at 90% → MANUAL_REVIEW
-   - One score at 49.9%, others at 90% → REJECTED
-   - 2-way mode with 95% score → MANUAL_REVIEW (not APPROVED)
+2. **Document Photo Extraction**
+   - PDF document → image conversion
+   - JPEG/PNG document → direct processing
+   - No face detected → DocumentPhotoExtractionError
+   - Corrupted document → error
 
-3. **Integration Points**
-   - KYC Orchestrator routes `face_matching` action correctly
-   - DynamoDB record contains all required fields
-   - SSM parameter retrieval with fallback
+3. **IPRS Photo Handling**
+   - Valid base64 photo → decoded bytes
+   - Missing photo field → None, proceed with 2-way
+   - Invalid base64 → warning logged, proceed with 2-way
+   - National ID → attempt IPRS photo
+   - Alien ID → skip IPRS photo
+
+4. **Decision Algorithm Examples**
+   - Scores [85, 78, 82] with thresholds 70/50 → AUTO_APPROVED (min=78)
+   - Scores [65, 78, 82] with thresholds 70/50 → MANUAL_REVIEW (min=65)
+   - Scores [45, 78, 82] with thresholds 70/50 → AUTO_REJECTED (min=45)
+   - Score [85] with no IPRS → PARTIAL_MATCH + requires_manual_review
+   - Boundary: score exactly 70 → AUTO_APPROVED
+   - Boundary: score exactly 50 → MANUAL_REVIEW
+   - Boundary: score exactly 49.99 → AUTO_REJECTED
+
+5. **Feature Flag and Configuration**
+   - Feature disabled → disabled response
+   - Invalid thresholds (approve ≤ review) → defaults used
+   - Custom thresholds from env vars
+
+6. **Integration Tests**
+   - face_match action registered in ActionRouter
+   - Payload validation rejects missing fields
+   - Response normalization for face_match
+   - Feature flag controls face_match action
 
 #### Property Tests (Universal Properties)
 
-Each correctness property (1-17) maps to a property-based test:
-
 | Property | Test Focus | Generator Strategy |
 |----------|------------|-------------------|
-| 1 | Image validation | Random images with varying resolution, format, face count |
-| 2 | IPRS extraction | Random IPRS response structures |
-| 3 | 2-way fallback | Requests with/without IPRS photo |
-| 4 | Format standardization | Random supported image formats |
-| 5 | Aspect ratio | Random image dimensions |
-| 6 | Quality metrics | Random preprocessed images |
-| 7 | Comparison completeness | Requests with all 3 images |
-| 8 | Approval decision | Random scores all ≥ threshold |
-| 9 | Review decision | Random scores with one in review range |
-| 10 | Rejection decision | Random scores with one below threshold |
-| 11 | Response structure | Random successful operations |
-| 12 | Non-approval reasons | Random non-approved results |
-| 13 | Audit storage | Random completed operations |
-| 14 | KYC status update | Random match results |
-| 15 | Error format | Random error conditions |
-| 16 | Retry behavior | Simulated transient failures |
-| 17 | Input validation | Random invalid inputs |
+| 1 | S3 path construction | Random session ID strings |
+| 2 | Bounding box padding | Random bounding boxes within random image dimensions |
+| 3 | Comparison count | Random requests with/without IPRS photo |
+| 4 | Liveness comparison invariant | Random face match results |
+| 5 | Minimum score correctness | Random lists of similarity scores |
+| 6 | Decision band correctness | Random scores × random valid thresholds |
+| 7 | PARTIAL_MATCH for no IPRS | Random scores with IPRS unavailable |
+| 8 | Response structure | Random face match results |
+| 9 | Non-blocking errors | Random exception types |
+| 10 | Payload validation | Random payloads with missing fields |
 
 ### Test Data Generators
 
 ```python
 from hypothesis import strategies as st
 
-# Generate random similarity scores
-similarity_score = st.floats(min_value=0.0, max_value=100.0)
+# Similarity scores (0-100)
+similarity_score = st.floats(min_value=0.0, max_value=100.0, allow_nan=False, allow_infinity=False)
 
-# Generate scores that should result in APPROVED
-approved_scores = st.lists(
-    st.floats(min_value=70.0, max_value=100.0),
-    min_size=3, max_size=3
+# Scores in specific decision bands
+approve_score = st.floats(min_value=70.0, max_value=100.0, allow_nan=False, allow_infinity=False)
+review_score = st.floats(min_value=50.0, max_value=69.99, allow_nan=False, allow_infinity=False)
+reject_score = st.floats(min_value=0.0, max_value=49.99, allow_nan=False, allow_infinity=False)
+
+# Valid document types
+document_type = st.sampled_from(["national_id", "alien_id", "passport", "military_id"])
+
+# Document types that support IPRS photo
+iprs_document_type = st.sampled_from(["national_id", "passport"])
+non_iprs_document_type = st.sampled_from(["alien_id", "military_id"])
+
+# Valid threshold configurations (auto_approve > manual_review)
+valid_thresholds = st.tuples(
+    st.floats(min_value=1.0, max_value=100.0, allow_nan=False, allow_infinity=False),
+    st.floats(min_value=0.0, max_value=99.0, allow_nan=False, allow_infinity=False)
+).filter(lambda t: t[0] > t[1])
+
+# Session IDs
+session_id = st.text(
+    alphabet=st.characters(whitelist_categories=('L', 'N'), whitelist_characters='-_'),
+    min_size=1, max_size=64
 )
 
-# Generate scores that should result in MANUAL_REVIEW
-review_scores = st.lists(
-    st.floats(min_value=50.0, max_value=100.0),
-    min_size=3, max_size=3
-).filter(lambda scores: any(50.0 <= s < 70.0 for s in scores))
-
-# Generate scores that should result in REJECTED
-rejected_scores = st.lists(
-    st.floats(min_value=0.0, max_value=100.0),
-    min_size=3, max_size=3
-).filter(lambda scores: any(s < 50.0 for s in scores))
-
-# Generate image dimensions
-image_dimensions = st.tuples(
-    st.integers(min_value=100, max_value=4000),
-    st.integers(min_value=100, max_value=4000)
-)
-
-# Generate quality metrics
-quality_metrics = st.fixed_dictionaries({
-    'brightness_score': st.floats(min_value=0.0, max_value=100.0),
-    'sharpness_score': st.floats(min_value=0.0, max_value=100.0),
-    'face_confidence': st.floats(min_value=0.0, max_value=100.0)
+# Bounding box within image (left, top, width, height as fractions 0-1)
+bounding_box = st.fixed_dictionaries({
+    'Left': st.floats(min_value=0.0, max_value=0.8, allow_nan=False, allow_infinity=False),
+    'Top': st.floats(min_value=0.0, max_value=0.8, allow_nan=False, allow_infinity=False),
+    'Width': st.floats(min_value=0.05, max_value=0.5, allow_nan=False, allow_infinity=False),
+    'Height': st.floats(min_value=0.05, max_value=0.5, allow_nan=False, allow_infinity=False),
 })
+
+# Image dimensions
+image_dimensions = st.tuples(
+    st.integers(min_value=100, max_value=4000),  # width
+    st.integers(min_value=100, max_value=4000)   # height
+)
 ```
 
 ### Mocking Strategy
 
-For property tests involving external services:
-
-1. **Rekognition**: Mock `compare_faces` to return deterministic scores based on input hash
-2. **Textract**: Mock `analyze_id` to return predefined photo regions
-3. **IPRS**: Mock API responses with/without photo field
-4. **SSM**: Mock parameter retrieval with configurable values
-5. **DynamoDB**: Use moto library for local DynamoDB simulation
+1. **AWS Rekognition**: Mock `compare_faces` and `detect_faces` responses with configurable similarity scores and bounding boxes
+2. **S3**: Mock `get_object` for liveness images and document files
+3. **IPRS**: Use the iprsVerificationResponse dict directly (no API call needed — photo comes from previous verification)
+4. **Logger**: Mock Lambda Powertools logger to verify log calls and levels
 
 ### Coverage Requirements
 
-- Minimum 80% code coverage for face matching module
-- 100% coverage of decision algorithm branches
-- All 17 correctness properties must have passing property tests
-- All error codes must have at least one unit test
+| Module | Minimum Coverage |
+|--------|-----------------|
+| face_match_service.py | 90% |
+| document_photo_extractor.py | 90% |
+| action_router.py (face_match additions) | 85% |
+| payload_schemas.py (face_match additions) | 90% |
+
+### Test File Structure
+
+```
+backend/core/functions/kyc_orchestrator/tests/
+├── __init__.py
+├── conftest.py
+├── test_face_match_service.py
+├── test_property_face_match_service.py
+├── test_document_photo_extractor.py
+├── test_property_document_photo_extractor.py
+└── test_face_match_integration.py
+```
