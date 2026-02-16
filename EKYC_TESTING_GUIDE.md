@@ -95,7 +95,7 @@ Providing optional fields enables Textract match comparison (Matched/Not Matched
     "matchResults": {
       "idNumber": {
         "status": "Matched",
-        "details": {"expected": "26465570", "actual": "26465570", "confidence": 95.25, "editdistance": 0}
+        "details": {"expected": "26465570", "actual": "26465570", "ocr_confidence": 95.25, "match_score": 100.0, "editdistance": 0}
       },
       "serialNumber": {"status": "Matched", "details": {...}},
       "fullNames": {"status": "Matched", "details": {...}},
@@ -118,6 +118,16 @@ Providing optional fields enables Textract match comparison (Matched/Not Matched
         "normalizedComparison": true,
         "reason": null
       }
+    },
+    "summary": {
+      "overall_status": "PASS",
+      "matched": 5,
+      "mismatched": 0,
+      "not_provided": 1,
+      "not_found": 2,
+      "validation_accuracy": 100.0,
+      "match_score": 100.0,
+      "mismatched_fields": []
     }
   }
 }
@@ -125,8 +135,12 @@ Providing optional fields enables Textract match comparison (Matched/Not Matched
 
 **Key fields in response:**
 - `matchResults.<field>.status` — "Matched", "Not Matched", "Not provided", or "Not Found"
+- `matchResults.<field>.details.ocr_confidence` — Textract OCR confidence (how sure Textract read the text)
+- `matchResults.<field>.details.match_score` — Similarity percentage between expected and actual values (0-100%)
 - `serialNumberValidation.status` — "MATCH", "MISMATCH", or "INCONCLUSIVE" (v1.2 IPRS cross-validation)
 - `genderValidation.status` — "MATCH", "MISMATCH", or "INCONCLUSIVE" (v1.2 IPRS cross-validation)
+- `summary.overall_status` — "PASS" (no mismatches), "FAIL" (any mismatch), or "INCONCLUSIVE" (no comparisons)
+- `summary.mismatched_fields` — Array of field names that failed matching
 - `s3Path` — Document stored in raw docs bucket (used for face matching)
 
 ### Step 2: Government Verification (IPRS)
@@ -297,6 +311,16 @@ curl -X POST https://6corkstod4.execute-api.eu-west-1.amazonaws.com/Stage/kyc \
         "reason": null
       }
     },
+    "summary": {
+      "overall_status": "PASS",
+      "matched": 4,
+      "mismatched": 0,
+      "not_provided": 0,
+      "not_found": 0,
+      "validation_accuracy": 100.0,
+      "match_score": 100.0,
+      "mismatched_fields": []
+    },
     "extractedData": {
       "PASSPORT_NUMBER": "BK080411",
       "SURNAME": "MAINA",
@@ -447,6 +471,16 @@ curl -s -X POST https://6corkstod4.execute-api.eu-west-1.amazonaws.com/Stage/kyc
         "iprsGender": "M"
       }
     },
+    "summary": {
+      "overall_status": "PASS",
+      "matched": 4,
+      "mismatched": 0,
+      "not_provided": 0,
+      "not_found": 0,
+      "validation_accuracy": 100.0,
+      "match_score": 100.0,
+      "mismatched_fields": []
+    },
     "extractedData": {
       "SERIAL_NUMBER": "A12345678",
       "FULL_NAMES": "JOHN DOE",
@@ -578,6 +612,16 @@ curl -s -X POST https://6corkstod4.execute-api.eu-west-1.amazonaws.com/Stage/kyc
         "extractedGender": "M",
         "iprsGender": "M"
       }
+    },
+    "summary": {
+      "overall_status": "PASS",
+      "matched": 3,
+      "mismatched": 0,
+      "not_provided": 0,
+      "not_found": 1,
+      "validation_accuracy": 100.0,
+      "match_score": 100.0,
+      "mismatched_fields": []
     }
   }
 }

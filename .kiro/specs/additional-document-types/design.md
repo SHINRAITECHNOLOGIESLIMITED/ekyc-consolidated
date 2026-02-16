@@ -361,9 +361,20 @@ All validation endpoints return:
                         "editdistance": 0,
                         "expected": "A123456",
                         "actual": "A123456",
-                        "confidence": 98.5
+                        "ocr_confidence": 98.5,
+                        "match_score": 100.0
                     }
                 }
+            },
+            "summary": {
+                "overall_status": "PASS",
+                "matched": 1,
+                "mismatched": 0,
+                "not_provided": 0,
+                "not_found": 0,
+                "validation_accuracy": 100.0,
+                "match_score": 100.0,
+                "mismatched_fields": []
             }
         }
     }
@@ -590,9 +601,9 @@ def mock_textract_response():
     """Mock Textract extraction response."""
     return {
         "form": {
-            "ALIEN_ID_NUMBER": {"value": "A123456", "confidence": 98.5},
-            "FULL_NAMES": {"value": "JOHN DOE", "confidence": 97.2},
-            "NATIONALITY": {"value": "INDIAN", "confidence": 96.8}
+            "ALIEN_ID_NUMBER": {"value": "A123456", "ocr_confidence": 98.5},
+            "FULL_NAMES": {"value": "JOHN DOE", "ocr_confidence": 97.2},
+            "NATIONALITY": {"value": "INDIAN", "ocr_confidence": 96.8}
         },
         "phrases": [{"text": "Republic of Kenya", "confidence": 99.0}]
     }
