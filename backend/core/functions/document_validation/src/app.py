@@ -427,12 +427,14 @@ def rate(matchResults):
     validation_accuracy = 0.0
     ocr_confidence = 0.0
     avg_match_score = 0.0
-    if len(matchResults) == 0:
-        pass
-    else:
-        passed = 0
-        failed = 0
-        mapping_issue = 0
+    processing_accuracy = 0.0
+    passed = 0
+    failed = 0
+    mapping_issue = 0
+    not_provided = 0
+    mismatched_fields = []
+
+    if len(matchResults) > 0:
         ocr_confidence_scores = []
         match_scores = []
         for field, result in matchResults.items():
@@ -447,8 +449,11 @@ def rate(matchResults):
                     passed += 1
                 elif result['status'] == "Not Matched":
                     failed += 1
+                    mismatched_fields.append(field)
                 elif result['status'] == "Not Found":
                     mapping_issue += 1
+                elif result['status'] == "Not provided":
+                    not_provided += 1
         if ocr_confidence_scores:
             ocr_confidence = sum(ocr_confidence_scores) / len(ocr_confidence_scores)
         if match_scores:
@@ -462,7 +467,27 @@ def rate(matchResults):
             processing_accuracy = 0.0
         else:
             processing_accuracy = (passed + failed) / (failed + passed + mapping_issue) * 100
-    return ocr_confidence, avg_match_score, validation_accuracy, processing_accuracy
+
+    # Determine overall status: PASS only if no mismatches among compared fields
+    if failed > 0:
+        overall_status = "FAIL"
+    elif passed > 0:
+        overall_status = "PASS"
+    else:
+        overall_status = "INCONCLUSIVE"
+
+    summary = {
+        "overall_status": overall_status,
+        "matched": passed,
+        "mismatched": failed,
+        "not_provided": not_provided,
+        "not_found": mapping_issue,
+        "validation_accuracy": round(validation_accuracy, 2),
+        "match_score": round(avg_match_score, 2),
+        "mismatched_fields": mismatched_fields
+    }
+
+    return ocr_confidence, avg_match_score, validation_accuracy, processing_accuracy, summary
 
 
 def fetch_iprs_data(id_number: str) -> dict:
@@ -835,7 +860,7 @@ def validate_nationalid(data):
         _documentType=DOCUMENT_TYPE.NATIONAL_ID
         _documentIdentifier=data['idNumber']
 
-        ocr_confidence, match_score, validation_accuracy, processing_accuracy = rate(matchResults)
+        ocr_confidence, match_score, validation_accuracy, processing_accuracy, summary = rate(matchResults)
         portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
                                       documentIdentifier=_documentIdentifier,
@@ -844,7 +869,7 @@ def validate_nationalid(data):
                                       validation_accuracy=validation_accuracy,
                                       processing_accuracy=processing_accuracy,
                                       overall_confidence=match_score)
-        results = dict(keywords_checks=checks, matchResults=matchResults)
+        results = dict(keywords_checks=checks, matchResults=matchResults, summary=summary)
         logger.info(f"Results: {results}")
         return make_response(200, dict(message="Validation successfull", s3Path=s3Path, results=results))
 
@@ -1010,7 +1035,7 @@ def validate_passport(data):
         _documentType = DOCUMENT_TYPE.PASSPORT
         _documentIdentifier = data['passportNumber']
 
-        ocr_confidence, match_score, validation_accuracy, processing_accuracy = rate(matchResults)
+        ocr_confidence, match_score, validation_accuracy, processing_accuracy, summary = rate(matchResults)
         portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
                                       documentIdentifier=_documentIdentifier,
@@ -1030,7 +1055,7 @@ def validate_passport(data):
         }
 
         results = dict(keywords_checks=checks, matchResults=matchResults, extractedData=extracted_data,
-                       extractionMethod=extraction_method)
+                       extractionMethod=extraction_method, summary=summary)
         logger.info(f"Results: {results}")
         return make_response(200, dict(message="Validation successful", s3Path=s3Path, results=results))
     except Exception as e:
@@ -1088,7 +1113,7 @@ def validate_krapincertificate(data):
         _documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE
         _documentIdentifier=data['pin']
 
-        ocr_confidence, match_score, validation_accuracy, processing_accuracy = rate(matchResults)
+        ocr_confidence, match_score, validation_accuracy, processing_accuracy, summary = rate(matchResults)
         portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
                                       documentIdentifier=_documentIdentifier,
@@ -1098,7 +1123,7 @@ def validate_krapincertificate(data):
                                       processing_accuracy=processing_accuracy,
                                       overall_confidence=match_score)
 
-        results = dict(keywords_checks=checks, matchResults=matchResults)
+        results = dict(keywords_checks=checks, matchResults=matchResults, summary=summary)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
 
@@ -1146,7 +1171,7 @@ def validate_cr12(data):
         _documentType=DOCUMENT_TYPE.CERTIFICATE_OF_INCORPORATION
         _documentIdentifier=data['businessNumber']
 
-        ocr_confidence, match_score, validation_accuracy, processing_accuracy = rate(matchResults)
+        ocr_confidence, match_score, validation_accuracy, processing_accuracy, summary = rate(matchResults)
         portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
                                       documentIdentifier=_documentIdentifier,
@@ -1156,7 +1181,7 @@ def validate_cr12(data):
                                       processing_accuracy=processing_accuracy,
                                       overall_confidence=match_score)
 
-        results = dict(keywords_checks=checks, matchResults=matchResults)
+        results = dict(keywords_checks=checks, matchResults=matchResults, summary=summary)
         logger.info(f"Results: {results}")
         return make_response(200, dict(s3Path=s3Path, results=results))
     except Exception as e:
@@ -1384,7 +1409,7 @@ def validate_alienid(data):
         _documentType = DOCUMENT_TYPE.ALIEN_ID
         _documentIdentifier = data['alienIdNumber']
 
-        ocr_confidence, match_score, validation_accuracy, processing_accuracy = rate(matchResults)
+        ocr_confidence, match_score, validation_accuracy, processing_accuracy, summary = rate(matchResults)
         portal.capture_doc_validation(
             documentType=_documentType,
             s3Path=s3Path,
@@ -1405,7 +1430,7 @@ def validate_alienid(data):
             if field in extracted_form
         }
         
-        results = dict(keywords_checks=checks, matchResults=matchResults, extractedData=extracted_data)
+        results = dict(keywords_checks=checks, matchResults=matchResults, extractedData=extracted_data, summary=summary)
         logger.info(f"Results: {results}")
         return make_response(200, dict(message="Validation successful", s3Path=s3Path, results=results))
 
@@ -1548,7 +1573,7 @@ def validate_militaryid(data):
         _documentType = DOCUMENT_TYPE.MILITARY_ID
         _documentIdentifier = data['serviceNumber']
 
-        ocr_confidence, match_score, validation_accuracy, processing_accuracy = rate(matchResults)
+        ocr_confidence, match_score, validation_accuracy, processing_accuracy, summary = rate(matchResults)
         portal.capture_doc_validation(
             documentType=_documentType,
             s3Path=s3Path,
@@ -1560,7 +1585,7 @@ def validate_militaryid(data):
             overall_confidence=match_score
         )
 
-        results = dict(keywords_checks=checks, matchResults=matchResults)
+        results = dict(keywords_checks=checks, matchResults=matchResults, summary=summary)
         logger.info(f"Results: {results}")
         return make_response(200, dict(message="Validation successful", s3Path=s3Path, results=results))
 
