@@ -1409,9 +1409,17 @@ def validate_militaryid(data):
             extracted_serial = extracted_form['SERIAL_NUMBER']['value']
         
         # Extract gender from Textract for IPRS comparison
+        # Try SEX field first, then GENDER field (military IDs may use either)
         extracted_gender = None
         if 'SEX' in extracted_form and extracted_form['SEX'].get('value'):
             extracted_gender = extracted_form['SEX']['value']
+        elif 'GENDER' in extracted_form and extracted_form['GENDER'].get('value'):
+            extracted_gender = extracted_form['GENDER']['value']
+        
+        # Fallback: use gender from request payload if Textract couldn't extract it
+        if not extracted_gender and data.get('gender'):
+            extracted_gender = data['gender']
+            logger.info("Using gender from request payload as Textract fallback for military ID")
         
         # Perform IPRS validations (non-blocking)
         serial_validation_result = validate_serial_number(
