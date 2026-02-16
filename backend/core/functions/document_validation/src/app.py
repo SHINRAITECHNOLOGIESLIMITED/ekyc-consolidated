@@ -409,35 +409,50 @@ def process(event_name, textract_name, event, form,is_date_field = False):
                 status = "Not Matched"
                 # calculate edit distance
                 editdistance = levenshtein_distance(actual.strip().lower(), expected.strip().lower())
-        details = dict(editdistance=editdistance, expected=expected, actual=actual, confidence = confidence)
+        # match_score: similarity percentage based on edit distance (0-100%)
+        max_len = max(len(expected.strip()), len(actual.strip()), 1)
+        match_score = round((1 - editdistance / max_len) * 100, 2)
+        details = dict(
+            editdistance=editdistance,
+            expected=expected,
+            actual=actual,
+            ocr_confidence=confidence,
+            match_score=match_score
+        )
 
 
     return dict(status=status, details=details)
 
 def rate(matchResults):
-    validation_accuracy=0.0
-    confidence=0.0
+    validation_accuracy = 0.0
+    ocr_confidence = 0.0
+    avg_match_score = 0.0
     if len(matchResults) == 0:
         pass
     else:
         passed = 0
         failed = 0
         mapping_issue = 0
-        confidence_scores = []
-        for field,result in matchResults.items():
+        ocr_confidence_scores = []
+        match_scores = []
+        for field, result in matchResults.items():
             if "details" in result:
                 if result["details"]:
-                    if "confidence" in result["details"]:
-                        confidence_scores.append(result["details"]["confidence"])
+                    if "ocr_confidence" in result["details"]:
+                        ocr_confidence_scores.append(result["details"]["ocr_confidence"])
+                    if "match_score" in result["details"]:
+                        match_scores.append(result["details"]["match_score"])
             if 'status' in result:
                 if result['status'] == 'Matched':
                     passed += 1
                 elif result['status'] == "Not Matched":
                     failed += 1
                 elif result['status'] == "Not Found":
-                    mapping_issue +=1
-        if confidence_scores:
-            confidence = sum(confidence_scores)/len(confidence_scores)
+                    mapping_issue += 1
+        if ocr_confidence_scores:
+            ocr_confidence = sum(ocr_confidence_scores) / len(ocr_confidence_scores)
+        if match_scores:
+            avg_match_score = sum(match_scores) / len(match_scores)
         if failed + passed == 0:
             validation_accuracy = 0.0
         else:
@@ -446,8 +461,8 @@ def rate(matchResults):
         if failed + passed + mapping_issue == 0:
             processing_accuracy = 0.0
         else:
-            processing_accuracy = (passed + failed)/(failed + passed + mapping_issue) * 100
-    return confidence,validation_accuracy,processing_accuracy
+            processing_accuracy = (passed + failed) / (failed + passed + mapping_issue) * 100
+    return ocr_confidence, avg_match_score, validation_accuracy, processing_accuracy
 
 
 def fetch_iprs_data(id_number: str) -> dict:
@@ -820,7 +835,7 @@ def validate_nationalid(data):
         _documentType=DOCUMENT_TYPE.NATIONAL_ID
         _documentIdentifier=data['idNumber']
 
-        confidence,validation_accuracy,processing_accuracy = rate(matchResults)
+        ocr_confidence, match_score, validation_accuracy, processing_accuracy = rate(matchResults)
         portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
                                       documentIdentifier=_documentIdentifier,
@@ -828,7 +843,7 @@ def validate_nationalid(data):
                                       keywords_checks=checks,
                                       validation_accuracy=validation_accuracy,
                                       processing_accuracy=processing_accuracy,
-                                      overall_confidence=confidence)
+                                      overall_confidence=match_score)
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
         return make_response(200, dict(message="Validation successfull", s3Path=s3Path, results=results))
@@ -995,7 +1010,7 @@ def validate_passport(data):
         _documentType = DOCUMENT_TYPE.PASSPORT
         _documentIdentifier = data['passportNumber']
 
-        confidence, validation_accuracy, processing_accuracy = rate(matchResults)
+        ocr_confidence, match_score, validation_accuracy, processing_accuracy = rate(matchResults)
         portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
                                       documentIdentifier=_documentIdentifier,
@@ -1003,7 +1018,7 @@ def validate_passport(data):
                                       keywords_checks=checks,
                                       validation_accuracy=validation_accuracy,
                                       processing_accuracy=processing_accuracy,
-                                      overall_confidence=confidence)
+                                      overall_confidence=match_score)
 
         # Include extracted data in response for transparency
         extracted_data = {
@@ -1073,7 +1088,7 @@ def validate_krapincertificate(data):
         _documentType=DOCUMENT_TYPE.KRA_PIN_CERTIFICATE
         _documentIdentifier=data['pin']
 
-        confidence,validation_accuracy,processing_accuracy = rate(matchResults)
+        ocr_confidence, match_score, validation_accuracy, processing_accuracy = rate(matchResults)
         portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
                                       documentIdentifier=_documentIdentifier,
@@ -1081,7 +1096,7 @@ def validate_krapincertificate(data):
                                       keywords_checks=checks,
                                       validation_accuracy=validation_accuracy,
                                       processing_accuracy=processing_accuracy,
-                                      overall_confidence=confidence)
+                                      overall_confidence=match_score)
 
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
@@ -1131,7 +1146,7 @@ def validate_cr12(data):
         _documentType=DOCUMENT_TYPE.CERTIFICATE_OF_INCORPORATION
         _documentIdentifier=data['businessNumber']
 
-        confidence,validation_accuracy,processing_accuracy = rate(matchResults)
+        ocr_confidence, match_score, validation_accuracy, processing_accuracy = rate(matchResults)
         portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
                                       documentIdentifier=_documentIdentifier,
@@ -1139,7 +1154,7 @@ def validate_cr12(data):
                                       keywords_checks=checks,
                                       validation_accuracy=validation_accuracy,
                                       processing_accuracy=processing_accuracy,
-                                      overall_confidence=confidence)
+                                      overall_confidence=match_score)
 
         results = dict(keywords_checks=checks, matchResults=matchResults)
         logger.info(f"Results: {results}")
@@ -1369,7 +1384,7 @@ def validate_alienid(data):
         _documentType = DOCUMENT_TYPE.ALIEN_ID
         _documentIdentifier = data['alienIdNumber']
 
-        confidence, validation_accuracy, processing_accuracy = rate(matchResults)
+        ocr_confidence, match_score, validation_accuracy, processing_accuracy = rate(matchResults)
         portal.capture_doc_validation(
             documentType=_documentType,
             s3Path=s3Path,
@@ -1378,7 +1393,7 @@ def validate_alienid(data):
             keywords_checks=checks,
             validation_accuracy=validation_accuracy,
             processing_accuracy=processing_accuracy,
-            overall_confidence=confidence
+            overall_confidence=match_score
         )
 
         # Include extracted data in response for transparency
@@ -1533,7 +1548,7 @@ def validate_militaryid(data):
         _documentType = DOCUMENT_TYPE.MILITARY_ID
         _documentIdentifier = data['serviceNumber']
 
-        confidence, validation_accuracy, processing_accuracy = rate(matchResults)
+        ocr_confidence, match_score, validation_accuracy, processing_accuracy = rate(matchResults)
         portal.capture_doc_validation(
             documentType=_documentType,
             s3Path=s3Path,
@@ -1542,7 +1557,7 @@ def validate_militaryid(data):
             keywords_checks=checks,
             validation_accuracy=validation_accuracy,
             processing_accuracy=processing_accuracy,
-            overall_confidence=confidence
+            overall_confidence=match_score
         )
 
         results = dict(keywords_checks=checks, matchResults=matchResults)
