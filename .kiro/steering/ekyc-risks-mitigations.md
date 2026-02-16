@@ -4,13 +4,14 @@ This document captures key risks identified in the executive review and their mi
 
 ## Risk Matrix
 
-| Risk | Impact | Mitigation | Owner |
-|------|--------|------------|-------|
-| ESB serial number not exposed | **HIGH** | Escalate Action Item 1 before sprint start - confirm within 48 hours | ESB Team |
-| Ambiguous 3-way scoring logic | Medium | Defined deterministic aggregation rule (fail-fast minimum score) in design | Dev Team |
-| Poor selfie quality | Medium | Enforce capture-time quality gates in portal | Frontend Team |
-| Manual review bottlenecks | Medium | SLA + reviewer queue limits configured | Ops Team |
-| Threshold disputes in UAT | Low-Medium | Log ROC metrics during UAT for data-driven tuning | QA Team |
+| Risk | Impact | Mitigation | Owner | Status |
+|------|--------|------------|-------|--------|
+| ESB serial number not exposed | **HIGH** | Escalate Action Item 1 before sprint start - confirm within 48 hours | ESB Team | Confirmed |
+| API Gateway 29s timeout for PDF validation | **HIGH** | Implemented async job pattern (202 + poll via `get_job_status`) for `validate_alienid` and `validate_militaryid` | Dev Team | Resolved |
+| Ambiguous 3-way scoring logic | Medium | Defined deterministic aggregation rule (fail-fast minimum score) in design | Dev Team | Resolved |
+| Poor selfie quality | Medium | Enforce capture-time quality gates in portal | Frontend Team | Open |
+| Manual review bottlenecks | Medium | SLA + reviewer queue limits configured | Ops Team | Open |
+| Threshold disputes in UAT | Low-Medium | Log ROC metrics during UAT for data-driven tuning | QA Team | Open |
 
 ## Critical Action Items
 
@@ -64,3 +65,5 @@ Plan additional time for:
 | Schema Mismatch Count | ESB stability | >0 |
 | MISMATCH Rate (Serial) | Fraud detection | >5% |
 | MISMATCH Rate (Gender) | Data quality | >2% |
+| Async Job Duration | Monitor PDF validation time | >60s |
+| Async Job Failure Rate | Monitor async reliability | >5% |

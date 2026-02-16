@@ -4,12 +4,12 @@
 
 # Release Notes
 
-## 🚨 Breaking Changes
+## Breaking Changes
 _No breaking changes were identified in this release._
 
 ---
 
-## ✨ Features
+## Features
 
 - **Agent & Registration Enhancements**
   - Improved agent details UI and adjusted the liveness threshold.
@@ -59,7 +59,7 @@ _No breaking changes were identified in this release._
 
 ---
 
-## 🐛 Bug Fixes
+## Bug Fixes
 
 - Updated CORS headers to explicitly allow GET methods and removed unused configurations.
 - Improved API error handling, especially for cached API calls and government verification, with clearer messaging.
@@ -69,7 +69,7 @@ _No breaking changes were identified in this release._
 
 ---
 
-## 🚀 Improvements
+## Improvements
 
 - **Refactoring & Code Quality**
   - Streamlined deployment and API configuration for document streaming functionality.
@@ -89,14 +89,14 @@ _No breaking changes were identified in this release._
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 - Added example .env file for developer and deployment configuration.
 - Updated authorizer examples in API gateway documentation to clarify usage of AWS_IAM and Lambda.
 
 ---
 
-## 🧹 Chore & Other
+## Chore & Other
 
 - Bumped application version numbers at each release milestone for version tracking.
 - Cleaned up unused dependencies across development and portal environments.

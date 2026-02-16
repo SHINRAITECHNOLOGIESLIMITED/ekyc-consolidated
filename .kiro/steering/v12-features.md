@@ -40,7 +40,7 @@ Compare customer selfie against ID document photo AND IPRS photo to verify ident
 - Metrics: false accept rate, false reject rate, review rate
 
 ### ESB Dependency
-⚠️ **Pending**: Confirm IPRS returns `photo` field (Base64 or URL)
+**Pending**: Confirm IPRS returns `photo` field (Base64 or URL)
 
 ---
 
@@ -74,7 +74,7 @@ Extracted Serial (Textract) → Normalize → Compare → IPRS Serial (API)
 - Metrics: MATCH/MISMATCH/INCONCLUSIVE rates
 
 ### ESB Status
-✅ **Confirmed**: IPRS `serialNumber` field is available
+**Confirmed**: IPRS `serialNumber` field is available
 
 ---
 
@@ -109,7 +109,7 @@ Extracted Gender (Textract) → Normalize → Compare → IPRS Gender (API)
 - Metrics: MATCH/MISMATCH/INCONCLUSIVE rates
 
 ### ESB Status
-✅ **Confirmed**: IPRS `gender` field is available
+**Confirmed**: IPRS `gender` field is available
 
 ---
 
@@ -123,13 +123,14 @@ Extracted Gender (Textract) → Normalize → Compare → IPRS Gender (API)
 
 ## Risk Matrix
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| ESB photo field not available | High | Escalate to ESB team immediately |
-| Ambiguous 3-way scoring logic | Medium | Define deterministic aggregation rule |
-| Poor selfie quality | Medium | Enforce capture-time quality gates |
-| Manual review bottlenecks | Medium | SLA + reviewer queue limits |
-| Threshold disputes in UAT | Low-Medium | Log ROC metrics during UAT |
+| Risk | Impact | Mitigation | Status |
+|------|--------|------------|--------|
+| ESB photo field not available | High | Escalate to ESB team immediately | Pending |
+| API Gateway 29s timeout for PDF validation | High | Implemented async job pattern (202 + polling) for alien/military ID | Resolved |
+| Ambiguous 3-way scoring logic | Medium | Define deterministic aggregation rule | Resolved |
+| Poor selfie quality | Medium | Enforce capture-time quality gates | Open |
+| Manual review bottlenecks | Medium | SLA + reviewer queue limits | Open |
+| Threshold disputes in UAT | Low-Medium | Log ROC metrics during UAT | Open |
 
 ---
 

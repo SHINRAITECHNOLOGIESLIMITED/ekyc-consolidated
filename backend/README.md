@@ -113,6 +113,22 @@ If your SAM application includes AWS Step Functions state machines, you can exec
 
     You'll need to consult the SAM CLI documentation for more advanced local testing scenarios, such as debugging Lambda functions.
 
+## Async Job Pattern
+
+Some document validation actions (`validate_alienid`, `validate_militaryid`) can exceed API Gateway's 29-second timeout due to PDF processing + IPRS cross-validation. These use an async job pattern:
+
+1. KYC Orchestrator creates a job in `AsyncJobsTable` (DynamoDB) with status `PROCESSING`
+2. Invokes DocumentValidationFn asynchronously (`InvocationType='Event'`)
+3. Returns `202 Accepted` with a `jobId` to the client
+4. DocumentValidationFn writes the result to DynamoDB when done (`COMPLETED` or `FAILED`)
+5. Client polls `get_job_status` with the `jobId` to retrieve the result
+
+Key files:
+- `core/functions/kyc_orchestrator/src/async_job_service.py`
+- `core/functions/kyc_orchestrator/src/action_router.py`
+- `core/functions/document_validation/src/app.py`
+- `template.yaml` (`AsyncJobsTable` resource)
+
 ## Testing
 
 Each Lambda function has a dedicated `test` directory containing unit tests. It is recommended to write comprehensive tests to ensure the reliability of your functions. You can use Python's built-in `unittest` framework or other testing frameworks like `pytest`.

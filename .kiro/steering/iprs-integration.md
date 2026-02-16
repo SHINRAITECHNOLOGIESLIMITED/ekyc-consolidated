@@ -303,3 +303,7 @@ def test_iprs_lookup(mock_esb):
 ### E2E Test Data
 
 See `e2e/tests/verification/test_verify_nationalid.py` for real test cases with known ID numbers.
+
+### Note on Async Invocations
+
+For Alien ID and Military ID validation, IPRS calls happen inside an asynchronously invoked Lambda (`InvocationType='Event'`). The orchestrator does not wait for the IPRS response — instead, the DocumentValidationFn writes the final result (including IPRS data) to DynamoDB. Clients poll `get_job_status` to retrieve the result. See `.kiro/steering/lambda-patterns.md` for the async invocation pattern.
