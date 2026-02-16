@@ -45,6 +45,8 @@ def normalize_verification_response(
         return _normalize_background_check(parsed_response, entity_type, entity_id)
     elif action == 'face_liveness':
         return _normalize_face_liveness(parsed_response, entity_type, entity_id)
+    elif action == 'face_match':
+        return _normalize_face_match(parsed_response, entity_type, entity_id)
     else:
         raise ValueError(f"Unknown action type: {action}")
 
@@ -306,6 +308,49 @@ def _normalize_face_liveness(
         'entityId': entity_id
     }
 
+def _normalize_face_match(
+    response: Dict[str, Any],
+    entity_type: str,
+    entity_id: str
+) -> Dict[str, Any]:
+    """
+    Normalize face match responses.
+
+    Extracts comparison scores, overall decision, and manual review flag.
+    """
+    overall_decision = response.get('overall_decision', 'ERROR')
+    comparisons = response.get('comparisons', {})
+    lowest_score = response.get('lowest_score')
+    iprs_photo_available = response.get('iprs_photo_available', False)
+    requires_manual_review = response.get('requires_manual_review', False)
+
+    # Determine status based on decision
+    status_map = {
+        'AUTO_APPROVED': 'VERIFIED',
+        'MANUAL_REVIEW': 'PENDING_REVIEW',
+        'AUTO_REJECTED': 'FAILED',
+        'PARTIAL_MATCH': 'PENDING_REVIEW',
+        'ERROR': 'FAILED',
+    }
+    status = status_map.get(overall_decision, 'FAILED')
+
+    return {
+        'verificationType': 'face_match',
+        'action': 'face_match',
+        'timestamp': datetime.utcnow().isoformat(),
+        'status': status,
+        'overallDecision': overall_decision,
+        'comparisons': comparisons,
+        'lowestScore': lowest_score,
+        'iprsPhotoAvailable': iprs_photo_available,
+        'requiresManualReview': requires_manual_review,
+        'thresholds': response.get('thresholds', {}),
+        'rawResponse': response,
+        'entityType': entity_type,
+        'entityId': entity_id
+    }
+
+
 
 def _action_to_verification_type(action: str) -> str:
     """
@@ -325,8 +370,12 @@ def _action_to_verification_type(action: str) -> str:
         'validate_krapincertificate': 'kra_validation',
         'government_verify_kra': 'kra_verification',
         'validate_cr12': 'cr12_validation',
+        'validate_alienid': 'alien_id_validation',
+        'government_verify_alienid': 'alien_id_verification',
+        'validate_militaryid': 'military_id_validation',
         'background_check': 'background_check',
-        'face_liveness': 'liveness'
+        'face_liveness': 'liveness',
+        'face_match': 'face_match'
     }
 
     return mapping.get(action, action)

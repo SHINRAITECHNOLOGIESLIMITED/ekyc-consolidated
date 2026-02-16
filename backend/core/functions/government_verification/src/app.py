@@ -41,8 +41,10 @@ def handler(event, context):
                     return verify_passport(data)
                 case '/government/kra':
                     return verify_taxpayerinfo(data)
+                case '/government/alienid':
+                    return verify_alienid(data)
                 case _:
-                    return make_response(404, {'message': 'Path Not Found',error: f'Path Not Found: {path}'})
+                    return make_response(404, {'message': 'Path Not Found','error': f'Path Not Found: {path}'})
 
         except json.JSONDecodeError:
             logger.error("Error decoding JSON body")
@@ -380,7 +382,9 @@ def verify_passport(event_data):
                                                 processing_accuracy=processing_accuracy)
 
                 logger.info(f"Match results: {matchResults}")
-                return make_response(200, dict(message="Verification Sucessful",results=matchResults))
+                return make_response(200, dict(message="Verification Sucessful",
+                                               results=matchResults,
+                                               iprsData=api_result.get('data', {})))
             else:
                 logger.error(f"Missing 'data' field in returned data: {api_result}")
                 return make_response(400, {'message': 'Missing \'data\' field in returned data', 'error': "Data missing in API response"})
@@ -493,6 +497,119 @@ def verify_taxpayerinfo(event_data):
     except Exception as e:
         logger.error(f"KRA ID validation failed: {str(e)}")
         return make_response(500, {'message': 'Error: KRA ID validation failed', 'error': str(e)})
+
+
+def verify_alienid(event_data):
+    """
+    Verify Alien ID against IPRS database.
+    """
+    schema = {
+        "type": "object",
+        "properties": {
+            "alienIdNumber": {"type": "string"},
+            "fullNames": {"type": "string"},
+            "gender": {"type": "string"},
+            "dateOfBirth": {"type": "string"},
+            "nationality": {"type": "string"},
+            "passportNumber": {"type": "string"},
+            "serialNumber": {"type": "string"},
+        },
+        "required": ["alienIdNumber"],
+        "additionalProperties": False
+    }
+
+    try:
+        validate(schema=schema, event=event_data)
+    except Exception as e:
+        logger.error(f"Schema validation failed for Alien ID: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
+
+    try:
+        response = serviceValidator.iprs.search_alien_id(dict(identifier="ALIEN_ID", value=event_data['alienIdNumber']))
+        if response.status_code >= 400:
+            error_message = 'Error in API response'
+            try:
+                error_object = response.json()
+                if 'errors' in error_object.get('error', {}):
+                    if 'errorMessage' in error_object['error']['errors']:
+                        error_message = error_object['error']['errors']['errorMessage']
+                elif 'message' in error_object:
+                    error_message = f"{response.status_code}: {error_object['message']}"
+                else:
+                    error_message = f'{response.status_code}: Error in API response'
+            except Exception as e:
+                error_message = f'{response.status_code}: Error in API response'
+            if response.status_code >= 500:
+                logger.error(f"Received status code: {response.status_code}; {error_message} :{response.json()}")
+                return make_response(response.status_code, dict(message="Error in API response", error=error_message))
+            elif response.status_code >= 400:
+                logger.warning(f"Received status code: {response.status_code}; {error_message} :{response.json()}")
+                return make_response(response.status_code, dict(message="Error in API response", error=error_message))
+        else:
+            api_result = response.json()
+            logger.info(f"IPRS Alien ID response: {api_result}")
+            
+            if "error" in api_result:
+                if api_result["error"]:
+                    return make_response(400, {'message': api_result['error'], 'error': api_result["error"]})
+            if "success" in api_result:
+                if api_result["success"] == False:
+                    return make_response(400, {'message': 'Call was not successful', 'error': "Call was not successful"})
+            
+            if 'data' in api_result:
+                # Construct fullNames from IPRS response
+                firstName = api_result['data'].get('firstName', '')
+                otherName = api_result['data'].get('otherName', '')
+                surname = api_result['data'].get('surname', '')
+                fullNames = f"{firstName} {otherName} {surname}".replace("  ", " ").strip().upper()
+                api_result['data']['fullNames'] = fullNames
+
+                # Match fields - IPRS returns alienId as 'idNumber'
+                alienIdMatchResult = process(event_name='alienIdNumber', api_field_name='idNumber', event=event_data, api_result=api_result)
+                fullNamesMatchResult = process(event_name='fullNames', api_field_name='fullNames', event=event_data, api_result=api_result)
+                genderMatchResult = process(event_name='gender', api_field_name='gender', event=event_data, api_result=api_result)
+                dateOfBirthMatchResult = process(event_name='dateOfBirth', api_field_name='dateOfBirth', event=event_data, api_result=api_result, is_date_field=True)
+                nationalityMatchResult = process(event_name='nationality', api_field_name='nationality', event=event_data, api_result=api_result)
+                passportNumberMatchResult = process(event_name='passportNumber', api_field_name='passportNumber', event=event_data, api_result=api_result)
+                serialNumberMatchResult = process(event_name='serialNumber', api_field_name='serialNumber', event=event_data, api_result=api_result)
+
+                matchResults = dict(
+                    alienIdNumber=alienIdMatchResult,
+                    fullNames=fullNamesMatchResult,
+                    gender=genderMatchResult,
+                    dateOfBirth=dateOfBirthMatchResult,
+                    nationality=nationalityMatchResult,
+                    passportNumber=passportNumberMatchResult,
+                    serialNumber=serialNumberMatchResult,
+                )
+
+                _documentType = DOCUMENT_TYPE.ALIEN_ID if hasattr(DOCUMENT_TYPE, 'ALIEN_ID') else 'ALIEN_ID'
+                _documentIdentifier = event_data['alienIdNumber']
+
+                validation_accuracy, processing_accuracy = rate(matchResults)
+
+                try:
+                    portal.capture_doc_verification(
+                        documentType=_documentType,
+                        documentIdentifier=_documentIdentifier,
+                        matchResults=matchResults,
+                        validation_accuracy=validation_accuracy,
+                        processing_accuracy=processing_accuracy
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to capture doc verification: {e}")
+
+                logger.info(f"Match results: {matchResults}")
+                return make_response(200, dict(
+                    message="Verification Successful",
+                    results=matchResults,
+                    iprsData=api_result.get('data', {})
+                ))
+            else:
+                return make_response(400, {'message': 'Missing \'data\' field in returned data', 'error': api_result})
+    except Exception as e:
+        logger.error(f"Alien ID verification failed: {e}")
+        return make_response(500, {'message': 'Alien ID verification failed', 'error': str(e)})
 
 
 def make_response(status_code, body):

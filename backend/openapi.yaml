@@ -369,6 +369,92 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /document/alienid:
+    post:
+      summary: Validate Alien ID document with IPRS cross-validation
+      operationId: validateAlienIdDocument
+      description: |
+        Validates Alien ID documents issued to foreign nationals residing in Kenya.
+        Includes IPRS cross-validation for serial number and gender (v1.2 feature).
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlienIdDocumentValidationRequest'
+      responses:
+        '200':
+          description: Document validation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentValidationResult'
+        '400':
+          description: Invalid input or document validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error or document processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /document/militaryid:
+    post:
+      summary: Validate Military ID document with IPRS cross-validation
+      operationId: validateMilitaryIdDocument
+      description: |
+        Validates Military ID documents issued to Kenya Defence Forces personnel.
+        Includes IPRS cross-validation for serial number and gender (v1.2 feature).
+      x-amazon-apigateway-integration:
+        uri: 
+          Fn::Sub: "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DocumentValidationFn.Arn}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MilitaryIdDocumentValidationRequest'
+      responses:
+        '200':
+          description: Document validation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentValidationResult'
+        '400':
+          description: Invalid input or document validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error or document processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
                 
   /faceliveness:
     post:
@@ -1000,6 +1086,96 @@ components:
         - uploadedDocumentUrl
         - businessNumber
         - businessName
+      additionalProperties: false
+
+    AlienIdDocumentValidationRequest:
+      type: object
+      description: Request for Alien ID document validation with IPRS cross-validation
+      properties:
+        uploadedDocumentUrl:
+          type: string
+          description: URL of the uploaded Alien ID document
+          format: url
+        alienIdNumber:
+          type: string
+          description: Alien ID number
+          example: '123456789'
+        serialNumber:
+          type: string
+          description: Serial number on the Alien ID
+        fullNames:
+          type: string
+          description: Full names as per Alien ID
+        gender:
+          type: string
+          description: Gender (M/F)
+        dateOfBirth:
+          type: string
+          description: Date of birth
+          format: date
+        nationality:
+          type: string
+          description: Nationality of the alien
+        dateOfIssue:
+          type: string
+          description: Date of issue
+          format: date
+        dateOfExpiry:
+          type: string
+          description: Date of expiry
+          format: date
+        occupation:
+          type: string
+          description: Occupation
+      required:
+        - uploadedDocumentUrl
+        - alienIdNumber
+      additionalProperties: false
+
+    MilitaryIdDocumentValidationRequest:
+      type: object
+      description: Request for Military ID document validation with IPRS cross-validation
+      properties:
+        uploadedDocumentUrl:
+          type: string
+          description: URL of the uploaded Military ID document
+          format: url
+        serviceNumber:
+          type: string
+          description: Military service number
+          example: 'KDF123456'
+        idNumber:
+          type: string
+          description: National ID number (for IPRS lookup)
+        serialNumber:
+          type: string
+          description: Serial number on the Military ID
+        fullNames:
+          type: string
+          description: Full names as per Military ID
+        gender:
+          type: string
+          description: Gender (M/F)
+        dateOfBirth:
+          type: string
+          description: Date of birth
+          format: date
+        rank:
+          type: string
+          description: Military rank
+        unit:
+          type: string
+          description: Military unit
+        dateOfIssue:
+          type: string
+          description: Date of issue
+          format: date
+        bloodGroup:
+          type: string
+          description: Blood group
+      required:
+        - uploadedDocumentUrl
+        - serviceNumber
       additionalProperties: false
 
     BackgroundCheckRequest:

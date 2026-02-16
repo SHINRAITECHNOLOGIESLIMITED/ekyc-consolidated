@@ -2,15 +2,13 @@
 version = 0.1
 
 [default.deploy.parameters]
-resolve_s3 = true
-profile = "default"
-stack_name = "jubilee-ekyc-backend"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-jogi1ykjkuno"
+profile = "pasha-eu"
+stack_name = "jubilee-ekyc-dev"
 region = "eu-west-1"
-confirm_changeset = true
+confirm_changeset = false
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = [
-    "AmplifyS3BucketName=amplify-dnw02dhxhpu7h-mai-kycdocumentsbucketa4bf11-wxhjqijfdzdz"
-]
+parameter_overrides = []
 
 [jubilee.deploy.parameters]
 resolve_s3 = true
