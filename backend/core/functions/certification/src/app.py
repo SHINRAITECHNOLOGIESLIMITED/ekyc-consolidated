@@ -162,10 +162,18 @@ def create_customer_certificate(data):
         id_verification = data.get('idVerification') or data.get('passportVerification')
         tax_verification = data['taxPayerVerification']
         background_check = data['backgroundCheck']
+        # v1.2 enhancements (optional — backward compatible)
+        serial_number_validation = data.get('serialNumberValidation')
+        gender_validation = data.get('genderValidation')
+        face_matching = data.get('faceMatching')
         identifier = registration["customerId"]
         # Create PDF certificate
-        pdf_buffer = generate_kyc_certificate("Customer", identifier,
-                                              registration, id_validation, id_verification, tax_verification, background_check)
+        pdf_buffer = generate_kyc_certificate(
+            "Customer", identifier, registration, id_validation,
+            id_verification, tax_verification, background_check,
+            serial_number_validation=serial_number_validation,
+            gender_validation=gender_validation,
+            face_matching=face_matching)
 
         # Generate S3 path for the certificate
         id_number = registration['idNumber']
@@ -269,10 +277,18 @@ def create_individual_agent_certificate(data):
         id_verification = data.get('idVerification') or data.get('passportVerification')
         tax_verification = data['taxPayerVerification']
         background_check = data['backgroundCheck']
+        # v1.2 enhancements (optional — backward compatible)
+        serial_number_validation = data.get('serialNumberValidation')
+        gender_validation = data.get('genderValidation')
+        face_matching = data.get('faceMatching')
         identifier = registration["agentId"]
         # Create PDF certificate
-        pdf_buffer = generate_kyc_certificate("Individual Agent", identifier,
-                                              registration, id_validation, id_verification, tax_verification, background_check)
+        pdf_buffer = generate_kyc_certificate(
+            "Individual Agent", identifier, registration, id_validation,
+            id_verification, tax_verification, background_check,
+            serial_number_validation=serial_number_validation,
+            gender_validation=gender_validation,
+            face_matching=face_matching)
 
         # Generate S3 path for the certificate
         id_number = registration['idNumber']
@@ -366,9 +382,12 @@ def create_business_agent_certificate(data):
         return make_response(500, {'message': 'Failed to create KYC certificate', 'error': str(e)})
 
 
-def generate_kyc_certificate(certificateType, identifier, registration, id_validation, id_verification, tax_verification, background_check):
+def generate_kyc_certificate(certificateType, identifier, registration, id_validation, id_verification,
+                             tax_verification, background_check, serial_number_validation=None,
+                             gender_validation=None, face_matching=None):
     """
-    Generate a PDF KYC certificate based on verification results
+    Generate a PDF KYC certificate based on verification results.
+    Includes v1.2 enhancements: serial number validation, gender validation, face matching.
     """
     try:
         buffer = BytesIO()
@@ -544,6 +563,115 @@ def generate_kyc_certificate(certificateType, identifier, registration, id_valid
         except Exception as e:
             logger.error(f"Error adding Background check: {e}")
             #raise Exception("Failed to add Background check to PDF")
+        # ── v1.2 Enhancements ────────────────────────────────────────────
+        try:
+            # Serial Number Validation (v1.2)
+            if serial_number_validation:
+                y_position -= 30
+                # Start new page if running low on space
+                if y_position < 120:
+                    pdf.showPage()
+                    y_position = 750
+                pdf.setFont("Helvetica-Bold", 12)
+                pdf.drawString(70, y_position, "Serial Number Validation (v1.2):")
+                pdf.setFont("Helvetica", 12)
+                status = serial_number_validation.get('status', 'N/A')
+                status_icon = "✓" if status == "MATCH" else ("✗" if status == "MISMATCH" else "?")
+                y_position -= 20
+                pdf.drawString(90, y_position, f"Status: {status_icon} {status}")
+                extracted = serial_number_validation.get('extractedSerialNumber', 'N/A')
+                iprs_val = serial_number_validation.get('iprsSerialNumber', 'N/A')
+                y_position -= 20
+                pdf.drawString(90, y_position, f"Document Serial: {extracted}")
+                y_position -= 20
+                pdf.drawString(90, y_position, f"IPRS Serial: {iprs_val}")
+                reason = serial_number_validation.get('reason')
+                if reason:
+                    y_position -= 20
+                    y_position = wrap_text(pdf, f"Reason: {reason}", 90, y_position, 450)
+        except Exception as e:
+            logger.error(f"Error adding Serial Number validation: {e}")
+        try:
+            # Gender Validation (v1.2)
+            if gender_validation:
+                y_position -= 30
+                if y_position < 120:
+                    pdf.showPage()
+                    y_position = 750
+                pdf.setFont("Helvetica-Bold", 12)
+                pdf.drawString(70, y_position, "Gender Validation - IPRS (v1.2):")
+                pdf.setFont("Helvetica", 12)
+                status = gender_validation.get('status', 'N/A')
+                status_icon = "✓" if status == "MATCH" else ("✗" if status == "MISMATCH" else "?")
+                y_position -= 20
+                pdf.drawString(90, y_position, f"Status: {status_icon} {status}")
+                extracted = gender_validation.get('extractedGender', 'N/A')
+                iprs_val = gender_validation.get('iprsGender', 'N/A')
+                y_position -= 20
+                pdf.drawString(90, y_position, f"Document Gender: {extracted}")
+                y_position -= 20
+                pdf.drawString(90, y_position, f"IPRS Gender: {iprs_val}")
+                reason = gender_validation.get('reason')
+                if reason:
+                    y_position -= 20
+                    y_position = wrap_text(pdf, f"Reason: {reason}", 90, y_position, 450)
+        except Exception as e:
+            logger.error(f"Error adding Gender validation: {e}")
+        try:
+            # Face Matching (v1.2)
+            if face_matching:
+                y_position -= 30
+                if y_position < 120:
+                    pdf.showPage()
+                    y_position = 750
+                pdf.setFont("Helvetica-Bold", 12)
+                pdf.drawString(70, y_position, "Face Matching (v1.2):")
+                pdf.setFont("Helvetica", 12)
+                decision = face_matching.get('overall_decision', 'N/A')
+                decision_icon = "✓" if decision == "AUTO_APPROVED" else (
+                    "⚠" if decision in ("PARTIAL_MATCH", "MANUAL_REVIEW") else "✗")
+                y_position -= 20
+                pdf.drawString(90, y_position, f"Decision: {decision_icon} {decision}")
+                y_position -= 20
+                lowest = face_matching.get('lowest_score')
+                pdf.drawString(90, y_position, f"Lowest Score: {lowest}%" if lowest is not None else "Lowest Score: N/A")
+                y_position -= 20
+                doc_type = face_matching.get('document_type', 'N/A')
+                pdf.drawString(90, y_position, f"Document Type: {doc_type}")
+                y_position -= 20
+                iprs_photo = face_matching.get('iprs_photo_available', False)
+                pdf.drawString(90, y_position, f"IPRS Photo Available: {'Yes' if iprs_photo else 'No'}")
+                y_position -= 20
+                manual = face_matching.get('requires_manual_review', False)
+                pdf.drawString(90, y_position, f"Manual Review Required: {'Yes' if manual else 'No'}")
+                # Individual comparisons
+                comparisons = face_matching.get('comparisons', {})
+                if comparisons:
+                    y_position -= 20
+                    pdf.drawString(90, y_position, "Comparisons:")
+                    for pair_name, comp_data in comparisons.items():
+                        y_position -= 18
+                        if y_position < 80:
+                            pdf.showPage()
+                            y_position = 750
+                        sim = comp_data.get('similarity', 'N/A')
+                        matched = comp_data.get('matched', False)
+                        match_icon = "✓" if matched else "✗"
+                        pdf.drawString(100, y_position, f"{match_icon} {pair_name}: {sim}%")
+                # Thresholds
+                thresholds = face_matching.get('thresholds', {})
+                if thresholds:
+                    y_position -= 18
+                    approve = thresholds.get('auto_approve', 70)
+                    review = thresholds.get('manual_review', 50)
+                    pdf.drawString(90, y_position, f"Thresholds: Approve >= {approve}%, Review >= {review}%")
+                # Error
+                fm_error = face_matching.get('error')
+                if fm_error:
+                    y_position -= 20
+                    y_position = wrap_text(pdf, f"Error: {fm_error}", 90, y_position, 450)
+        except Exception as e:
+            logger.error(f"Error adding Face Matching: {e}")
         try:
             # Add certification statement
             y_position -= 40

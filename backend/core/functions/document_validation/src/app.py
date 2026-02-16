@@ -20,7 +20,7 @@ from portal import Portal,DOCUMENT_TYPE
 # v1.2 Feature imports - Serial Number and Gender Validation
 from serial_number_validator import validate_serial_number, ValidationStatus
 from gender_validator import validate_gender, GenderValidationStatus
-from iprs_schema import validate_iprs_response_schema, check_schema_compatibility, IPRS_SCHEMA_VERSION, emit_schema_validation_metric
+from iprs_schema import validate_iprs_response_schema, IPRS_SCHEMA_VERSION, emit_schema_validation_metric, SchemaValidationStatus
 
 KYCDOCUMENTSBUCKET_NAME = os.environ.get('KYCDOCUMENTSBUCKET_NAME', None)
 assert KYCDOCUMENTSBUCKET_NAME is not None, "KYCDOCUMENTSBUCKET_NAME is not set"
@@ -51,20 +51,71 @@ except ImportError:
 def convert_to_pdf(file_name, content_type):
     """
     Read file_name format based on content type.
+    
+    For PDFs that may not be directly supported by Textract (e.g., scanned PDFs),
+    converts them to image-based PDFs that Textract can process.
 
     Parameters:
     - file_name: document path
     - content_type: MIME type of the document
 
     Returns:
-    - PDF binary data
+    - PDF binary data (image-based for Textract compatibility)
     """
-
-    # update function to convert using filename
     if content_type == 'application/pdf':
-        # If it's already a PDF, just return the binary data
-        with open(file_name, 'rb') as f:
-            return f.read()
+        # Convert PDF to images then back to PDF for Textract compatibility
+        # This handles scanned PDFs and other formats Textract doesn't support directly
+        try:
+            import fitz  # PyMuPDF - pure Python, no external dependencies
+            
+            logger.info("Converting PDF to image-based PDF for Textract compatibility")
+            
+            # Open the PDF
+            doc = fitz.open(file_name)
+            
+            if doc.page_count == 0:
+                logger.warning("No pages in PDF, returning original")
+                with open(file_name, 'rb') as f:
+                    return f.read()
+            
+            # Convert each page to image and create new PDF
+            images = []
+            for page_num in range(doc.page_count):
+                page = doc[page_num]
+                # Render page to image at 200 DPI for good OCR quality
+                mat = fitz.Matrix(200/72, 200/72)  # 200 DPI
+                pix = page.get_pixmap(matrix=mat)
+                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                images.append(img)
+            
+            doc.close()
+            
+            # Create a new PDF from the images
+            img_buffer = io.BytesIO()
+            
+            if len(images) == 1:
+                images[0].save(img_buffer, format='PDF')
+            else:
+                # Multiple pages - save all as single PDF
+                images[0].save(
+                    img_buffer, 
+                    format='PDF', 
+                    save_all=True, 
+                    append_images=images[1:]
+                )
+            
+            logger.info(f"Converted {len(images)} page(s) to image-based PDF")
+            return img_buffer.getvalue()
+            
+        except ImportError:
+            logger.warning("PyMuPDF not available, returning original PDF")
+            with open(file_name, 'rb') as f:
+                return f.read()
+        except Exception as e:
+            logger.warning(f"PDF conversion failed ({e}), returning original PDF")
+            with open(file_name, 'rb') as f:
+                return f.read()
+    
     logger.info(f"Document is not a PDF, converting to PDF")
     if content_type.startswith('image/'):
         # Handle image conversion
@@ -78,7 +129,7 @@ def convert_to_pdf(file_name, content_type):
         c.save()
         return img_buffer.getvalue()
     else:
-        raise Exception(f"Unsupported file type: {content_type}")  # Fixed syntax error
+        raise Exception(f"Unsupported file type: {content_type}")
 
 
 def copy_to_s3(url, object_key):
@@ -184,6 +235,10 @@ def handler(event, context):
                     return validate_krapincertificate(data)
                 case '/document/cr12':
                     return validate_cr12(data)
+                case '/document/alienid':
+                    return validate_alienid(data)
+                case '/document/militaryid':
+                    return validate_militaryid(data)
                 case _:
                     return make_response(404, {'message': 'Path Not Found'})
 
@@ -384,16 +439,21 @@ def fetch_iprs_data(id_number: str) -> dict:
             return result
         
         # Validate schema before extracting data
-        schema_valid, missing_fields, schema_error = validate_iprs_response_schema(api_result)
-        result["schema_valid"] = schema_valid
+        schema_result = validate_iprs_response_schema(api_result)
+        result["schema_valid"] = schema_result.status == SchemaValidationStatus.VALID
         
         # Emit schema validation metric
-        emit_schema_validation_metric(metrics, schema_valid, missing_fields)
+        emit_schema_validation_metric(
+            metrics,
+            schema_result.status == SchemaValidationStatus.VALID,
+            schema_result.missing_fields
+        )
         
-        if not schema_valid:
-            result["error"] = f"IPRS schema validation failed: {schema_error}"
+        if schema_result.status == SchemaValidationStatus.INVALID:
+            result["error"] = f"IPRS schema validation failed: missing {schema_result.missing_fields}"
             logger.warning("IPRS schema validation failed", extra={
-                "missing_fields": missing_fields,
+                "missing_fields": schema_result.missing_fields,
+                "null_fields": schema_result.null_fields,
                 "schema_version": IPRS_SCHEMA_VERSION
             })
             # Continue anyway - extract what we can
@@ -406,7 +466,7 @@ def fetch_iprs_data(id_number: str) -> dict:
         logger.info("IPRS data retrieved successfully", extra={
             "has_serial": result["serialNumber"] is not None,
             "has_gender": result["gender"] is not None,
-            "schema_valid": schema_valid
+            "schema_valid": result["schema_valid"]
         })
         
         return result
@@ -469,6 +529,87 @@ def _emit_validation_metrics(serial_result, gender_result):
         logger.error("Failed to emit validation metrics", extra={
             "error": str(e)
         })
+
+
+def fetch_iprs_passport_data(passport_number: str, id_number: str) -> dict:
+    """
+    Fetch IPRS data for a passport using the dedicated passport IPRS endpoint.
+    
+    Uses /iprs/searchUsingPassportNumber which returns gender (unlike the National ID
+    endpoint which requires a valid national ID number). This is the correct endpoint
+    for passport gender validation since the personal number on a passport may not be
+    a national ID number.
+    
+    Args:
+        passport_number: The passport number (e.g., 'BK080411')
+        id_number: The personal/ID number from the passport
+        
+    Returns:
+        dict with keys: gender, success, error
+    """
+    result = {
+        "gender": None,
+        "success": False,
+        "error": None
+    }
+    
+    if not IPRS_CLIENT_AVAILABLE or not ENABLE_IPRS_VALIDATION:
+        result["error"] = "IPRS validation disabled"
+        logger.info("IPRS passport validation skipped - client not available or disabled")
+        return result
+    
+    try:
+        logger.info("Fetching IPRS passport data for gender validation", extra={
+            "passport_masked": f"***{passport_number[-4:]}" if len(passport_number) >= 4 else "***"
+        })
+        
+        start_time = time.time()
+        
+        response = esb_client.iprs.search_passport_number({
+            "identifier": "PASSPORT",
+            "value": passport_number,
+            "idNumber": id_number
+        })
+        
+        latency_ms = (time.time() - start_time) * 1000
+        metrics.add_metric(name="IPRSPassportAPILatency", unit=MetricUnit.Milliseconds, value=latency_ms)
+        
+        if response.status_code >= 400:
+            result["error"] = f"IPRS Passport API error: {response.status_code}"
+            logger.warning("IPRS Passport API returned error", extra={
+                "status_code": response.status_code
+            })
+            metrics.add_metric(name="IPRSAPIError", unit=MetricUnit.Count, value=1)
+            return result
+        
+        api_result = response.json()
+        
+        # ESB passport endpoint returns {"status":"success","code":200,"data":{...}}
+        # Check both possible success indicators
+        if not api_result.get("success") and api_result.get("status") != "success":
+            result["error"] = "IPRS passport lookup unsuccessful"
+            logger.warning("IPRS passport lookup unsuccessful", extra={
+                "response": api_result
+            })
+            return result
+        
+        data = api_result.get("data", {})
+        result["gender"] = data.get("gender")
+        result["success"] = True
+        
+        logger.info("IPRS passport data retrieved successfully", extra={
+            "has_gender": result["gender"] is not None
+        })
+        
+        return result
+        
+    except Exception as e:
+        result["error"] = f"IPRS passport lookup failed: {str(e)}"
+        logger.error("IPRS passport lookup exception", extra={
+            "error": str(e)
+        })
+        metrics.add_metric(name="IPRSAPIError", unit=MetricUnit.Count, value=1)
+        return result
 
 
 def validate_nationalid(data):
@@ -568,9 +709,15 @@ def validate_nationalid(data):
             extracted_serial = extracted_form['SERIAL_NUMBER']['value']
         
         # Extract gender from Textract for IPRS comparison
+        # Fall back to user-provided gender if Textract couldn't extract it
         extracted_gender = None
         if 'SEX' in extracted_form and extracted_form['SEX'].get('value'):
             extracted_gender = extracted_form['SEX']['value']
+        elif data.get('gender'):
+            extracted_gender = data['gender']
+            logger.info("Using user-provided gender (Textract extraction failed)", extra={
+                "gender": extracted_gender
+            })
         
         # Perform IPRS validations (non-blocking)
         serial_validation_result = validate_serial_number(
@@ -619,6 +766,12 @@ def validate_nationalid(data):
 
 
 def validate_passport(data):
+    """
+    Validate Passport document with IPRS cross-validation.
+    
+    Uses Textract queries for reliable field extraction from Kenyan passports.
+    Supports IPRS validation when personalNumber (ID number) is provided.
+    """
     schema = {
         "type": "object",
         "properties": {
@@ -650,69 +803,126 @@ def validate_passport(data):
         object_key = f"Passport/{data['passportNumber']}.pdf"
         url, s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
         logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
+        
+        # Use Textract queries for more reliable passport field extraction
+        queriesConfig = {
+            'Queries': [
+                {'Text': 'What is the passport number?', 'Alias': 'PASSPORT_NUMBER'},
+                {'Text': 'What is the surname or family name?', 'Alias': 'SURNAME'},
+                {'Text': 'What are the given names or first names?', 'Alias': 'GIVEN_NAMES'},
+                {'Text': 'What is the date of birth?', 'Alias': 'DATE_OF_BIRTH'},
+                {'Text': 'What is the place of birth?', 'Alias': 'PLACE_OF_BIRTH'},
+                {'Text': 'What is the sex or gender?', 'Alias': 'SEX'},
+                {'Text': 'What is the date of issue?', 'Alias': 'DATE_OF_ISSUE'},
+                {'Text': 'What is the date of expiry or expiration date?', 'Alias': 'DATE_OF_EXPIRY'},
+                {'Text': 'What is the nationality?', 'Alias': 'NATIONALITY'},
+                {'Text': 'What is the personal number or ID number?', 'Alias': 'PERSONAL_NUMBER'},
+                {'Text': 'What is the country code?', 'Alias': 'COUNTRY_CODE'},
+                {'Text': 'What is the issuing authority?', 'Alias': 'ISSUING_AUTHORITY'},
+            ]
+        }
+        
+        # Try query-based extraction first
+        try:
+            extracted_form = query(s3Path, queriesConfig=queriesConfig)
+            logger.info(f"Passport Textract query results: {extracted_form}")
+            extraction_method = "queries"
+        except Exception as query_error:
+            logger.warning(f"Query extraction failed, falling back to form extraction: {query_error}")
+            extracted = extract(s3Path)
+            extracted_form = extracted["form"]
+            extraction_method = "forms"
+        
+        # Also get phrases for keyword checks
         extracted = extract(s3Path)
-        extracted_form = extracted["form"]
-        logger.info(extracted_form)
         extracted_prose = " ".join(item['text'] for item in extracted["phrases"]).lower()
+        
         checks = []
         checks.append(
-            {"check": 'Contains the words "Jamhuri ya Kenya"', "result": "Jamhuri ya Kenya".lower() in extracted_prose})
+            {"check": 'Contains the words "Jamhuri ya Kenya"', "result": "jamhuri ya kenya" in extracted_prose})
         checks.append({"check": 'Contains the words "Republic of Kenya"',
-                       "result": "Republic of Kenya".lower() in extracted_prose})
+                       "result": "republic of kenya" in extracted_prose})
         checks.append({"check": 'Contains the words "Republique de Kenya"',
-                       "result": "Republique de Kenya".lower() in extracted_prose})
-        documentTypeMatchResult = process(event_name='documentType', textract_name='TYPEAINA/TYPE', event=data,
-                                          form=extracted_form)
-        countryCodeMatchResult = process(event_name='countryCode',
-                                         textract_name='COUNTRY_CODE_NAMBARI_YA_NCHICODE_DU_PAYS', event=data,
-                                         form=extracted_form)
-        passportNumberMatchResult = process(event_name='passportNumber',
-                                            textract_name='PASSPORT_NO_NAMBARI_YA_PAST_N°_DE_PASSEPORT',
+                       "result": "republique de kenya" in extracted_prose})
+        checks.append({"check": 'Contains the word "PASSPORT"',
+                       "result": "passport" in extracted_prose})
+        
+        # Process field matches using query aliases or form field names
+        passportNumberMatchResult = process(event_name='passportNumber', textract_name='PASSPORT_NUMBER',
                                             event=data, form=extracted_form)
-        personalNumberMatchResult = process(event_name='personalNumber',
-                                            textract_name='PERSONAL_NO_NAMBARI_YA_KIBINAFSI/NO_PERSONNEL',
-                                            event=data, form=extracted_form)
-        surnameMatchResult = process(event_name='surname', textract_name='SURNAME./INA_LA_UKAO-NOM', event=data,
-                                     form=extracted_form)
-        givenNamesMatchResult = process(event_name='givenNames', textract_name='GIVEN_NAMES/MAJINA_ALIYOPEWA,_PRENOMS',
+        surnameMatchResult = process(event_name='surname', textract_name='SURNAME',
+                                     event=data, form=extracted_form)
+        givenNamesMatchResult = process(event_name='givenNames', textract_name='GIVEN_NAMES',
                                         event=data, form=extracted_form)
-        dateOfBirthMatchResult = process(event_name='dateOfBirth',
-                                         textract_name='DATE_OF_BIRTH/TAREHE_YA_KUZALIWA_DATE_DE_NAISSANCE',
-                                         event=data, form=extracted_form,is_date_field=True)
-        placeOfBirthMatchResult = process(event_name='placeOfBirth',
-                                          textract_name='SEXUINSIASEXE_PLACE_OF_BIRTH_MAHAH_PA_KUZALIWALIEU_DE_NAISSANCE',
+        dateOfBirthMatchResult = process(event_name='dateOfBirth', textract_name='DATE_OF_BIRTH',
+                                         event=data, form=extracted_form, is_date_field=True)
+        placeOfBirthMatchResult = process(event_name='placeOfBirth', textract_name='PLACE_OF_BIRTH',
                                           event=data, form=extracted_form)
-        genderMatchResult = process(event_name='gender', textract_name='SEXUINSIASEXE', event=data,
-                                    form=extracted_form)
-        dateOfIssueMatchResult = process(event_name='dateOfIssue', textract_name='DATE_OF_ISSUE_TAREHE_VA_KUTOLENA',
-                                         event=data, form=extracted_form,is_date_field=True)
-        dateOfExpiryMatchResult = process(event_name='dateOfExpiry', textract_name='DATE_OF_EXPIRY', event=data,
-                                          form=extracted_form,is_date_field=True)
-        nationalityMatchResult = process(event_name='nationality', textract_name='NATIONALITY/UTAIFA/NATIONALITÉ',
+        genderMatchResult = process(event_name='gender', textract_name='SEX',
+                                    event=data, form=extracted_form)
+        dateOfIssueMatchResult = process(event_name='dateOfIssue', textract_name='DATE_OF_ISSUE',
+                                         event=data, form=extracted_form, is_date_field=True)
+        dateOfExpiryMatchResult = process(event_name='dateOfExpiry', textract_name='DATE_OF_EXPIRY',
+                                          event=data, form=extracted_form, is_date_field=True)
+        nationalityMatchResult = process(event_name='nationality', textract_name='NATIONALITY',
                                          event=data, form=extracted_form)
-        issuingAuthorityMatchResult = process(event_name='issuingAuthority',
-                                              textract_name='ISSUING_AUTHORITY_MAMLAKA_YA_KUTOA_PASIAUTORITE',
+        personalNumberMatchResult = process(event_name='personalNumber', textract_name='PERSONAL_NUMBER',
+                                            event=data, form=extracted_form)
+        countryCodeMatchResult = process(event_name='countryCode', textract_name='COUNTRY_CODE',
+                                         event=data, form=extracted_form)
+        issuingAuthorityMatchResult = process(event_name='issuingAuthority', textract_name='ISSUING_AUTHORITY',
                                               event=data, form=extracted_form)
 
-        matchResults = dict(documentType=documentTypeMatchResult,
-                            countryCode=countryCodeMatchResult,
-                            passportNumber=passportNumberMatchResult,
-                            personalNumber=personalNumberMatchResult,
-                            surname=surnameMatchResult,
-                            gender=genderMatchResult,
-                            givenNames=givenNamesMatchResult,
-                            dateOfBirth=dateOfBirthMatchResult,
-                            placeOfBirth=placeOfBirthMatchResult,
-                            dateOfIssue=dateOfIssueMatchResult,
-                            dateOfExpiry=dateOfExpiryMatchResult,
-                            nationality=nationalityMatchResult,
-                            issuingAuthority=issuingAuthorityMatchResult,
-                            )
+        matchResults = dict(
+            passportNumber=passportNumberMatchResult,
+            surname=surnameMatchResult,
+            givenNames=givenNamesMatchResult,
+            gender=genderMatchResult,
+            dateOfBirth=dateOfBirthMatchResult,
+            placeOfBirth=placeOfBirthMatchResult,
+            dateOfIssue=dateOfIssueMatchResult,
+            dateOfExpiry=dateOfExpiryMatchResult,
+            nationality=nationalityMatchResult,
+            personalNumber=personalNumberMatchResult,
+            countryCode=countryCodeMatchResult,
+            issuingAuthority=issuingAuthorityMatchResult,
+        )
 
-        _documentType=DOCUMENT_TYPE.PASSPORT
-        _documentIdentifier=data['passportNumber']
+        # v1.2 Feature: IPRS Gender Validation for Passport
+        # Uses the passport IPRS endpoint (search_passport_number) which returns gender.
+        # The National ID endpoint (search_generic) won't work here because the passport
+        # personal number may not be a national ID number.
+        passport_number = data.get('passportNumber')
+        id_number = data.get('personalNumber')
+        if not id_number and 'PERSONAL_NUMBER' in extracted_form:
+            id_number = extracted_form['PERSONAL_NUMBER'].get('value')
+        if passport_number and id_number:
+            iprs_data = fetch_iprs_passport_data(passport_number, id_number)
+            
+            # Extract gender from Textract for IPRS comparison
+            extracted_gender = None
+            if 'SEX' in extracted_form and extracted_form['SEX'].get('value'):
+                extracted_gender = extracted_form['SEX']['value']
+            
+            # Perform gender validation only (non-blocking)
+            gender_validation_result = validate_gender(
+                extracted_gender=extracted_gender,
+                iprs_gender=iprs_data.get("gender")
+            )
+            
+            # Add IPRS gender validation result to matchResults
+            matchResults['genderValidation'] = gender_validation_result.to_dict()
+            
+            # Log validation outcomes
+            logger.info("Passport IPRS gender validation completed", extra={
+                "gender_status": gender_validation_result.status.value,
+                "iprs_available": iprs_data.get("success", False)
+            })
 
-        confidence,validation_accuracy,processing_accuracy = rate(matchResults)
+        _documentType = DOCUMENT_TYPE.PASSPORT
+        _documentIdentifier = data['passportNumber']
+
+        confidence, validation_accuracy, processing_accuracy = rate(matchResults)
         portal.capture_doc_validation(documentType=_documentType,
                                       s3Path=s3Path,
                                       documentIdentifier=_documentIdentifier,
@@ -722,9 +932,19 @@ def validate_passport(data):
                                       processing_accuracy=processing_accuracy,
                                       overall_confidence=confidence)
 
-        results = dict(keywords_checks=checks, matchResults=matchResults)
+        # Include extracted data in response for transparency
+        extracted_data = {
+            field: extracted_form.get(field, {}).get('value') if isinstance(extracted_form.get(field), dict) else None
+            for field in ['PASSPORT_NUMBER', 'SURNAME', 'GIVEN_NAMES', 'SEX', 'DATE_OF_BIRTH',
+                          'PLACE_OF_BIRTH', 'DATE_OF_ISSUE', 'DATE_OF_EXPIRY', 'NATIONALITY',
+                          'PERSONAL_NUMBER', 'COUNTRY_CODE', 'ISSUING_AUTHORITY']
+            if field in extracted_form
+        }
+
+        results = dict(keywords_checks=checks, matchResults=matchResults, extractedData=extracted_data,
+                       extractionMethod=extraction_method)
         logger.info(f"Results: {results}")
-        return make_response(200, dict(s3Path=s3Path, results=results))
+        return make_response(200, dict(message="Validation successful", s3Path=s3Path, results=results))
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_passport: {e}")
         return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
@@ -856,6 +1076,389 @@ def validate_cr12(data):
         return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
     except Exception as e:
         logger.error(f"An unexpected error occurred in validate_cr12: {e}")
+        return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
+
+
+def fetch_iprs_alien_data(alien_id: str) -> dict:
+    """
+    Fetch IPRS data for a given Alien ID using the dedicated Alien ID API.
+    
+    Uses /iprs/searchUsingAlienId endpoint per IPRS API v1.2 documentation.
+    
+    Args:
+        alien_id: The Alien ID number to look up
+        
+    Returns:
+        dict with keys: serialNumber, gender, success, error
+    """
+    result = {
+        "serialNumber": None,
+        "gender": None,
+        "success": False,
+        "error": None
+    }
+    
+    if not IPRS_CLIENT_AVAILABLE or not ENABLE_IPRS_VALIDATION:
+        result["error"] = "IPRS validation disabled"
+        logger.info("IPRS validation skipped - client not available or disabled")
+        return result
+    
+    try:
+        logger.info("Fetching IPRS data for Alien ID validation", extra={
+            "alien_id_masked": f"***{alien_id[-4:]}" if len(alien_id) >= 4 else "***"
+        })
+        
+        start_time = time.time()
+        
+        # Use the dedicated Alien ID search API
+        response = esb_client.iprs.search_alien_id({
+            "identifier": "ALIEN_ID",
+            "value": alien_id
+        })
+        
+        latency_ms = (time.time() - start_time) * 1000
+        metrics.add_metric(name="IPRSAlienAPILatency", unit=MetricUnit.Milliseconds, value=latency_ms)
+        
+        if response.status_code >= 400:
+            result["error"] = f"IPRS Alien API error: {response.status_code}"
+            logger.warning("IPRS Alien API returned error", extra={"status_code": response.status_code})
+            return result
+        
+        api_result = response.json()
+        
+        if not api_result.get("success"):
+            result["error"] = "IPRS Alien lookup unsuccessful"
+            logger.warning("IPRS Alien lookup unsuccessful", extra={"response": api_result})
+            return result
+        
+        data = api_result.get("data", {})
+        result["serialNumber"] = data.get("serialNumber")
+        result["gender"] = data.get("gender")
+        result["success"] = True
+        
+        logger.info("IPRS Alien data retrieved successfully", extra={
+            "has_serial": result["serialNumber"] is not None,
+            "has_gender": result["gender"] is not None
+        })
+        
+        return result
+        
+    except Exception as e:
+        result["error"] = f"IPRS Alien lookup failed: {str(e)}"
+        logger.error("IPRS Alien lookup exception", extra={"error": str(e)})
+        return result
+
+
+def validate_alienid(data):
+    """
+    Validate Alien ID (Foreigner Certificate) with IPRS cross-validation.
+    
+    Alien IDs are issued to foreign nationals residing in Kenya. Uses Amazon Textract
+    for OCR extraction with IPRS validation for serial number and gender.
+    
+    Front side fields: SERIAL NUMBER, FULL NAMES, NATIONALITY, PLACE OF BIRTH,
+    PLACE OF ISSUE, DATE OF ISSUE, DATE OF EXPIRY, SEX, DATE OF BIRTH, INDIV. NUMBER
+    """
+    schema = {
+        "type": "object",
+        "properties": {
+            "uploadedDocumentUrl": {"type": "string", "format": "uri"},
+            "alienIdNumber": {"type": "string"},
+            "serialNumber": {"type": "string"},
+            "fullNames": {"type": "string"},
+            "gender": {"type": "string"},
+            "dateOfBirth": {"type": "string"},
+            "nationality": {"type": "string"},
+            "placeOfBirth": {"type": "string"},
+            "placeOfIssue": {"type": "string"},
+            "dateOfIssue": {"type": "string"},
+            "dateOfExpiry": {"type": "string"},
+            "indivNumber": {"type": "string"},
+        },
+        "required": ["uploadedDocumentUrl", "alienIdNumber"],
+        "additionalProperties": False
+    }
+
+    try:
+        validate(event=data, schema=schema)
+    except Exception as e:
+        logger.error(f"Schema validation failed for AlienID document: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
+    
+    try:
+        object_key = f"AlienID/{data['alienIdNumber']}.pdf"
+        url, s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
+        logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
+        
+        # Use Textract for OCR extraction
+        extracted = extract(s3Path)
+        extracted_form = extracted["form"]
+        logger.info(f"Alien ID Textract extraction results: {extracted_form}")
+        extracted_prose = " ".join(item['text'] for item in extracted["phrases"]).lower()
+        
+        # Keyword checks for Alien ID document
+        checks = []
+        checks.append({"check": 'Contains "FOREIGNER CERTIFICATE" or "ALIEN"',
+                       "result": "foreigner" in extracted_prose or "alien" in extracted_prose})
+        checks.append({"check": 'Contains "REPUBLIC OF KENYA"',
+                       "result": "republic of kenya" in extracted_prose})
+        
+        # Process field matches - map request fields to extracted values
+        # Note: Textract field names may include dots (e.g., INDIV._NUMBER)
+        serialNumberMatchResult = process(event_name='serialNumber', textract_name='SERIAL_NUMBER',
+                                          event=data, form=extracted_form)
+        fullNamesMatchResult = process(event_name='fullNames', textract_name='FULL_NAMES',
+                                       event=data, form=extracted_form)
+        genderMatchResult = process(event_name='gender', textract_name='SEX',
+                                    event=data, form=extracted_form)
+        dateOfBirthMatchResult = process(event_name='dateOfBirth', textract_name='DATE_OF_BIRTH',
+                                         event=data, form=extracted_form, is_date_field=True)
+        nationalityMatchResult = process(event_name='nationality', textract_name='NATIONALITY',
+                                         event=data, form=extracted_form)
+        placeOfBirthMatchResult = process(event_name='placeOfBirth', textract_name='PLACE_OF_BIRTH',
+                                          event=data, form=extracted_form)
+        placeOfIssueMatchResult = process(event_name='placeOfIssue', textract_name='PLACE_OF_ISSUE',
+                                          event=data, form=extracted_form)
+        dateOfIssueMatchResult = process(event_name='dateOfIssue', textract_name='DATE_OF_ISSUE',
+                                         event=data, form=extracted_form, is_date_field=True)
+        dateOfExpiryMatchResult = process(event_name='dateOfExpiry', textract_name='DATE_OF_EXPIRY',
+                                          event=data, form=extracted_form, is_date_field=True)
+        # Textract returns INDIV._NUMBER (with dot) - try both variants
+        indivNumberMatchResult = process(event_name='indivNumber', textract_name='INDIV._NUMBER',
+                                         event=data, form=extracted_form)
+        if indivNumberMatchResult['status'] == 'Not Found':
+            indivNumberMatchResult = process(event_name='indivNumber', textract_name='INDIV_NUMBER',
+                                             event=data, form=extracted_form)
+
+        matchResults = dict(
+            serialNumber=serialNumberMatchResult,
+            fullNames=fullNamesMatchResult,
+            gender=genderMatchResult,
+            dateOfBirth=dateOfBirthMatchResult,
+            nationality=nationalityMatchResult,
+            placeOfBirth=placeOfBirthMatchResult,
+            placeOfIssue=placeOfIssueMatchResult,
+            dateOfIssue=dateOfIssueMatchResult,
+            dateOfExpiry=dateOfExpiryMatchResult,
+            indivNumber=indivNumberMatchResult,
+        )
+        
+        # v1.2 Feature: IPRS Validation for Serial Number and Gender (Alien ID)
+        # Use dedicated Alien ID IPRS API
+        iprs_data = fetch_iprs_alien_data(data['alienIdNumber'])
+        
+        # Extract values from Textract for IPRS comparison
+        extracted_serial = None
+        if 'SERIAL_NUMBER' in extracted_form and extracted_form['SERIAL_NUMBER'].get('value'):
+            extracted_serial = extracted_form['SERIAL_NUMBER']['value']
+        
+        extracted_gender = None
+        if 'SEX' in extracted_form and extracted_form['SEX'].get('value'):
+            extracted_gender = extracted_form['SEX']['value']
+        
+        # Perform IPRS validations (non-blocking)
+        serial_validation_result = validate_serial_number(
+            extracted_serial=extracted_serial,
+            iprs_serial=iprs_data.get("serialNumber")
+        )
+        
+        gender_validation_result = validate_gender(
+            extracted_gender=extracted_gender,
+            iprs_gender=iprs_data.get("gender")
+        )
+        
+        # Add IPRS validation results to matchResults
+        matchResults['serialNumberValidation'] = serial_validation_result.to_dict()
+        matchResults['genderValidation'] = gender_validation_result.to_dict()
+        
+        # Log validation outcomes
+        logger.info("Alien ID IPRS validation completed", extra={
+            "serial_status": serial_validation_result.status.value,
+            "gender_status": gender_validation_result.status.value,
+            "iprs_available": iprs_data.get("success", False),
+            "extraction_method": "textract"
+        })
+        
+        # Emit validation metrics
+        _emit_validation_metrics(serial_validation_result, gender_validation_result)
+
+        _documentType = DOCUMENT_TYPE.ALIEN_ID
+        _documentIdentifier = data['alienIdNumber']
+
+        confidence, validation_accuracy, processing_accuracy = rate(matchResults)
+        portal.capture_doc_validation(
+            documentType=_documentType,
+            s3Path=s3Path,
+            documentIdentifier=_documentIdentifier,
+            matchResults=matchResults,
+            keywords_checks=checks,
+            validation_accuracy=validation_accuracy,
+            processing_accuracy=processing_accuracy,
+            overall_confidence=confidence
+        )
+
+        # Include extracted data in response for transparency
+        extracted_data = {
+            field: extracted_form.get(field, {}).get('value')
+            for field in ['SERIAL_NUMBER', 'FULL_NAMES', 'SEX', 'DATE_OF_BIRTH', 'NATIONALITY',
+                          'PLACE_OF_BIRTH', 'PLACE_OF_ISSUE', 'DATE_OF_ISSUE', 'DATE_OF_EXPIRY',
+                          'INDIV._NUMBER', 'PASSPORT_NUMBER', 'RESIDENTIAL_ADDRESS', 'IMMIGRATION_STATUS']
+            if field in extracted_form
+        }
+        
+        results = dict(keywords_checks=checks, matchResults=matchResults, extractedData=extracted_data)
+        logger.info(f"Results: {results}")
+        return make_response(200, dict(message="Validation successful", s3Path=s3Path, results=results))
+
+    except Exception as e:
+        logger.error(f"An unexpected error occurred in validate_alienid: {e}")
+        return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
+
+
+def validate_militaryid(data):
+    """
+    Validate Military ID document with IPRS cross-validation for serial number and gender.
+    
+    Military IDs are issued to Kenya Defence Forces personnel and can be validated
+    against IPRS using the associated national ID number.
+    """
+    schema = {
+        "type": "object",
+        "properties": {
+            "uploadedDocumentUrl": {"type": "string", "format": "uri"},
+            "serviceNumber": {"type": "string"},
+            "idNumber": {"type": "string"},
+            "serialNumber": {"type": "string"},
+            "fullNames": {"type": "string"},
+            "gender": {"type": "string"},
+            "dateOfBirth": {"type": "string"},
+            "rank": {"type": "string"},
+            "unit": {"type": "string"},
+            "dateOfIssue": {"type": "string"},
+            "bloodGroup": {"type": "string"},
+        },
+        "required": ["uploadedDocumentUrl", "serviceNumber"],
+        "additionalProperties": False
+    }
+
+    try:
+        validate(event=data, schema=schema)
+    except Exception as e:
+        logger.error(f"Schema validation failed for MilitaryID document: {e}")
+        return make_response(400, {'message': 'Request body validation failed', 'error': str(e)})
+    
+    try:
+        object_key = f"MilitaryID/{data['serviceNumber']}.pdf"
+        url, s3Path = copy_to_s3(url=data['uploadedDocumentUrl'], object_key=object_key)
+        logger.info(f"Downloaded {data['uploadedDocumentUrl']} to {url}")
+        
+        extracted = extract(s3Path)
+        extracted_form = extracted["form"]
+        logger.info(extracted_form)
+        extracted_prose = " ".join(item['text'] for item in extracted["phrases"]).lower()
+        
+        checks = []
+        checks.append({"check": 'Contains the words "Kenya Defence Forces"',
+                       "result": "kenya defence forces".lower() in extracted_prose})
+        checks.append({"check": 'Contains the words "Military"',
+                       "result": "military".lower() in extracted_prose})
+        
+        # Process field matches
+        serviceNumberMatchResult = process(event_name='serviceNumber', textract_name='SERVICE_NUMBER',
+                                           event=data, form=extracted_form)
+        idNumberMatchResult = process(event_name='idNumber', textract_name='ID_NUMBER',
+                                      event=data, form=extracted_form)
+        serialNumberMatchResult = process(event_name='serialNumber', textract_name='SERIAL_NUMBER',
+                                          event=data, form=extracted_form)
+        fullNamesMatchResult = process(event_name='fullNames', textract_name='FULL_NAMES',
+                                       event=data, form=extracted_form)
+        genderMatchResult = process(event_name='gender', textract_name='SEX',
+                                    event=data, form=extracted_form)
+        dateOfBirthMatchResult = process(event_name='dateOfBirth', textract_name='DATE_OF_BIRTH',
+                                         event=data, form=extracted_form, is_date_field=True)
+        rankMatchResult = process(event_name='rank', textract_name='RANK',
+                                  event=data, form=extracted_form)
+        unitMatchResult = process(event_name='unit', textract_name='UNIT',
+                                  event=data, form=extracted_form)
+        dateOfIssueMatchResult = process(event_name='dateOfIssue', textract_name='DATE_OF_ISSUE',
+                                         event=data, form=extracted_form, is_date_field=True)
+        bloodGroupMatchResult = process(event_name='bloodGroup', textract_name='BLOOD_GROUP',
+                                        event=data, form=extracted_form)
+
+        matchResults = dict(
+            serviceNumber=serviceNumberMatchResult,
+            idNumber=idNumberMatchResult,
+            serialNumber=serialNumberMatchResult,
+            fullNames=fullNamesMatchResult,
+            gender=genderMatchResult,
+            dateOfBirth=dateOfBirthMatchResult,
+            rank=rankMatchResult,
+            unit=unitMatchResult,
+            dateOfIssue=dateOfIssueMatchResult,
+            bloodGroup=bloodGroupMatchResult,
+        )
+        
+        # v1.2 Feature: IPRS Validation for Serial Number and Gender (Military ID)
+        # Use national ID number for IPRS lookup if available
+        lookup_id = data.get('idNumber') or data['serviceNumber']
+        iprs_data = fetch_iprs_data(lookup_id)
+        
+        # Extract serial number from Textract for IPRS comparison
+        extracted_serial = None
+        if 'SERIAL_NUMBER' in extracted_form and extracted_form['SERIAL_NUMBER'].get('value'):
+            extracted_serial = extracted_form['SERIAL_NUMBER']['value']
+        
+        # Extract gender from Textract for IPRS comparison
+        extracted_gender = None
+        if 'SEX' in extracted_form and extracted_form['SEX'].get('value'):
+            extracted_gender = extracted_form['SEX']['value']
+        
+        # Perform IPRS validations (non-blocking)
+        serial_validation_result = validate_serial_number(
+            extracted_serial=extracted_serial,
+            iprs_serial=iprs_data.get("serialNumber")
+        )
+        
+        gender_validation_result = validate_gender(
+            extracted_gender=extracted_gender,
+            iprs_gender=iprs_data.get("gender")
+        )
+        
+        # Add IPRS validation results to matchResults
+        matchResults['serialNumberValidation'] = serial_validation_result.to_dict()
+        matchResults['genderValidation'] = gender_validation_result.to_dict()
+        
+        # Log validation outcomes
+        logger.info("Military ID IPRS validation completed", extra={
+            "serial_status": serial_validation_result.status.value,
+            "gender_status": gender_validation_result.status.value,
+            "iprs_available": iprs_data.get("success", False)
+        })
+        
+        # Emit validation metrics
+        _emit_validation_metrics(serial_validation_result, gender_validation_result)
+
+        _documentType = DOCUMENT_TYPE.MILITARY_ID
+        _documentIdentifier = data['serviceNumber']
+
+        confidence, validation_accuracy, processing_accuracy = rate(matchResults)
+        portal.capture_doc_validation(
+            documentType=_documentType,
+            s3Path=s3Path,
+            documentIdentifier=_documentIdentifier,
+            matchResults=matchResults,
+            keywords_checks=checks,
+            validation_accuracy=validation_accuracy,
+            processing_accuracy=processing_accuracy,
+            overall_confidence=confidence
+        )
+
+        results = dict(keywords_checks=checks, matchResults=matchResults)
+        logger.info(f"Results: {results}")
+        return make_response(200, dict(message="Validation successful", s3Path=s3Path, results=results))
+
+    except Exception as e:
+        logger.error(f"An unexpected error occurred in validate_militaryid: {e}")
         return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
 
 

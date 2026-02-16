@@ -1,225 +1,432 @@
 """
-IPRS Response Schema Definition and Validation
+IPRS Response Schema Validation Module
 
-Defines the expected schema for IPRS API responses and provides validation
-to detect schema changes that could break validation logic.
+Validates IPRS API responses against expected schema to detect schema drift early.
+Emits CloudWatch metrics for monitoring and alerting.
 
-Schema Version: 1.0.0
-Last Updated: January 2026
+Requirements: Schema validation for v1.2 features (serial number, gender, photo)
 """
 
-import os
-from typing import Dict, List, Optional, Tuple
-from aws_lambda_powertools import Logger
+from dataclasses import dataclass
+from enum import Enum
+from typing import Optional
+
+from aws_lambda_powertools import Logger, Metrics
 from aws_lambda_powertools.metrics import MetricUnit
 
 logger = Logger()
+metrics = Metrics(namespace="JubileeEKYC/IPRS")
 
-# Metrics namespace for IPRS validation
-METRICS_NAMESPACE = os.environ.get('METRICS_NAMESPACE', 'JubileeEKYC/DocumentValidation')
+# Schema version for tracking compatibility
+IPRS_SCHEMA_VERSION = "1.2.0"
 
-# Schema version - update when IPRS response structure changes
-IPRS_SCHEMA_VERSION = "1.0.0"
 
-# SSM Parameter name for schema version (can be overridden via environment)
-IPRS_SCHEMA_VERSION_PARAM = os.environ.get(
-    'IPRS_SCHEMA_VERSION_PARAM',
-    '/jubilee-ekyc/esb/iprs-schema-version'
-)
+class SchemaValidationStatus(Enum):
+    """Schema validation outcome status."""
+    VALID = "VALID"
+    INVALID = "INVALID"
+    PARTIAL = "PARTIAL"
 
-# Required fields for National ID validation
-REQUIRED_FIELDS_NATIONAL_ID = [
-    'idNumber',
-    'serialNumber',
-    'firstName',
-    'surname',
-    'gender',
-    'dateOfBirth',
-    'dateOfIssue',
-    'placeOfBirth'
+
+@dataclass
+class SchemaValidationResult:
+    """
+    Result of IPRS response schema validation.
+    
+    Attributes:
+        status: Validation outcome (VALID, INVALID, or PARTIAL)
+        missing_fields: List of required fields that are missing
+        null_fields: List of required fields that are present but null
+        extra_fields: List of unexpected fields (informational)
+        schema_version: Expected schema version
+    """
+    status: SchemaValidationStatus
+    missing_fields: list[str]
+    null_fields: list[str]
+    extra_fields: list[str]
+    schema_version: str = "1.0.0"
+    
+    def to_dict(self) -> dict:
+        """Convert to dictionary for logging/API response."""
+        return {
+            "status": self.status.value,
+            "missingFields": self.missing_fields,
+            "nullFields": self.null_fields,
+            "extraFields": self.extra_fields,
+            "schemaVersion": self.schema_version,
+            "isValid": self.status == SchemaValidationStatus.VALID
+        }
+
+
+# Required fields for National ID IPRS response
+NATIONAL_ID_REQUIRED_FIELDS = [
+    "idNumber",
+    "serialNumber",
+    "firstName",
+    "surname",
+    "gender",
+    "dateOfBirth",
+    "dateOfIssue",
+    "placeOfBirth"
 ]
 
-# Optional fields that may be present
-OPTIONAL_FIELDS_NATIONAL_ID = [
-    'otherName',
-    'citizenship',
-    'photo'
+
+# Optional fields (may be present)
+NATIONAL_ID_OPTIONAL_FIELDS = [
+    "otherName",
+    "citizenship",
+    "photo"
+]
+
+# v1.2 feature-specific required fields
+V12_SERIAL_NUMBER_FIELDS = ["serialNumber"]
+V12_GENDER_FIELDS = ["gender"]
+V12_FACE_MATCHING_FIELDS = ["photo"]
+
+# Passport response required fields
+PASSPORT_REQUIRED_FIELDS = [
+    "passportNumber",
+    "firstName",
+    "surname",
+    "gender",
+    "dateOfBirth",
+    "dateOfIssue",
+    "dateOfExpiry"
 ]
 
 
 def validate_iprs_response_schema(
-    response: Dict,
-    document_type: str = "NATIONAL_ID"
-) -> Tuple[bool, List[str], Optional[str]]:
+    response: dict,
+    document_type: str = "national_id",
+    request_id: Optional[str] = None
+) -> SchemaValidationResult:
     """
-    Validate that an IPRS response conforms to the expected schema.
+    Validate IPRS response conforms to expected schema.
+    
+    Checks for required fields, null values, and unexpected fields.
+    Emits CloudWatch metrics for monitoring schema drift.
     
     Args:
-        response: The IPRS API response dictionary
-        document_type: Type of document being validated (NATIONAL_ID, PASSPORT, etc.)
+        response: Raw IPRS API response dictionary
+        document_type: Type of document ("national_id" or "passport")
+        request_id: Optional request ID for logging correlation
     
     Returns:
-        Tuple of (is_valid, missing_fields, error_message)
-        - is_valid: True if schema is valid
-        - missing_fields: List of missing required fields
-        - error_message: Error description if validation failed
+        SchemaValidationResult with validation details
+    
+    Example:
+        >>> response = {"success": True, "data": {"idNumber": "123", ...}}
+        >>> result = validate_iprs_response_schema(response)
+        >>> result.status
+        SchemaValidationStatus.VALID
     """
-    # Check for success flag
-    if not response.get('success'):
-        return False, [], "IPRS response indicates failure"
+    # Check top-level response structure
+    if not isinstance(response, dict):
+        logger.error("IPRS response is not a dictionary", extra={
+            "request_id": request_id,
+            "response_type": type(response).__name__
+        })
+        _emit_schema_metric("INVALID", document_type, ["response_not_dict"])
+        return SchemaValidationResult(
+            status=SchemaValidationStatus.INVALID,
+            missing_fields=["response_structure"],
+            null_fields=[],
+            extra_fields=[]
+        )
     
-    # Check for data object
-    data = response.get('data')
-    if not data:
-        return False, [], "IPRS response missing 'data' field"
+    # Check success flag
+    if not response.get("success"):
+        error_msg = response.get("error", "Unknown error")
+        logger.warning("IPRS response indicates failure", extra={
+            "request_id": request_id,
+            "error": error_msg
+        })
+        # This is a valid response structure, just unsuccessful
+        return SchemaValidationResult(
+            status=SchemaValidationStatus.VALID,
+            missing_fields=[],
+            null_fields=[],
+            extra_fields=[]
+        )
     
-    if not isinstance(data, dict):
-        return False, [], "IPRS response 'data' is not a dictionary"
+    # Get data payload
+    data = response.get("data")
+    if data is None:
+        logger.error("IPRS response missing data field", extra={
+            "request_id": request_id
+        })
+        _emit_schema_metric("INVALID", document_type, ["data_missing"])
+        return SchemaValidationResult(
+            status=SchemaValidationStatus.INVALID,
+            missing_fields=["data"],
+            null_fields=[],
+            extra_fields=[]
+        )
     
-    # Get required fields based on document type
-    if document_type == "NATIONAL_ID":
-        required_fields = REQUIRED_FIELDS_NATIONAL_ID
+    # Select required fields based on document type
+    if document_type == "passport":
+        required_fields = PASSPORT_REQUIRED_FIELDS
+        optional_fields = ["otherName", "nationality", "photo"]
     else:
-        # Default to National ID fields for now
-        required_fields = REQUIRED_FIELDS_NATIONAL_ID
+        required_fields = NATIONAL_ID_REQUIRED_FIELDS
+        optional_fields = NATIONAL_ID_OPTIONAL_FIELDS
     
-    # Check for missing required fields
-    missing_fields = [field for field in required_fields if field not in data]
+    # Check for missing fields
+    missing_fields = [f for f in required_fields if f not in data]
     
-    if missing_fields:
-        logger.warning("IPRS schema validation - missing fields", extra={
-            "missing_fields": missing_fields,
-            "document_type": document_type,
-            "schema_version": IPRS_SCHEMA_VERSION
-        })
-        return False, missing_fields, f"Missing required fields: {', '.join(missing_fields)}"
+    # Check for null values in required fields
+    null_fields = [
+        f for f in required_fields 
+        if f in data and data[f] is None
+    ]
     
-    # Check for null values in critical fields
-    null_critical_fields = []
-    critical_fields = ['serialNumber', 'gender']
-    for field in critical_fields:
-        if data.get(field) is None:
-            null_critical_fields.append(field)
+    # Identify extra fields (informational, not an error)
+    all_expected = set(required_fields + optional_fields)
+    extra_fields = [f for f in data.keys() if f not in all_expected]
     
-    if null_critical_fields:
-        logger.warning("IPRS schema validation - null critical fields", extra={
-            "null_fields": null_critical_fields,
-            "document_type": document_type
-        })
-        # This is a warning, not a failure - fields exist but are null
-    
-    logger.info("IPRS schema validation passed", extra={
+    # Log validation details
+    logger.info("IPRS schema validation completed", extra={
+        "request_id": request_id,
         "document_type": document_type,
-        "schema_version": IPRS_SCHEMA_VERSION,
-        "has_serial": data.get('serialNumber') is not None,
-        "has_gender": data.get('gender') is not None
+        "missing_fields": missing_fields,
+        "null_fields": null_fields,
+        "extra_fields": extra_fields
     })
     
-    return True, [], None
-
-
-def get_schema_version() -> str:
-    """
-    Get the current IPRS schema version.
+    # Determine status
+    if missing_fields or null_fields:
+        if len(missing_fields) + len(null_fields) <= 2:
+            status = SchemaValidationStatus.PARTIAL
+        else:
+            status = SchemaValidationStatus.INVALID
+    else:
+        status = SchemaValidationStatus.VALID
     
-    In production, this could be fetched from SSM Parameter Store
-    to allow dynamic updates without redeployment.
+    # Emit metrics
+    _emit_schema_metric(status.value, document_type, missing_fields + null_fields)
     
-    Returns:
-        Schema version string
-    """
-    # For now, return the hardcoded version
-    # TODO: Implement SSM Parameter Store lookup for production
-    return IPRS_SCHEMA_VERSION
+    return SchemaValidationResult(
+        status=status,
+        missing_fields=missing_fields,
+        null_fields=null_fields,
+        extra_fields=extra_fields
+    )
 
 
-def check_schema_compatibility(response: Dict) -> Dict:
+
+def validate_v12_fields(
+    response: dict,
+    features: list[str],
+    request_id: Optional[str] = None
+) -> dict[str, SchemaValidationResult]:
     """
-    Check if the IPRS response is compatible with the current schema version.
+    Validate v1.2 feature-specific fields in IPRS response.
     
-    Returns a dict with compatibility information for logging/metrics.
+    Checks availability of fields required for specific v1.2 features:
+    - serial_number: Requires serialNumber field
+    - gender: Requires gender field
+    - face_matching: Requires photo field
     
     Args:
-        response: The IPRS API response
+        response: Raw IPRS API response dictionary
+        features: List of features to validate ("serial_number", "gender", "face_matching")
+        request_id: Optional request ID for logging correlation
     
     Returns:
-        Dict with keys: compatible, version, missing_fields, warnings
-    """
-    is_valid, missing_fields, error = validate_iprs_response_schema(response)
+        Dictionary mapping feature name to validation result
     
-    result = {
-        "compatible": is_valid,
-        "version": IPRS_SCHEMA_VERSION,
-        "missing_fields": missing_fields,
-        "error": error,
-        "warnings": []
+    Example:
+        >>> result = validate_v12_fields(response, ["serial_number", "gender"])
+        >>> result["serial_number"].status
+        SchemaValidationStatus.VALID
+    """
+    results = {}
+    data = response.get("data", {}) if response.get("success") else {}
+    
+    feature_field_map = {
+        "serial_number": V12_SERIAL_NUMBER_FIELDS,
+        "gender": V12_GENDER_FIELDS,
+        "face_matching": V12_FACE_MATCHING_FIELDS
     }
     
-    # Check for unexpected fields (schema evolution)
-    if is_valid:
-        data = response.get('data', {})
-        known_fields = set(REQUIRED_FIELDS_NATIONAL_ID + OPTIONAL_FIELDS_NATIONAL_ID)
-        actual_fields = set(data.keys())
-        new_fields = actual_fields - known_fields
+    for feature in features:
+        required = feature_field_map.get(feature, [])
+        missing = [f for f in required if f not in data]
+        null_fields = [f for f in required if f in data and data[f] is None]
         
-        if new_fields:
-            result["warnings"].append(f"New fields detected: {', '.join(new_fields)}")
-            logger.info("IPRS schema - new fields detected", extra={
-                "new_fields": list(new_fields),
-                "schema_version": IPRS_SCHEMA_VERSION
-            })
-    
-    return result
-
-
-def emit_schema_validation_metric(metrics, is_valid: bool, missing_fields: List[str] = None):
-    """
-    Emit CloudWatch metrics for IPRS schema validation.
-    
-    This function emits metrics that can be used to create CloudWatch alarms
-    for schema mismatch detection.
-    
-    Args:
-        metrics: AWS Lambda Powertools Metrics instance
-        is_valid: Whether schema validation passed
-        missing_fields: List of missing fields (if any)
-    """
-    try:
-        # Emit schema validation result metric
-        metrics.add_metric(
-            name="IPRSSchemaValidation",
-            unit=MetricUnit.Count,
-            value=1 if is_valid else 0
+        if missing or null_fields:
+            status = SchemaValidationStatus.INVALID
+        else:
+            status = SchemaValidationStatus.VALID
+        
+        results[feature] = SchemaValidationResult(
+            status=status,
+            missing_fields=missing,
+            null_fields=null_fields,
+            extra_fields=[]
         )
         
-        # Emit schema mismatch metric (for alarming)
-        if not is_valid:
+        # Log feature-specific validation
+        logger.info(f"v1.2 {feature} field validation", extra={
+            "request_id": request_id,
+            "feature": feature,
+            "status": status.value,
+            "missing": missing,
+            "null": null_fields
+        })
+        
+        # Emit feature-specific metric
+        _emit_feature_metric(feature, status.value)
+    
+    return results
+
+
+def extract_validated_field(
+    response: dict,
+    field_name: str,
+    default: Optional[str] = None
+) -> Optional[str]:
+    """
+    Safely extract a field from IPRS response with validation.
+    
+    Args:
+        response: Raw IPRS API response dictionary
+        field_name: Name of field to extract
+        default: Default value if field is missing or null
+    
+    Returns:
+        Field value or default
+    """
+    if not response.get("success"):
+        return default
+    
+    data = response.get("data", {})
+    value = data.get(field_name)
+    
+    if value is None or (isinstance(value, str) and value.strip() == ""):
+        return default
+    
+    return value
+
+
+def _emit_schema_metric(
+    status: str,
+    document_type: str,
+    problem_fields: list[str]
+) -> None:
+    """Emit CloudWatch metric for schema validation."""
+    try:
+        metrics.add_metric(
+            name="SchemaValidation",
+            unit=MetricUnit.Count,
+            value=1
+        )
+        metrics.add_dimension(name="Status", value=status)
+        metrics.add_dimension(name="DocumentType", value=document_type)
+        
+        # Emit specific metric for schema drift detection
+        if status != "VALID":
             metrics.add_metric(
-                name="IPRSSchemaMismatch",
+                name="SchemaDrift",
                 unit=MetricUnit.Count,
                 value=1
             )
-            
-            # Add dimension for missing fields count
-            metrics.add_dimension(
-                name="MissingFieldsCount",
-                value=str(len(missing_fields) if missing_fields else 0)
-            )
-            
-            logger.warning("IPRS schema mismatch metric emitted", extra={
-                "missing_fields": missing_fields,
-                "schema_version": IPRS_SCHEMA_VERSION
+            logger.warning("Schema drift detected", extra={
+                "status": status,
+                "document_type": document_type,
+                "problem_fields": problem_fields
             })
-        else:
-            # Emit zero for mismatch when valid (for consistent metric)
-            metrics.add_metric(
-                name="IPRSSchemaMismatch",
-                unit=MetricUnit.Count,
-                value=0
-            )
-            
     except Exception as e:
-        # Don't fail validation due to metrics emission error
-        logger.error("Failed to emit schema validation metric", extra={
-            "error": str(e)
-        })
+        logger.error(f"Failed to emit schema metric: {e}")
+
+
+def _emit_feature_metric(feature: str, status: str) -> None:
+    """Emit CloudWatch metric for v1.2 feature field availability."""
+    try:
+        metrics.add_metric(
+            name=f"V12FieldAvailability_{feature}",
+            unit=MetricUnit.Count,
+            value=1 if status == "VALID" else 0
+        )
+        
+        if status != "VALID":
+            metrics.add_metric(
+                name=f"V12FieldMissing_{feature}",
+                unit=MetricUnit.Count,
+                value=1
+            )
+    except Exception as e:
+        logger.error(f"Failed to emit feature metric: {e}")
+
+
+
+def emit_schema_validation_metric(
+    metrics_instance,
+    schema_valid: bool,
+    missing_fields: list[str]
+) -> None:
+    """
+    Emit CloudWatch metric for schema validation result.
+    
+    Args:
+        metrics_instance: AWS Lambda Powertools Metrics instance
+        schema_valid: Whether schema validation passed
+        missing_fields: List of missing field names
+    """
+    try:
+        metrics_instance.add_metric(
+            name="IPRSSchemaValidation",
+            unit=MetricUnit.Count,
+            value=1 if schema_valid else 0
+        )
+        
+        if not schema_valid and missing_fields:
+            metrics_instance.add_metric(
+                name="IPRSSchemaMissingFields",
+                unit=MetricUnit.Count,
+                value=len(missing_fields)
+            )
+    except Exception as e:
+        logger.error(f"Failed to emit schema validation metric: {e}")
+
+
+def check_schema_compatibility(
+    response: dict,
+    required_features: list[str] = None
+) -> tuple[bool, list[str], str]:
+    """
+    Check if IPRS response schema is compatible with required features.
+    
+    Args:
+        response: Raw IPRS API response dictionary
+        required_features: List of features requiring validation
+    
+    Returns:
+        Tuple of (is_valid, missing_fields, error_message)
+    """
+    if required_features is None:
+        required_features = ["serial_number", "gender"]
+    
+    if not isinstance(response, dict):
+        return False, [], "Response is not a dictionary"
+    
+    if not response.get("success"):
+        return True, [], ""  # Unsuccessful response is valid structure
+    
+    data = response.get("data", {})
+    if not data:
+        return False, ["data"], "Missing data field"
+    
+    missing = []
+    for feature in required_features:
+        if feature == "serial_number" and "serialNumber" not in data:
+            missing.append("serialNumber")
+        elif feature == "gender" and "gender" not in data:
+            missing.append("gender")
+        elif feature == "face_matching" and "photo" not in data:
+            missing.append("photo")
+    
+    if missing:
+        return False, missing, f"Missing fields: {', '.join(missing)}"
+    
+    return True, [], ""

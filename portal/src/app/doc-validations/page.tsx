@@ -84,10 +84,28 @@ const listingProps: ListingProps<DocumentValidation> = {
     },
     {
       label: "Certification of Incoporation (CR12) Validation",
-      id: "cr12", // Add an id to each action
+      id: "cr12",
       render: () => {
         return (
           <CR12ValidationForm/>
+        );
+      },
+    },
+    {
+      label: "New Alien ID Validation",
+      id: "alienid",
+      render: () => {
+        return (
+          <AlienIdValidationForm/>
+        );
+      },
+    },
+    {
+      label: "New Military ID Validation",
+      id: "militaryid",
+      render: () => {
+        return (
+          <MilitaryIdValidationForm/>
         );
       },
     },
@@ -193,4 +211,52 @@ const CR12ValidationForm: React.FC = () => (
     ]}
   />
 );
+
+const AlienIdValidationForm: React.FC = () => (
+  <DocumentForm
+    title="Alien ID Validation"
+    apiEndpoint="document/alienid"
+    fields={[
+      { id: "alienIdNumber", label: "Alien ID Number", type: "text", required: true, placeholder: "A12345678" },
+      { id: "fullNames", label: "Full Names", type: "text", placeholder: "JOHN DOE" },
+      { id: "gender", label: "Gender", type: "text", placeholder: "Male" },
+      { id: "dateOfBirth", label: "Date of Birth", type: "date", placeholder: "1990-01-01" },
+      { id: "nationality", label: "Nationality", type: "text", placeholder: "UGANDAN" },
+      { id: "serialNumber", label: "Serial Number", type: "text", placeholder: "123456789" },
+      {
+        id: "uploadedDocumentUrl",
+        label: "Alien ID Document",
+        type: "document",
+        required: true,
+        description: "Upload the front side of the Alien ID",
+        constraintText: "Supported formats: JPG, PNG, PDF"
+      }
+    ]}
+  />
+);
+
+const MilitaryIdValidationForm: React.FC = () => (
+  <DocumentForm
+    title="Military ID Validation"
+    apiEndpoint="document/militaryid"
+    fields={[
+      { id: "serviceNumber", label: "Service Number", type: "text", required: true, placeholder: "SVC12345" },
+      { id: "idNumber", label: "ID Number", type: "text", placeholder: "23667272" },
+      { id: "fullNames", label: "Full Names", type: "text", placeholder: "JOHN DOE" },
+      { id: "gender", label: "Gender", type: "text", placeholder: "Male" },
+      { id: "dateOfBirth", label: "Date of Birth", type: "date", placeholder: "1990-01-01" },
+      { id: "rank", label: "Rank", type: "text", placeholder: "CORPORAL" },
+      { id: "serialNumber", label: "Serial Number", type: "text", placeholder: "123456789" },
+      {
+        id: "uploadedDocumentUrl",
+        label: "Military ID Document",
+        type: "document",
+        required: true,
+        description: "Upload the front side of the Military ID",
+        constraintText: "Supported formats: JPG, PNG, PDF"
+      }
+    ]}
+  />
+);
+
 export default DocumentsListing;

@@ -69,6 +69,13 @@ const listingProps: ListingProps<DocumentVerification> = {
         return <KRAVerificationForm />;
       },
     },
+    {
+      label: "New Alien ID Verification",
+      id: "alienid",
+      render: () => {
+        return <AlienIdVerificationForm />;
+      },
+    },
   ],
 };
 
@@ -114,6 +121,18 @@ const KRAVerificationForm: React.FC = () => (
       { id: "idNumber", label: "ID Number", type: "text", required: true, placeholder: "23667272" },
       { id: "pin", label: "PIN", type: "text", placeholder: "A003388522V" },
       { id: "taxPayerName", label: "Tax Payer Name", type: "text", placeholder: "Jackson Gitonga Mwangi" },
+    ]}
+  />
+);
+
+const AlienIdVerificationForm: React.FC = () => (
+  <DocumentForm
+    title="Alien ID Verification"
+    apiEndpoint="government/alienid"
+    fields={[
+      { id: "alienIdNumber", label: "Alien ID Number", type: "text", required: true, placeholder: "A12345678" },
+      { id: "fullNames", label: "Full Names", type: "text", placeholder: "JOHN DOE" },
+      { id: "dateOfBirth", label: "Date of Birth", type: "date", placeholder: "1990-01-01" },
     ]}
   />
 );
