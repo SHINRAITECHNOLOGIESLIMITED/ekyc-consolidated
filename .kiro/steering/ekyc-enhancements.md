@@ -45,6 +45,14 @@ Key files:
 - `backend/core/functions/document_validation/src/app.py` — async result writing (`_write_async_result`, `_fail_async_job`)
 - `backend/template.yaml` — `AsyncJobsTable` DynamoDB resource
 
+### Response Fields (v1.2 Updates)
+Document validation responses now include:
+- `matchResults.<field>.details.ocr_confidence` — Textract OCR confidence (how sure Textract read the text)
+- `matchResults.<field>.details.match_score` — Similarity percentage between expected and actual values (0-100%), based on Levenshtein edit distance
+- `summary` block with `overall_status` (PASS/FAIL/INCONCLUSIVE), field counts (`matched`, `mismatched`, `not_provided`, `not_found`), aggregate `match_score`, and `mismatched_fields` array
+
+Note: The old `confidence` field has been renamed to `ocr_confidence` to avoid confusion. The new `match_score` field provides the actual similarity metric.
+
 ### Error Handling
 - Use consistent error codes across all features
 - Log all errors with correlation IDs
