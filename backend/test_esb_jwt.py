@@ -23,7 +23,7 @@ def decode_jwt_without_verification(token: str) -> dict:
 
         parts = token.split('.')
         if len(parts) != 3:
-            print(f"❌ Invalid JWT structure. Expected 3 parts, got {len(parts)}")
+            print(f"[FAIL] Invalid JWT structure. Expected 3 parts, got {len(parts)}")
             return None
 
         # Decode header
@@ -40,7 +40,7 @@ def decode_jwt_without_verification(token: str) -> dict:
             'signature': parts[2][:20] + '...'  # First 20 chars of signature
         }
     except Exception as e:
-        print(f"❌ Error decoding JWT: {e}")
+        print(f"[FAIL] Error decoding JWT: {e}")
         return None
 
 def get_esb_credentials():
@@ -54,7 +54,7 @@ def get_esb_credentials():
 
         # First, we need to find the secret ARN
         # Let's list secrets to find it
-        print("📋 Searching for Jubilee ESB secret...")
+        print("[INFO] Searching for Jubilee ESB secret...")
         paginator = secrets_client.get_paginator('list_secrets')
 
         esb_secret_arn = None
@@ -62,14 +62,14 @@ def get_esb_credentials():
             for secret in page['SecretList']:
                 if 'jubilee-esb' in secret['Name'].lower() or 'esb-api' in secret['Name'].lower():
                     esb_secret_arn = secret['ARN']
-                    print(f"✅ Found ESB secret: {secret['Name']}")
+                    print(f"[OK] Found ESB secret: {secret['Name']}")
                     print(f"   ARN: {esb_secret_arn}")
                     break
             if esb_secret_arn:
                 break
 
         if not esb_secret_arn:
-            print("❌ ESB secret not found. Looking for secrets with 'jubilee-esb' in name.")
+            print("[FAIL] ESB secret not found. Looking for secrets with 'jubilee-esb' in name.")
             print("\nAvailable secrets:")
             for page in paginator.paginate():
                 for secret in page['SecretList']:
@@ -80,7 +80,7 @@ def get_esb_credentials():
         response = secrets_client.get_secret_value(SecretId=esb_secret_arn)
         credentials = json.loads(response['SecretString'])
 
-        print(f"\n📦 Retrieved ESB credentials:")
+        print(f"\n[INFO] Retrieved ESB credentials:")
         print(f"   Base URL: {credentials.get('baseurl', 'N/A')}")
         print(f"   Business: {credentials.get('business', 'N/A')}")
         print(f"   Username: {credentials.get('username', 'N/A')[:5]}...")
@@ -88,7 +88,7 @@ def get_esb_credentials():
         return credentials
 
     except Exception as e:
-        print(f"❌ Error retrieving credentials: {e}")
+        print(f"[FAIL] Error retrieving credentials: {e}")
         return None
 
 def retrieve_esb_jwt_token(credentials: dict) -> str:
@@ -105,7 +105,7 @@ def retrieve_esb_jwt_token(credentials: dict) -> str:
             "Content-Type": "application/json"
         }
 
-        print(f"\n🔐 Authenticating with ESB...")
+        print(f"\n[AUTH] Authenticating with ESB...")
         print(f"   URL: {auth_url}")
 
         response = requests.post(
@@ -118,12 +118,12 @@ def retrieve_esb_jwt_token(credentials: dict) -> str:
         print(f"   Status: {response.status_code}")
 
         if response.status_code != 200:
-            print(f"❌ Authentication failed:")
+            print(f"[FAIL] Authentication failed:")
             print(f"   Response: {response.text}")
             return None
 
         token_data = response.json()
-        print(f"\n✅ Authentication successful!")
+        print(f"\n[OK] Authentication successful!")
         print(f"   Token Type: {token_data.get('tokenType', 'N/A')}")
 
         # Return full JWT string
@@ -131,7 +131,7 @@ def retrieve_esb_jwt_token(credentials: dict) -> str:
         return full_token
 
     except Exception as e:
-        print(f"❌ Error retrieving JWT token: {e}")
+        print(f"[FAIL] Error retrieving JWT token: {e}")
         return None
 
 def analyze_jwt_token(jwt_token: str):
@@ -145,14 +145,14 @@ def analyze_jwt_token(jwt_token: str):
     if not decoded:
         return
 
-    print("\n📋 HEADER:")
+    print("\n[INFO] HEADER:")
     print(json.dumps(decoded['header'], indent=2))
 
-    print("\n📋 PAYLOAD:")
+    print("\n[INFO] PAYLOAD:")
     payload = decoded['payload']
     print(json.dumps(payload, indent=2))
 
-    print("\n🔍 KEY CLAIMS:")
+    print("\n[CLAIMS] KEY CLAIMS:")
 
     # Common JWT claims
     if 'iss' in payload:
@@ -173,7 +173,7 @@ def analyze_jwt_token(jwt_token: str):
         nbf_time = datetime.fromtimestamp(payload['nbf'])
         print(f"   Not Before (nbf): {nbf_time}")
 
-    print(f"\n🔒 SIGNATURE (first 20 chars): {decoded['signature']}")
+    print(f"\n[SIGNATURE] SIGNATURE (first 20 chars): {decoded['signature']}")
 
     print("\n" + "="*70)
     print("LAMBDA AUTHORIZER REQUIREMENTS")
@@ -183,16 +183,16 @@ def analyze_jwt_token(jwt_token: str):
     print("2. Verify token structure (3 parts separated by dots)")
 
     if 'exp' in payload:
-        print("3. ✅ Verify expiration claim exists - CHECK expiration")
+        print("3. [OK] Verify expiration claim exists - CHECK expiration")
     else:
-        print("3. ⚠️  No expiration claim found - CHECK if this is expected")
+        print("3. [WARN] No expiration claim found - CHECK if this is expected")
 
     if 'iss' in payload:
-        print(f"4. ✅ Verify issuer: {payload['iss']}")
+        print(f"4. [OK] Verify issuer: {payload['iss']}")
     else:
-        print("4. ⚠️  No issuer claim - May need to validate differently")
+        print("4. [WARN] No issuer claim - May need to validate differently")
 
-    print("\n💡 RECOMMENDATIONS:")
+    print("\n[TIP] RECOMMENDATIONS:")
     if 'iss' in payload and 'cognito' in payload['iss'].lower():
         print("   - Token appears to be from Cognito")
         print("   - Can use Cognito JWKS for signature verification")
@@ -202,25 +202,25 @@ def analyze_jwt_token(jwt_token: str):
         print("   - Since ESB already authenticated, Lambda may only need basic validation")
 
 def main():
-    print("🚀 ESB JWT Token Test Script")
+    print("[START] ESB JWT Token Test Script")
     print("="*70)
 
     # Step 1: Get ESB credentials
     credentials = get_esb_credentials()
     if not credentials:
-        print("\n❌ Failed to retrieve ESB credentials. Exiting.")
+        print("\n[FAIL] Failed to retrieve ESB credentials. Exiting.")
         return 1
 
     # Step 2: Get JWT token
     jwt_token = retrieve_esb_jwt_token(credentials)
     if not jwt_token:
-        print("\n❌ Failed to retrieve JWT token. Exiting.")
+        print("\n[FAIL] Failed to retrieve JWT token. Exiting.")
         return 1
 
     # Step 3: Analyze token
     analyze_jwt_token(jwt_token)
 
-    print("\n✅ Test complete!")
+    print("\n[OK] Test complete!")
     return 0
 
 if __name__ == "__main__":

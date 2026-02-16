@@ -4,12 +4,12 @@
 
 # Release Notes
 
-## 🚨 Breaking Changes
+## Breaking Changes
 _No breaking changes were introduced in this release._
 
 ---
 
-## ✨ Features
+## Features
 
 - **AI-Powered Release Notes and Enhanced Logging**  
   Introduced automated, AI-driven release notes generation, robust logging mechanisms, and a user-friendly UI for improved release workflows.
@@ -55,14 +55,14 @@ _No breaking changes were introduced in this release._
 
 ---
 
-## 🐛 Bug Fixes
+## Bug Fixes
 
 - **Navigation Title Version Rendering**  
   Ensured the application version number is always correctly rendered as a string in the navigation title.
 
 ---
 
-## 🚀 Improvements
+## Improvements
 
 - **Standardized Step Function Workflows**  
   Standardized JSON path usage and simplified state machine workflows for more maintainable state management.
@@ -75,13 +75,13 @@ _No breaking changes were introduced in this release._
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 _No documentation-specific updates in this release._
 
 ---
 
-## 🧹 Chore & Other
+## Chore & Other
 
 - **Version Bumps**  
   Updated project versioning to v0.0.31, v0.0.32, v0.0.33, and v0.0.34 as part of the release process.

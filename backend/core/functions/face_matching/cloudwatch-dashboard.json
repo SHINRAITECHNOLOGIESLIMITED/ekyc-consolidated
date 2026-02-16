@@ -1,0 +1,226 @@
+{
+  "widgets": [
+    {
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "# Face Matching Verification Dashboard\nMonitoring for 3-way face comparison verification (v1.2 Feature)"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 1,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "Decision Outcomes",
+        "view": "pie",
+        "metrics": [
+          ["JubileeEKYC/FaceMatching", "ApprovedCount", {"label": "Approved", "color": "#2ca02c"}],
+          [".", "ManualReviewCount", {"label": "Manual Review", "color": "#ff7f0e"}],
+          [".", "RejectedCount", {"label": "Rejected", "color": "#d62728"}]
+        ],
+        "region": "eu-west-1",
+        "period": 3600,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 1,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "Decision Trend (24h)",
+        "view": "timeSeries",
+        "stacked": true,
+        "metrics": [
+          ["JubileeEKYC/FaceMatching", "ApprovedCount", {"label": "Approved", "color": "#2ca02c"}],
+          [".", "ManualReviewCount", {"label": "Manual Review", "color": "#ff7f0e"}],
+          [".", "RejectedCount", {"label": "Rejected", "color": "#d62728"}]
+        ],
+        "region": "eu-west-1",
+        "period": 300,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 1,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "Manual Review Rate (%)",
+        "view": "singleValue",
+        "metrics": [
+          [{"expression": "100 * m1 / (m1 + m2 + m3)", "label": "Manual Review %", "id": "e1"}],
+          ["JubileeEKYC/FaceMatching", "ManualReviewCount", {"id": "m1", "visible": false}],
+          [".", "ApprovedCount", {"id": "m2", "visible": false}],
+          [".", "RejectedCount", {"id": "m3", "visible": false}]
+        ],
+        "region": "eu-west-1",
+        "period": 3600,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 7,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Processing Latency (ms)",
+        "view": "timeSeries",
+        "metrics": [
+          ["JubileeEKYC/FaceMatching", "TotalProcessingTime", {"stat": "p50", "label": "p50"}],
+          [".", ".", {"stat": "p90", "label": "p90"}],
+          [".", ".", {"stat": "p99", "label": "p99"}]
+        ],
+        "region": "eu-west-1",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 7,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Comparison Latency by Type (ms)",
+        "view": "timeSeries",
+        "metrics": [
+          ["JubileeEKYC/FaceMatching", "ComparisonLatency", "ComparisonType", "selfie_vs_id", {"stat": "Average", "label": "Selfie vs ID"}],
+          [".", ".", ".", "selfie_vs_iprs", {"stat": "Average", "label": "Selfie vs IPRS"}],
+          [".", ".", ".", "id_vs_iprs", {"stat": "Average", "label": "ID vs IPRS"}]
+        ],
+        "region": "eu-west-1",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 13,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "Comparison Mode Distribution",
+        "view": "pie",
+        "metrics": [
+          ["JubileeEKYC/FaceMatching", "ThreeWayComparison", {"label": "3-Way"}],
+          [".", "TwoWayComparison", {"label": "2-Way (Degraded)"}]
+        ],
+        "region": "eu-west-1",
+        "period": 3600,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 13,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "Quality Gate Failures",
+        "view": "timeSeries",
+        "stacked": true,
+        "metrics": [
+          ["JubileeEKYC/FaceMatching", "NoFaceDetected", {"label": "No Face", "color": "#d62728"}],
+          [".", "MultipleFacesDetected", {"label": "Multiple Faces", "color": "#ff7f0e"}],
+          [".", "LowBrightnessFailures", {"label": "Low Brightness", "color": "#9467bd"}],
+          [".", "LowSharpnessFailures", {"label": "Low Sharpness", "color": "#8c564b"}],
+          [".", "LowResolutionFailures", {"label": "Low Resolution", "color": "#e377c2"}]
+        ],
+        "region": "eu-west-1",
+        "period": 300,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 13,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "Error Rates",
+        "view": "timeSeries",
+        "metrics": [
+          ["JubileeEKYC/FaceMatching", "IPRSPhotoUnavailable", {"label": "IPRS Photo Unavailable", "color": "#ff7f0e"}],
+          [".", "RekognitionErrors", {"label": "Rekognition Errors", "color": "#d62728"}],
+          [".", "ProcessingErrors", {"label": "Processing Errors", "color": "#9467bd"}]
+        ],
+        "region": "eu-west-1",
+        "period": 300,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 19,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "## UAT Threshold Tuning Metrics"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 20,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "ROC Indicators (UAT)",
+        "view": "timeSeries",
+        "metrics": [
+          ["JubileeEKYC/FaceMatching", "FalseAcceptIndicator", {"label": "Potential False Accept", "color": "#d62728"}],
+          [".", "FalseRejectIndicator", {"label": "Potential False Reject", "color": "#ff7f0e"}]
+        ],
+        "region": "eu-west-1",
+        "period": 300,
+        "stat": "Sum",
+        "annotations": {
+          "horizontal": [
+            {
+              "label": "Alert Threshold",
+              "value": 5,
+              "color": "#d62728"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 20,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Total Requests",
+        "view": "timeSeries",
+        "metrics": [
+          ["JubileeEKYC/FaceMatching", "TotalRequests", {"stat": "Sum", "label": "Total Requests"}]
+        ],
+        "region": "eu-west-1",
+        "period": 300
+      }
+    }
+  ]
+}

@@ -62,15 +62,15 @@ This document defines the expected response schemas for Jubilee ESB API integrat
 | `dateOfIssue` | string | Yes | ID issue date | "4/1/2003" |
 | `placeOfBirth` | string | Yes | District/place of birth | "NAIROBI" |
 | `citizenship` | string | No | Citizenship status | "Kenyan" |
-| `photo` | string | No | Base64 encoded photo or URL | ⚠️ Needs ESB confirmation |
+| `photo` | string | No | Base64 encoded photo or URL | Needs ESB confirmation |
 
 ### Critical Fields for v1.2 Features
 
 | Feature | Required Field | Status |
 |---------|---------------|--------|
-| Serial Number Validation | `serialNumber` | ✅ Confirmed available |
-| Gender Validation | `gender` | ✅ Confirmed available |
-| Face Matching | `photo` | ⚠️ Pending ESB confirmation |
+| Serial Number Validation | `serialNumber` | Confirmed available |
+| Gender Validation | `gender` | Confirmed available |
+| Face Matching | `photo` | Pending ESB confirmation |
 
 ---
 

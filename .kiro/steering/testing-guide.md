@@ -252,6 +252,36 @@ cd e2e
 pytest tests/verification/test_verify_nationalid.py -v
 ```
 
+### E2E Tests for Async Endpoints (Alien ID / Military ID)
+
+`validate_alienid` and `validate_militaryid` use an async job pattern (202 → poll `get_job_status` → COMPLETED). E2E tests for these endpoints must implement polling logic:
+
+```python
+# 1. Submit validation request — expect 202 with jobId
+response = requests.post(url, json=payload, headers=headers)
+assert response.status_code == 202
+job_id = response.json()["jobId"]
+
+# 2. Poll get_job_status every 5s until COMPLETED or timeout
+for _ in range(max_polls):
+    time.sleep(5)
+    poll_response = requests.post(url, json={
+        "action": "get_job_status",
+        "data": {"jobId": job_id}
+    }, headers=headers)
+    status = poll_response.json().get("status")
+    if status == "COMPLETED":
+        result = poll_response.json()["result"]
+        break
+else:
+    raise TimeoutError("Job did not complete in time")
+
+# 3. Validate the result payload as usual
+assert result["success"] is True
+```
+
+See `test_alien1_e2e.py` in the project root for a working example.
+
 ### All Tests with Verbose Output
 
 ```bash

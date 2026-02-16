@@ -29,15 +29,15 @@ def get_esb_credentials():
         session = boto3.Session(profile_name=AWS_PROFILE, region_name=AWS_REGION)
         secrets_client = session.client('secretsmanager')
         
-        print(f"📋 Retrieving ESB credentials from: {ESB_SECRET_NAME}")
+        print(f"[INFO] Retrieving ESB credentials from: {ESB_SECRET_NAME}")
         response = secrets_client.get_secret_value(SecretId=ESB_SECRET_NAME)
         credentials = json.loads(response['SecretString'])
         
-        print(f"✅ Retrieved credentials for: {credentials.get('username', 'N/A')}")
+        print(f"[OK] Retrieved credentials for: {credentials.get('username', 'N/A')}")
         return credentials
         
     except Exception as e:
-        print(f"❌ Error retrieving credentials: {e}")
+        print(f"[FAIL] Error retrieving credentials: {e}")
         return None
 
 
@@ -53,7 +53,7 @@ def get_esb_token(credentials: dict) -> str:
             "password": credentials['password']
         }
         
-        print(f"\n🔐 Authenticating with ESB...")
+        print(f"\n[AUTH] Authenticating with ESB...")
         print(f"   URL: {auth_url}")
         
         response = requests.post(
@@ -66,16 +66,16 @@ def get_esb_token(credentials: dict) -> str:
         print(f"   Status: {response.status_code}")
         
         if response.status_code != 200:
-            print(f"❌ Authentication failed: {response.text}")
+            print(f"[FAIL] Authentication failed: {response.text}")
             return None
         
         token_data = response.json()
         full_token = f"{token_data['tokenType']} {token_data['accessToken']}"
-        print(f"✅ Authentication successful!")
+        print(f"[OK] Authentication successful!")
         return full_token
         
     except Exception as e:
-        print(f"❌ Error getting token: {e}")
+        print(f"[FAIL] Error getting token: {e}")
         return None
 
 
@@ -96,7 +96,7 @@ def test_iprs_search(token: str, id_number: str, expected_name: str = None):
             "value": id_number
         }
         
-        print(f"\n🔍 Testing IPRS search for ID: {id_number}")
+        print(f"\n[SEARCH] Testing IPRS search for ID: {id_number}")
         print(f"   URL: {url}")
         
         response = requests.post(url, json=data, headers=headers, timeout=30)
@@ -104,21 +104,21 @@ def test_iprs_search(token: str, id_number: str, expected_name: str = None):
         print(f"   Status: {response.status_code}")
         
         if response.status_code != 200:
-            print(f"❌ IPRS search failed: {response.text}")
+            print(f"[FAIL] IPRS search failed: {response.text}")
             return None
         
         result = response.json()
         
         if not result.get('success'):
-            print(f"❌ IPRS lookup unsuccessful: {result.get('error')}")
+            print(f"[FAIL] IPRS lookup unsuccessful: {result.get('error')}")
             return result
         
         iprs_data = result.get('data', {})
         
-        print(f"\n✅ IPRS Response:")
+        print(f"\n[OK] IPRS Response:")
         print(f"   ID Number: {iprs_data.get('idNumber')}")
-        print(f"   Serial Number: {iprs_data.get('serialNumber')} {'✅' if iprs_data.get('serialNumber') else '❌ MISSING'}")
-        print(f"   Gender: {iprs_data.get('gender')} {'✅' if iprs_data.get('gender') else '❌ MISSING'}")
+        print(f"   Serial Number: {iprs_data.get('serialNumber')} {'[OK]' if iprs_data.get('serialNumber') else '[FAIL] MISSING'}")
+        print(f"   Gender: {iprs_data.get('gender')} {'[OK]' if iprs_data.get('gender') else '[FAIL] MISSING'}")
         print(f"   First Name: {iprs_data.get('firstName')}")
         print(f"   Surname: {iprs_data.get('surname')}")
         print(f"   Date of Birth: {iprs_data.get('dateOfBirth')}")
@@ -126,16 +126,16 @@ def test_iprs_search(token: str, id_number: str, expected_name: str = None):
         print(f"   Photo Available: {'Yes' if iprs_data.get('photo') else 'No'}")
         
         # Validate v1.2 required fields
-        print(f"\n📋 v1.2 Field Validation:")
+        print(f"\n[INFO] v1.2 Field Validation:")
         serial_ok = iprs_data.get('serialNumber') is not None
         gender_ok = iprs_data.get('gender') is not None
-        print(f"   Serial Number field: {'✅ Present' if serial_ok else '❌ Missing'}")
-        print(f"   Gender field: {'✅ Present' if gender_ok else '❌ Missing'}")
+        print(f"   Serial Number field: {'[OK] Present' if serial_ok else '[FAIL] Missing'}")
+        print(f"   Gender field: {'[OK] Present' if gender_ok else '[FAIL] Missing'}")
         
         return result
         
     except Exception as e:
-        print(f"❌ Error in IPRS search: {e}")
+        print(f"[FAIL] Error in IPRS search: {e}")
         return None
 
 
@@ -151,7 +151,7 @@ def test_iprs_ping(token: str):
             "Authorization": token
         }
         
-        print(f"\n🏓 Testing IPRS ping...")
+        print(f"\n[PING] Testing IPRS ping...")
         print(f"   URL: {url}")
         
         response = requests.post(url, json={}, headers=headers, timeout=30)
@@ -159,14 +159,14 @@ def test_iprs_ping(token: str):
         print(f"   Status: {response.status_code}")
         
         if response.status_code == 200:
-            print(f"✅ IPRS service is available!")
+            print(f"[OK] IPRS service is available!")
             return True
         else:
-            print(f"❌ IPRS ping failed: {response.text}")
+            print(f"[FAIL] IPRS ping failed: {response.text}")
             return False
             
     except Exception as e:
-        print(f"❌ Error pinging IPRS: {e}")
+        print(f"[FAIL] Error pinging IPRS: {e}")
         return False
 
 
@@ -179,13 +179,13 @@ def main():
     # Step 1: Get credentials
     credentials = get_esb_credentials()
     if not credentials:
-        print("\n❌ Failed to retrieve credentials. Exiting.")
+        print("\n[FAIL] Failed to retrieve credentials. Exiting.")
         return 1
     
     # Step 2: Get token
     token = get_esb_token(credentials)
     if not token:
-        print("\n❌ Failed to get ESB token. Exiting.")
+        print("\n[FAIL] Failed to get ESB token. Exiting.")
         return 1
     
     # Step 3: Test IPRS ping
@@ -215,20 +215,20 @@ def main():
     print("\n" + "=" * 70)
     print("SUMMARY")
     print("=" * 70)
-    print(f"IPRS Ping: {'✅ OK' if ping_ok else '❌ Failed'}")
+    print(f"IPRS Ping: {'[OK]' if ping_ok else '[FAIL]'}")
     print(f"Tests Run: {len(results)}")
     
     all_have_serial = all(r['has_serial'] for r in results)
     all_have_gender = all(r['has_gender'] for r in results)
     
     print(f"\nv1.2 Feature Readiness:")
-    print(f"   Serial Number Validation: {'✅ Ready' if all_have_serial else '❌ Not Ready'}")
-    print(f"   Gender Validation: {'✅ Ready' if all_have_gender else '❌ Not Ready'}")
+    print(f"   Serial Number Validation: {'[OK] Ready' if all_have_serial else '[FAIL] Not Ready'}")
+    print(f"   Gender Validation: {'[OK] Ready' if all_have_gender else '[FAIL] Not Ready'}")
     
     if all_have_serial and all_have_gender:
-        print(f"\n🎉 ESB is ready for v1.2 Serial Number and Gender validation!")
+        print(f"\n[SUCCESS] ESB is ready for v1.2 Serial Number and Gender validation!")
     else:
-        print(f"\n⚠️  Some required fields are missing from IPRS response.")
+        print(f"\n[WARN] Some required fields are missing from IPRS response.")
     
     return 0
 

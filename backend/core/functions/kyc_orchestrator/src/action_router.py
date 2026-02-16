@@ -27,6 +27,7 @@ from response_normalizer import (
     normalize_verification_response,
     calculate_overall_verification_status
 )
+from async_job_service import AsyncJobService, is_async_action
 
 logger = Logger()
 
@@ -40,6 +41,7 @@ class ActionRouter:
     def __init__(self):
         self.action_handlers = self._initialize_action_handlers()
         self.lambda_service = LambdaService()
+        self.async_job_service = AsyncJobService()
         self.dynamodb = boto3.client('dynamodb')
         self.customer_table = os.environ.get('AMPLIFY_DYNAMODB_CUSTOMER_TABLE', 'Customer-7s7oergeyvc23jelhjmhef4uki-NONE')
         self.agent_table = os.environ.get('AMPLIFY_DYNAMODB_AGENT_TABLE', 'Agent-7s7oergeyvc23jelhjmhef4uki-NONE')
@@ -355,6 +357,7 @@ class ActionRouter:
             'get_certificate': self._handle_get_certificate,
             'generate_certificate': self._handle_generate_certificate,
             'get_kyc_status': self._handle_get_kyc_status,
+            'get_job_status': self._handle_get_job_status,
 
             # Legacy workflow operation (maintains backward compatibility)
             'process_workflow': self._handle_workflow_orchestration
@@ -1016,47 +1019,60 @@ class ActionRouter:
 
     def _handle_alienid_validation(self, data: Dict[str, Any],
                                    context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Handle alien ID document validation."""
-        logger.info("Processing alien ID validation")
+        """Handle alien ID document validation — async to avoid API Gateway 29s timeout."""
+        logger.info("Processing alien ID validation (async)")
 
         try:
-            entity_id, entity_type = self._extract_natural_identifier('validate_alienid', data)
+            request_id = context.get('request_id') if context else None
 
-            result = self.lambda_service.invoke_document_validation('alienid', data)
+            # Create async job and invoke Lambda asynchronously
+            job_id = self.async_job_service.create_job(
+                action='validate_alienid',
+                data=data,
+                request_id=request_id
+            )
+
+            # Build the event payload with jobId so Lambda can write results back
+            event_payload = {
+                'httpMethod': 'POST',
+                'path': '/document/alienid',
+                'body': json.dumps(data),
+                'headers': {'Content-Type': 'application/json'},
+                'requestContext': {
+                    'requestId': f'async-{job_id}',
+                    'asyncJobId': job_id
+                }
+            }
+
+            result = self.lambda_service.invoke_function(
+                'document_validation', event_payload, invocation_type='Event'
+            )
 
             if not result['success']:
-                logger.error(f"Alien ID validation failed: {result['error']}")
+                # Async invoke itself failed — mark job as failed
+                self.async_job_service.fail_job(job_id, str(result.get('error', 'Async invoke failed')))
                 error_response = create_standardized_response(
                     action='validate_alienid',
                     success=False,
                     error=result['error'],
-                    request_id=context.get('request_id') if context else None
+                    request_id=request_id
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('validate_alienid', error_response)
                 return secure_response_factory(status_code, error_response)
 
-            validation_response = result['response']
-
-            if entity_id and entity_type:
-                try:
-                    normalized = normalize_verification_response(
-                        action='validate_alienid',
-                        raw_response=validation_response,
-                        entity_type=entity_type,
-                        entity_id=entity_id
-                    )
-                    self._store_verification_result(entity_type, entity_id, normalized, registration_data=data)
-                except Exception as storage_error:
-                    logger.warning(f"Failed to store verification result: {storage_error}")
-
-            standardized_result = create_standardized_response(
+            # Return 202 Accepted with jobId for polling
+            accepted_response = create_standardized_response(
                 action='validate_alienid',
                 success=True,
-                result=validation_response,
-                request_id=context.get('request_id') if context else None
+                result={
+                    'jobId': job_id,
+                    'status': 'PROCESSING',
+                    'message': 'Alien ID validation submitted. Poll get_job_status with this jobId.',
+                    'pollAction': 'get_job_status'
+                },
+                request_id=request_id
             )
-            status_code = HTTPStatusMapper.map_result_to_status_code('validate_alienid', standardized_result)
-            return secure_response_factory(status_code, standardized_result)
+            return secure_response_factory(202, accepted_response)
 
         except Exception as e:
             logger.error(f"Error in alien ID validation: {e}")
@@ -1074,47 +1090,57 @@ class ActionRouter:
 
     def _handle_militaryid_validation(self, data: Dict[str, Any],
                                       context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Handle military ID document validation."""
-        logger.info("Processing military ID validation")
+        """Handle military ID document validation — async to avoid API Gateway 29s timeout."""
+        logger.info("Processing military ID validation (async)")
 
         try:
-            entity_id, entity_type = self._extract_natural_identifier('validate_militaryid', data)
+            request_id = context.get('request_id') if context else None
 
-            result = self.lambda_service.invoke_document_validation('militaryid', data)
+            # Create async job and invoke Lambda asynchronously
+            job_id = self.async_job_service.create_job(
+                action='validate_militaryid',
+                data=data,
+                request_id=request_id
+            )
+
+            event_payload = {
+                'httpMethod': 'POST',
+                'path': '/document/militaryid',
+                'body': json.dumps(data),
+                'headers': {'Content-Type': 'application/json'},
+                'requestContext': {
+                    'requestId': f'async-{job_id}',
+                    'asyncJobId': job_id
+                }
+            }
+
+            result = self.lambda_service.invoke_function(
+                'document_validation', event_payload, invocation_type='Event'
+            )
 
             if not result['success']:
-                logger.error(f"Military ID validation failed: {result['error']}")
+                self.async_job_service.fail_job(job_id, str(result.get('error', 'Async invoke failed')))
                 error_response = create_standardized_response(
                     action='validate_militaryid',
                     success=False,
                     error=result['error'],
-                    request_id=context.get('request_id') if context else None
+                    request_id=request_id
                 )
                 status_code = HTTPStatusMapper.map_result_to_status_code('validate_militaryid', error_response)
                 return secure_response_factory(status_code, error_response)
 
-            validation_response = result['response']
-
-            if entity_id and entity_type:
-                try:
-                    normalized = normalize_verification_response(
-                        action='validate_militaryid',
-                        raw_response=validation_response,
-                        entity_type=entity_type,
-                        entity_id=entity_id
-                    )
-                    self._store_verification_result(entity_type, entity_id, normalized, registration_data=data)
-                except Exception as storage_error:
-                    logger.warning(f"Failed to store verification result: {storage_error}")
-
-            standardized_result = create_standardized_response(
+            accepted_response = create_standardized_response(
                 action='validate_militaryid',
                 success=True,
-                result=validation_response,
-                request_id=context.get('request_id') if context else None
+                result={
+                    'jobId': job_id,
+                    'status': 'PROCESSING',
+                    'message': 'Military ID validation submitted. Poll get_job_status with this jobId.',
+                    'pollAction': 'get_job_status'
+                },
+                request_id=request_id
             )
-            status_code = HTTPStatusMapper.map_result_to_status_code('validate_militaryid', standardized_result)
-            return secure_response_factory(status_code, standardized_result)
+            return secure_response_factory(202, accepted_response)
 
         except Exception as e:
             logger.error(f"Error in military ID validation: {e}")
@@ -2382,6 +2408,64 @@ class ActionRouter:
             )
             status_code = HTTPStatusMapper.map_result_to_status_code('get_kyc_status', error_response)
             return secure_response_factory(status_code, error_response)
+
+    def _handle_get_job_status(self, data: Dict[str, Any],
+                               context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Retrieve the status and result of an async job.
+
+        Clients poll this after receiving a 202 from validate_alienid or validate_militaryid.
+        """
+        logger.info("Processing job status retrieval")
+
+        try:
+            job_id = data.get('jobId')
+            if not job_id:
+                error_response = create_standardized_response(
+                    action='get_job_status',
+                    success=False,
+                    error={
+                        'message': 'Missing required parameter: jobId',
+                        'error_code': 'MISSING_JOB_ID'
+                    },
+                    request_id=context.get('request_id') if context else None
+                )
+                return secure_response_factory(400, error_response)
+
+            job = self.async_job_service.get_job(job_id)
+
+            if not job:
+                error_response = create_standardized_response(
+                    action='get_job_status',
+                    success=False,
+                    error={
+                        'message': f'Job not found: {job_id}',
+                        'error_code': 'JOB_NOT_FOUND'
+                    },
+                    request_id=context.get('request_id') if context else None
+                )
+                return secure_response_factory(404, error_response)
+
+            standardized_result = create_standardized_response(
+                action='get_job_status',
+                success=True,
+                result=job,
+                request_id=context.get('request_id') if context else None
+            )
+            return secure_response_factory(200, standardized_result)
+
+        except Exception as e:
+            logger.error(f"Error in job status retrieval: {e}")
+            error_response = create_standardized_response(
+                action='get_job_status',
+                success=False,
+                error={
+                    'message': f'Job status retrieval error: {str(e)}',
+                    'error_code': 'JOB_STATUS_ERROR'
+                },
+                request_id=context.get('request_id') if context else None
+            )
+            return secure_response_factory(500, error_response)
 
     def _handle_workflow_orchestration(self, data: Dict[str, Any],
                                      context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

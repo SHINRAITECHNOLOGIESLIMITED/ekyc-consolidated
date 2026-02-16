@@ -67,7 +67,7 @@ This document defines the confirmed IPRS API response schema based on analysis o
 
 | Field | Type | Status | Notes |
 |-------|------|--------|-------|
-| `photo` | string | ⚠️ Pending | Base64 or URL - needs ESB team confirmation |
+| `photo` | string | Pending | Base64 or URL - needs ESB team confirmation |
 | `citizenship` | string | Unknown | May be available |
 
 ---
@@ -76,17 +76,17 @@ This document defines the confirmed IPRS API response schema based on analysis o
 
 ### Serial Number Validation
 - **Required Field**: `serialNumber`
-- **Status**: ✅ Confirmed available
+- **Status**: Confirmed available
 - **Evidence**: Used in `government_verification/app.py` line 213
 
 ### Gender Validation
 - **Required Field**: `gender`
-- **Status**: ✅ Confirmed available
+- **Status**: Confirmed available
 - **Evidence**: Used in `government_verification/app.py` line 219
 
 ### Face Matching
 - **Required Field**: `photo`
-- **Status**: ⚠️ Pending ESB confirmation
+- **Status**: Pending ESB confirmation
 - **Action**: ESB team to confirm within 48 hours
 
 ---

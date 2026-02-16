@@ -38,18 +38,18 @@ where <commit_type> follows conventional commits (e.g., feat, fix, chore, docs, 
 
 Output Format: 
 Generate release notes with the following sections:
-✨ Features: List new features introduced in this release. Use commit messages with feat: type.
-🐛 Bug Fixes: List issues that were resolved in this release. Use commit messages with fix: type.
-🚀 Improvements: List general enhancements, performance improvements, or refactoring that might be relevant to users.
-📚 Documentation: List updates related to documentation. Use commit messages with docs: type.
-🧹 Chore & Other: Briefly mention maintenance tasks, build system updates, or other changes that might be noteworthy.
+Features: List new features introduced in this release. Use commit messages with feat: type.
+Bug Fixes: List issues that were resolved in this release. Use commit messages with fix: type.
+Improvements: List general enhancements, performance improvements, or refactoring that might be relevant to users.
+Documentation: List updates related to documentation. Use commit messages with docs: type.
+Chore & Other: Briefly mention maintenance tasks, build system updates, or other changes that might be noteworthy.
 
 Instructions:
 - Process the provided list of commit messages
 - Group the commit messages by their type (feat, fix, perf, refactor, docs, chore, etc.)
 - For each section, list the descriptions of the relevant commit messages
 - Rephrase commit descriptions for clarity and readability in release notes
-- If a commit message includes a breaking change, include a separate "🚨 Breaking Changes" section at the top
+- If a commit message includes a breaking change, include a separate "Breaking Changes" section at the top
 - Exclude merge commits unless they contain specific, important information
 - Order the items within each section logically
 - Ensure the tone is professional and informative
@@ -309,18 +309,18 @@ def categorize_commits(commits):
         Dictionary with categorized commits
     """
     categories = {
-        'feat': {'title': '🚀 New Features', 'commits': []},
-        'fix': {'title': '🐛 Bug Fixes', 'commits': []},
-        'docs': {'title': '📚 Documentation', 'commits': []},
-        'style': {'title': '💎 Styles', 'commits': []},
-        'refactor': {'title': '♻️ Code Refactoring', 'commits': []},
-        'perf': {'title': '⚡ Performance Improvements', 'commits': []},
-        'test': {'title': '🧪 Tests', 'commits': []},
-        'build': {'title': '🔨 Build System', 'commits': []},
-        'ci': {'title': '👷 CI/CD', 'commits': []},
-        'chore': {'title': '🧹 Chores', 'commits': []},
-        'revert': {'title': '⏪ Reverts', 'commits': []},
-        'other': {'title': '📦 Other Changes', 'commits': []}
+        'feat': {'title': 'New Features', 'commits': []},
+        'fix': {'title': 'Bug Fixes', 'commits': []},
+        'docs': {'title': 'Documentation', 'commits': []},
+        'style': {'title': 'Styles', 'commits': []},
+        'refactor': {'title': 'Code Refactoring', 'commits': []},
+        'perf': {'title': 'Performance Improvements', 'commits': []},
+        'test': {'title': 'Tests', 'commits': []},
+        'build': {'title': 'Build System', 'commits': []},
+        'ci': {'title': 'CI/CD', 'commits': []},
+        'chore': {'title': 'Chores', 'commits': []},
+        'revert': {'title': 'Reverts', 'commits': []},
+        'other': {'title': 'Other Changes', 'commits': []}
     }
     
     # Regular expression to match conventional commit format

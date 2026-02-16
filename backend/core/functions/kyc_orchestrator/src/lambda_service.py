@@ -49,7 +49,9 @@ class LambdaService:
             'document_streaming': os.environ.get('DOCUMENT_STREAMING_FUNCTION',
                                                'jubilee-ekyc-backend-DocumentStreamingFn-CIEfZ4k3epfo'),
             'certification': os.environ.get('CERTIFICATION_FUNCTION',
-                                          'jubilee-ekyc-backend-CertificationFn-XTZ04Ew73YMw')
+                                          'jubilee-ekyc-backend-CertificationFn-XTZ04Ew73YMw'),
+            'face_matching': os.environ.get('FACE_MATCHING_FUNCTION',
+                                          'jubilee-ekyc-backend-FaceMatchingFn')
         }
 
     def invoke_function(self, function_key: str, payload: Dict[str, Any],
@@ -251,6 +253,29 @@ class LambdaService:
         }
 
         return self.invoke_function('document_streaming', event_payload)
+
+    def invoke_face_matching(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Invoke face matching function for 3-way face comparison.
+        
+        Args:
+            data: Face matching data containing:
+                - customer_id: Customer identifier
+                - customer_photo_key: S3 key for customer selfie
+                - id_document_key: S3 key for ID document
+                - iprs_id_number: ID number for IPRS photo lookup
+                
+        Returns:
+            Face matching result with scores and decision
+        """
+        event_payload = {
+            'httpMethod': 'POST',
+            'body': json.dumps(data),
+            'headers': {'Content-Type': 'application/json'},
+            'requestContext': {'requestId': f'action-{datetime.utcnow().isoformat()}'}
+        }
+
+        return self.invoke_function('face_matching', event_payload)
 
     # Performance Optimization Methods
     def invoke_parallel(self, invocations: list) -> Dict[str, Any]:
