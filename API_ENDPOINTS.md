@@ -177,6 +177,34 @@ Cross-validates gender extracted from document against IPRS authoritative record
 - `MISMATCH` - Gender doesn't match (data entry error or fraud)
 - `INCONCLUSIVE` - Unable to compare (missing data)
 
+### Validation Summary Block
+All document validation responses now include a `summary` block providing an overall verdict:
+
+**Response includes:**
+```json
+{
+  "summary": {
+    "overall_status": "PASS",
+    "matched": 5,
+    "mismatched": 0,
+    "not_provided": 1,
+    "not_found": 2,
+    "validation_accuracy": 100.0,
+    "match_score": 98.5,
+    "mismatched_fields": []
+  }
+}
+```
+
+**`overall_status` values:**
+- `PASS` - No mismatched fields
+- `FAIL` - One or more fields mismatched (listed in `mismatched_fields`)
+- `INCONCLUSIVE` - No fields could be compared
+
+**Field details:**
+- `matchResults.<field>.details.ocr_confidence` - Textract OCR confidence (how sure Textract read the text)
+- `matchResults.<field>.details.match_score` - Similarity percentage between expected and actual values (0-100%)
+
 ---
 
 ## Example: National ID Validation
@@ -205,7 +233,7 @@ curl -X POST https://6corkstod4.execute-api.eu-west-1.amazonaws.com/Stage/docume
     "matchResults": {
       "idNumber": {
         "status": "Matched",
-        "details": {"expected": "26465570", "actual": "26465570", "confidence": 95.25}
+        "details": {"expected": "26465570", "actual": "26465570", "ocr_confidence": 95.25, "match_score": 100.0}
       },
       "serialNumberValidation": {
         "status": "MATCH",
@@ -217,6 +245,16 @@ curl -X POST https://6corkstod4.execute-api.eu-west-1.amazonaws.com/Stage/docume
         "extractedGender": "M",
         "iprsGender": "M"
       }
+    },
+    "summary": {
+      "overall_status": "PASS",
+      "matched": 1,
+      "mismatched": 0,
+      "not_provided": 0,
+      "not_found": 0,
+      "validation_accuracy": 100.0,
+      "match_score": 100.0,
+      "mismatched_fields": []
     }
   }
 }

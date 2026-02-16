@@ -54,7 +54,7 @@ curl -X POST "$API_URL/document/nationalid" \
     "matchResults": {
       "idNumber": {
         "status": "Matched",
-        "details": {"expected": "26465570", "actual": "26465570", "confidence": 95.25}
+        "details": {"expected": "26465570", "actual": "26465570", "ocr_confidence": 95.25, "match_score": 100.0}
       },
       "serialNumberValidation": {
         "status": "MATCH",
