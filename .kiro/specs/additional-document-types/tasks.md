@@ -18,6 +18,7 @@ This implementation plan adds support for six new document types to the Jubilee 
     - Implement Textract field extraction for Alien ID fields
     - Add keyword checks for "Republic of Kenya" and "Alien Certificate"
     - Wire up to handler route for `/document/alienid`
+    - **Note**: Alien ID validation is invoked asynchronously by the orchestrator (202 → poll pattern). The handler detects `asyncJobId` in `requestContext` and writes results to DynamoDB via `_write_async_result()` / `_fail_async_job()`. See async job pattern in `action_router.py` and `async_job_service.py`.
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
   
   - [ ] 2.2 Write property test for text normalization idempotence
@@ -58,6 +59,7 @@ This implementation plan adds support for six new document types to the Jubilee 
     - Implement Textract field extraction for Military ID fields (service number, rank, unit, blood group)
     - Add keyword checks for military-specific terms
     - Wire up to handler route for `/document/militaryid`
+    - **Note**: Military ID validation is invoked asynchronously by the orchestrator (202 → poll pattern), same as Alien ID. The handler detects `asyncJobId` in `requestContext` and writes results to DynamoDB. See async job pattern in `action_router.py` and `async_job_service.py`.
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
   
   - [ ] 5.2 Write unit tests for validate_militaryid

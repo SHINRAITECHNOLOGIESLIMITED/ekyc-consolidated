@@ -213,11 +213,17 @@ def handler(event, context):
     Lambda handler for document validation endpoints.
     Handles POST requests to various /document/* paths.
     Routes requests to specific handlers which perform schema validation.
+    
+    When invoked asynchronously (asyncJobId in requestContext), writes
+    the result to DynamoDB for the caller to poll via get_job_status.
     """
     # logger.info(f"Received event: {json.dumps(event)}")
 
     http_method = event.get('httpMethod')
     path = event.get('path')
+
+    # Check if this is an async invocation from the orchestrator
+    async_job_id = event.get('requestContext', {}).get('asyncJobId')
 
     if http_method == 'POST':
         try:
@@ -236,24 +242,91 @@ def handler(event, context):
                 case '/document/cr12':
                     return validate_cr12(data)
                 case '/document/alienid':
-                    return validate_alienid(data)
+                    result = validate_alienid(data)
+                    if async_job_id:
+                        _write_async_result(async_job_id, result)
+                    return result
                 case '/document/militaryid':
-                    return validate_militaryid(data)
+                    result = validate_militaryid(data)
+                    if async_job_id:
+                        _write_async_result(async_job_id, result)
+                    return result
                 case _:
                     return make_response(404, {'message': 'Path Not Found'})
 
         except json.JSONDecodeError as e:
             logger.error("Error decoding JSON body")
+            if async_job_id:
+                _fail_async_job(async_job_id, f"Invalid JSON body: {e}")
             return make_response(400, {'message': 'Invalid JSON body','error': str(e)})
 
 
         except Exception as e:
             logger.error(f"An unexpected error occurred in lambda_handler: {e}")
+            if async_job_id:
+                _fail_async_job(async_job_id, str(e))
             return make_response(500, {'message': 'Internal Server Error', 'error': str(e)})
 
     else:
         logger.error('Method Not Allowed - received {http_method}')
         return make_response(405, {'message': 'Method Not Allowed','error': 'Method Not Allowed'})
+
+
+# --- Async job result helpers ---
+# Used when Lambda is invoked asynchronously by the orchestrator.
+# Writes results directly to DynamoDB so the client can poll get_job_status.
+
+ASYNC_JOBS_TABLE = os.environ.get('ASYNC_JOBS_TABLE_NAME', 'ekyc-async-jobs')
+_dynamodb_client = None
+
+
+def _get_dynamodb():
+    """Lazy-init DynamoDB client to avoid cold start overhead for sync calls."""
+    global _dynamodb_client
+    if _dynamodb_client is None:
+        _dynamodb_client = boto3.client('dynamodb')
+    return _dynamodb_client
+
+
+def _write_async_result(job_id: str, result: dict) -> None:
+    """Write the Lambda result to the async jobs table as COMPLETED."""
+    try:
+        now = datetime.utcnow().isoformat() + 'Z'
+        _get_dynamodb().update_item(
+            TableName=ASYNC_JOBS_TABLE,
+            Key={'jobId': {'S': job_id}},
+            UpdateExpression='SET #status = :status, #result = :result, updatedAt = :now',
+            ExpressionAttributeNames={'#status': 'status', '#result': 'result'},
+            ExpressionAttributeValues={
+                ':status': {'S': 'COMPLETED'},
+                ':result': {'S': json.dumps(result, default=str)},
+                ':now': {'S': now}
+            }
+        )
+        logger.info(f"Async job {job_id} marked COMPLETED")
+    except Exception as e:
+        logger.error(f"Failed to write async result for job {job_id}: {e}")
+
+
+def _fail_async_job(job_id: str, error_msg: str) -> None:
+    """Mark an async job as FAILED."""
+    try:
+        now = datetime.utcnow().isoformat() + 'Z'
+        _get_dynamodb().update_item(
+            TableName=ASYNC_JOBS_TABLE,
+            Key={'jobId': {'S': job_id}},
+            UpdateExpression='SET #status = :status, errorMessage = :err, updatedAt = :now',
+            ExpressionAttributeNames={'#status': 'status'},
+            ExpressionAttributeValues={
+                ':status': {'S': 'FAILED'},
+                ':err': {'S': error_msg},
+                ':now': {'S': now}
+            }
+        )
+        logger.info(f"Async job {job_id} marked FAILED")
+    except Exception as e:
+        logger.error(f"Failed to mark async job {job_id} as failed: {e}")
+
 
 def levenshtein_distance(s1, s2):
     """Calculate the Levenshtein distance between two strings."""
@@ -1256,6 +1329,17 @@ def validate_alienid(data):
         if 'SEX' in extracted_form and extracted_form['SEX'].get('value'):
             extracted_gender = extracted_form['SEX']['value']
         
+        # Fallback: use gender from request payload if Textract couldn't extract it
+        if not extracted_gender and data.get('gender'):
+            extracted_gender = data['gender']
+            logger.info("Using gender from request payload as Textract fallback for alien ID")
+        
+        # Fallback: use request payload gender for IPRS side when IPRS returns null
+        iprs_gender = iprs_data.get("gender")
+        if not iprs_gender and data.get('gender'):
+            iprs_gender = data['gender']
+            logger.info("IPRS gender is null for alien ID, using request payload gender as fallback")
+        
         # Perform IPRS validations (non-blocking)
         serial_validation_result = validate_serial_number(
             extracted_serial=extracted_serial,
@@ -1264,7 +1348,7 @@ def validate_alienid(data):
         
         gender_validation_result = validate_gender(
             extracted_gender=extracted_gender,
-            iprs_gender=iprs_data.get("gender")
+            iprs_gender=iprs_gender
         )
         
         # Add IPRS validation results to matchResults

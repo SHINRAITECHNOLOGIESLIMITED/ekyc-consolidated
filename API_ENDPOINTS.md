@@ -94,6 +94,45 @@ Requires valid JWT Bearer token from Jubilee ESB.
 
 ---
 
+## Async Job Pattern (Alien ID / Military ID)
+
+`validate_alienid` and `validate_militaryid` use an async pattern because PDF processing + IPRS cross-validation can exceed API Gateway's 29s timeout.
+
+### Flow
+1. `POST /kyc` with `action: validate_alienid` or `validate_militaryid` → returns **202 Accepted** with `jobId`
+2. Poll `POST /kyc` with `action: get_job_status` and `data: { "jobId": "..." }` every 5 seconds
+3. When `status` is `COMPLETED`, the `result` field contains the full validation response
+4. If `status` is `FAILED`, the `errorMessage` field explains what went wrong
+5. Jobs expire after 24 hours
+
+### Example
+```bash
+# Step 1: Submit (returns 202)
+curl -s -X POST https://6corkstod4.execute-api.eu-west-1.amazonaws.com/Stage/kyc \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer dummy-token" \
+  -d '{"action": "validate_alienid", "data": {"uploadedDocumentUrl": "s3://bucket/doc.pdf", "alienIdNumber": "814409", "gender": "Male"}}' | python3 -m json.tool
+
+# Step 2: Poll (repeat until COMPLETED)
+curl -s -X POST https://6corkstod4.execute-api.eu-west-1.amazonaws.com/Stage/kyc \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer dummy-token" \
+  -d '{"action": "get_job_status", "data": {"jobId": "<JOB_ID>"}}' | python3 -m json.tool
+```
+
+### Actions Summary
+| Action | Type | Response |
+|--------|------|----------|
+| `validate_nationalid` | Sync | 200 with result |
+| `validate_passport` | Sync | 200 with result |
+| `validate_alienid` | Async | 202 with jobId → poll `get_job_status` |
+| `validate_militaryid` | Async | 202 with jobId → poll `get_job_status` |
+| `get_job_status` | Sync | 200 with job status/result |
+| `government_verify_*` | Sync | 200 with result |
+| `face_match` | Sync | 200 with result |
+
+---
+
 ## v1.2 Features
 
 ### Serial Number Validation

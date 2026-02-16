@@ -229,6 +229,7 @@ Resources:
           FACE_MATCH_MANUAL_REVIEW_THRESHOLD: 50
           FACE_MATCH_ENABLED: 'true'
           FACE_MATCH_REQUIRE_IPRS_PHOTO: 'false'
+          ASYNC_JOBS_TABLE_NAME: !Ref AsyncJobsTable
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -280,6 +281,7 @@ Resources:
               Resource:
                 - !GetAtt CustomerTable.Arn
                 - !GetAtt AgentTable.Arn
+                - !GetAtt AsyncJobsTable.Arn
             - Sid: CertificationBucketReadAccess
               Effect: Allow
               Action:
@@ -361,6 +363,8 @@ Resources:
           JUBILEEAPICACHE_TABLE_ARN: !GetAtt JubileeApiCache.Arn
           # Bedrock model for Alien ID extraction (Claude Vision)
           BEDROCK_MODEL_ID: 'anthropic.claude-sonnet-4-20250514-v1:0'
+          # Async job tracking table for long-running validations
+          ASYNC_JOBS_TABLE_NAME: !Ref AsyncJobsTable
       Events:
         ApiGatewayPOSTKRA:
           Type: Api
@@ -475,6 +479,8 @@ Resources:
                 - !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-sonnet*
         - DynamoDBCrudPolicy:
             TableName: !Ref JubileeApiCache
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AsyncJobsTable
       Layers:
         - !Ref PortalProjectionLayer
         - !Ref DocumentTextractLayer
@@ -1075,6 +1081,30 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: expiry_time
         Enabled: true
+
+  AsyncJobsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${AWS::StackName}-AsyncJobs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: jobId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: jobId
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Purpose
+          Value: eKYC Async Job Tracking
+        - Key: ManagedBy
+          Value: CloudFormation
 Metadata:
   AWS::Composer::Groups:
     Group2:

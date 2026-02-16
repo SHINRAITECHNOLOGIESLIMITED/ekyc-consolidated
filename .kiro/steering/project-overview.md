@@ -61,17 +61,32 @@ portal/                      # Next.js frontend
 
 The `/kyc` endpoint routes requests based on `action` field:
 
-| Action | Lambda | Description |
-|--------|--------|-------------|
-| `validate_nationalid` | DocumentValidationFn | Validate National ID via Textract |
-| `validate_passport` | DocumentValidationFn | Validate Passport via Textract |
-| `validate_krapincertificate` | DocumentValidationFn | Validate KRA PIN certificate |
-| `verify_nationalid` | GovernmentVerificationFn | Verify ID against IPRS |
-| `verify_passport` | GovernmentVerificationFn | Verify passport against IPRS |
-| `verify_kra` | GovernmentVerificationFn | Verify KRA PIN |
-| `background_check` | BackgroundCheckFn | LexisNexis screening |
-| `create_liveness_session` | FaceLivenessFn | Start face liveness check |
-| `get_liveness_results` | FaceLivenessFn | Get liveness results |
+| Action | Lambda | Description | Response |
+|--------|--------|-------------|----------|
+| `validate_nationalid` | DocumentValidationFn | Validate National ID via Textract | Sync (200) |
+| `validate_passport` | DocumentValidationFn | Validate Passport via Textract | Sync (200) |
+| `validate_krapincertificate` | DocumentValidationFn | Validate KRA PIN certificate | Sync (200) |
+| `validate_alienid` | DocumentValidationFn | Validate Alien ID via Textract + IPRS | Async (202 → poll) |
+| `validate_militaryid` | DocumentValidationFn | Validate Military ID via Textract + IPRS | Async (202 → poll) |
+| `get_job_status` | KYCOrchestratorFn | Poll async job result | Sync (200) |
+| `verify_nationalid` | GovernmentVerificationFn | Verify ID against IPRS | Sync (200) |
+| `verify_passport` | GovernmentVerificationFn | Verify passport against IPRS | Sync (200) |
+| `verify_kra` | GovernmentVerificationFn | Verify KRA PIN | Sync (200) |
+| `background_check` | BackgroundCheckFn | LexisNexis screening | Sync (200) |
+| `create_liveness_session` | FaceLivenessFn | Start face liveness check | Sync (200) |
+| `get_liveness_results` | FaceLivenessFn | Get liveness results | Sync (200) |
+| `face_match` | FaceMatchingFn | 3-way face comparison | Sync (200) |
+
+### Async Job Pattern
+
+`validate_alienid` and `validate_militaryid` use an async pattern to avoid API Gateway's 29s timeout (PDF processing + IPRS cross-validation can exceed this). The flow:
+
+1. Client sends request → Orchestrator creates job in DynamoDB (PROCESSING), invokes Lambda async, returns 202 with `jobId`
+2. Client polls `get_job_status` with `jobId` every 5s
+3. When status is `COMPLETED`, the `result` field contains the full validation response
+4. Jobs expire after 24 hours (DynamoDB TTL)
+
+Infrastructure: `AsyncJobsTable` (DynamoDB, PAY_PER_REQUEST, TTL enabled)
 
 ## v1.2 Features (In Development)
 
@@ -102,6 +117,7 @@ Key Lambda environment variables:
 - `PORTAL_SECRET_ARN` - Portal GraphQL credentials
 - `DOCUMENT_VALIDATION_FN_ARN` - Document validation Lambda ARN
 - `GOVERNMENT_VERIFICATION_FN_ARN` - Government verification Lambda ARN
+- `ASYNC_JOBS_TABLE_NAME` - DynamoDB table for async job tracking (used by KYCOrchestratorFn and DocumentValidationFn)
 
 ## Testing
 

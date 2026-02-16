@@ -56,9 +56,18 @@ flowchart TB
 ```python
 # Add to handler() match statement
 case '/document/alienid':
-    return validate_alienid(data)
+    result = validate_alienid(data)
+    # NOTE: Alien ID uses async job pattern via KYC Orchestrator.
+    # When invoked async (asyncJobId in requestContext), writes result to DynamoDB.
+    if async_job_id:
+        _write_async_result(async_job_id, result)
+    return result
 case '/document/militaryid':
-    return validate_militaryid(data)
+    result = validate_militaryid(data)
+    # NOTE: Military ID also uses async job pattern.
+    if async_job_id:
+        _write_async_result(async_job_id, result)
+    return result
 case '/document/diplomaticid':
     return validate_diplomaticid(data)
 case '/document/refugeeid':
@@ -68,6 +77,8 @@ case '/document/workpermit':
 case '/document/dependantpass':
     return validate_dependantpass(data)
 ```
+
+**Important**: `validate_alienid` and `validate_militaryid` are invoked asynchronously by the KYC Orchestrator (via `InvocationType='Event'`) to avoid API Gateway's 29s timeout. The orchestrator returns 202 with a `jobId`, and the client polls `get_job_status` for the result. The Document Validation Lambda detects async invocation via `asyncJobId` in `requestContext` and writes the result to the `AsyncJobsTable` DynamoDB table.
 
 #### Validation Function Interface
 

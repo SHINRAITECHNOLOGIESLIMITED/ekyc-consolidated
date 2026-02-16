@@ -106,6 +106,33 @@ NewTable:
       SSEEnabled: true
 ```
 
+### Async Jobs Table (Existing)
+
+The `AsyncJobsTable` is used for tracking long-running async validations (alien ID, military ID). It uses TTL to auto-expire jobs after 24 hours:
+
+```yaml
+AsyncJobsTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: !Sub ${AWS::StackName}-AsyncJobs
+    BillingMode: PAY_PER_REQUEST
+    AttributeDefinitions:
+      - AttributeName: jobId
+        AttributeType: S
+    KeySchema:
+      - AttributeName: jobId
+        KeyType: HASH
+    TimeToLiveSpecification:
+      AttributeName: ttl
+      Enabled: true
+    PointInTimeRecoverySpecification:
+      PointInTimeRecoveryEnabled: true
+    SSESpecification:
+      SSEEnabled: true
+```
+
+Both `KYCOrchestratorFn` and `DocumentValidationFn` need `DynamoDBCrudPolicy` for this table.
+
 ## Adding SSM Parameters
 
 ```yaml

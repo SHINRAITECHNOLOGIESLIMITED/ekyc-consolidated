@@ -30,6 +30,21 @@ All responses must follow the existing schema:
 }
 ```
 
+### Async Job Pattern (Alien ID / Military ID)
+`validate_alienid` and `validate_militaryid` use an async pattern because PDF processing + IPRS cross-validation can exceed API Gateway's 29s timeout:
+
+1. Orchestrator creates a job record in `AsyncJobsTable` (DynamoDB) with status PROCESSING
+2. Invokes DocumentValidationFn asynchronously (`InvocationType='Event'`) with `asyncJobId` in `requestContext`
+3. Returns 202 Accepted with `jobId` to the client
+4. DocumentValidationFn completes work and writes result to DynamoDB (COMPLETED or FAILED)
+5. Client polls `get_job_status` action with `jobId` to retrieve the result
+
+Key files:
+- `backend/core/functions/kyc_orchestrator/src/async_job_service.py` — AsyncJobService class
+- `backend/core/functions/kyc_orchestrator/src/action_router.py` — `_handle_alienid_validation`, `_handle_militaryid_validation`, `_handle_get_job_status`
+- `backend/core/functions/document_validation/src/app.py` — async result writing (`_write_async_result`, `_fail_async_job`)
+- `backend/template.yaml` — `AsyncJobsTable` DynamoDB resource
+
 ### Error Handling
 - Use consistent error codes across all features
 - Log all errors with correlation IDs

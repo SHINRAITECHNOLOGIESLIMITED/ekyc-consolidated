@@ -153,6 +153,7 @@ import json
 
 lambda_client = boto3.client('lambda')
 
+# Synchronous invocation (waits for result)
 response = lambda_client.invoke(
     FunctionName=os.environ['TARGET_FUNCTION'],
     InvocationType='RequestResponse',
@@ -161,6 +162,57 @@ response = lambda_client.invoke(
 
 result = json.loads(response['Payload'].read())
 ```
+
+## Async Lambda Invocation Pattern
+
+For long-running operations that exceed API Gateway's 29s timeout (e.g., PDF validation with IPRS cross-validation), use the async job pattern:
+
+```python
+import boto3
+import json
+
+lambda_client = boto3.client('lambda')
+
+# 1. Create job record in DynamoDB (PROCESSING)
+job_id = async_job_service.create_job(action=action, data=data)
+
+# 2. Build event payload with asyncJobId so Lambda can write results back
+event_payload = {
+    'httpMethod': 'POST',
+    'path': '/document/alienid',
+    'body': json.dumps(data),
+    'headers': {'Content-Type': 'application/json'},
+    'requestContext': {
+        'requestId': f'async-{job_id}',
+        'asyncJobId': job_id
+    }
+}
+
+# 3. Invoke Lambda asynchronously (fire-and-forget)
+response = lambda_client.invoke(
+    FunctionName=os.environ['TARGET_FUNCTION'],
+    InvocationType='Event',  # Async — returns immediately
+    Payload=json.dumps(event_payload)
+)
+
+# 4. Return 202 Accepted with jobId for client polling
+return make_response(202, {'jobId': job_id, 'status': 'PROCESSING'})
+```
+
+### Writing Async Results from the Target Lambda
+
+```python
+# In the target Lambda handler, detect async invocation and write result to DynamoDB
+async_job_id = event.get('requestContext', {}).get('asyncJobId')
+
+result = process_document(data)
+
+if async_job_id:
+    _write_async_result(async_job_id, result)  # Mark job COMPLETED in DynamoDB
+```
+
+Currently used by: `validate_alienid`, `validate_militaryid`
+Key files: `async_job_service.py`, `action_router.py`, `document_validation/src/app.py`
 
 ## Error Classes
 

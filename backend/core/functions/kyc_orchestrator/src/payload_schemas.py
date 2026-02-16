@@ -38,6 +38,7 @@ class KYCAction(Enum):
     GET_CERTIFICATE = "get_certificate"
     GENERATE_CERTIFICATE = "generate_certificate"
     GET_KYC_STATUS = "get_kyc_status"
+    GET_JOB_STATUS = "get_job_status"
 
     # Legacy workflow (backward compatibility)
     PROCESS_WORKFLOW = "process_workflow"
