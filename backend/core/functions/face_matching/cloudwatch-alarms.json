@@ -1,0 +1,96 @@
+{
+  "alarms": [
+    {
+      "AlarmName": "FaceMatching-HighManualReviewRate",
+      "AlarmDescription": "Manual review rate exceeds 30% threshold - may indicate threshold tuning needed",
+      "MetricName": "ManualReviewRate",
+      "Namespace": "JubileeEKYC/FaceMatching",
+      "Statistic": "Average",
+      "Period": 3600,
+      "EvaluationPeriods": 3,
+      "Threshold": 30,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching",
+      "ActionsEnabled": true
+    },
+    {
+      "AlarmName": "FaceMatching-HighLatency",
+      "AlarmDescription": "Face matching p95 latency exceeds 5 seconds",
+      "MetricName": "TotalProcessingTime",
+      "Namespace": "JubileeEKYC/FaceMatching",
+      "ExtendedStatistic": "p95",
+      "Period": 300,
+      "EvaluationPeriods": 3,
+      "Threshold": 5000,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching",
+      "ActionsEnabled": true
+    },
+    {
+      "AlarmName": "FaceMatching-HighErrorRate",
+      "AlarmDescription": "Processing errors exceed threshold",
+      "MetricName": "ProcessingErrors",
+      "Namespace": "JubileeEKYC/FaceMatching",
+      "Statistic": "Sum",
+      "Period": 300,
+      "EvaluationPeriods": 2,
+      "Threshold": 10,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching",
+      "ActionsEnabled": true
+    },
+    {
+      "AlarmName": "FaceMatching-IPRSPhotoUnavailable",
+      "AlarmDescription": "High rate of IPRS photo unavailability - check ESB integration",
+      "MetricName": "IPRSPhotoUnavailable",
+      "Namespace": "JubileeEKYC/FaceMatching",
+      "Statistic": "Sum",
+      "Period": 3600,
+      "EvaluationPeriods": 1,
+      "Threshold": 50,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching",
+      "ActionsEnabled": true
+    },
+    {
+      "AlarmName": "FaceMatching-HighRejectionRate",
+      "AlarmDescription": "Rejection rate exceeds 20% - may indicate image quality issues",
+      "MetricName": "RejectedCount",
+      "Namespace": "JubileeEKYC/FaceMatching",
+      "Statistic": "Sum",
+      "Period": 3600,
+      "EvaluationPeriods": 3,
+      "Threshold": 20,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching",
+      "ActionsEnabled": true
+    },
+    {
+      "AlarmName": "FaceMatching-QualityGateFailures",
+      "AlarmDescription": "High rate of quality gate failures",
+      "MetricName": "QualityGateFailures",
+      "Namespace": "JubileeEKYC/FaceMatching",
+      "Statistic": "Sum",
+      "Period": 3600,
+      "EvaluationPeriods": 2,
+      "Threshold": 30,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching",
+      "ActionsEnabled": true
+    },
+    {
+      "AlarmName": "FaceMatching-TwoWayDegradation",
+      "AlarmDescription": "High rate of 2-way comparison mode (IPRS photo unavailable)",
+      "MetricName": "TwoWayComparison",
+      "Namespace": "JubileeEKYC/FaceMatching",
+      "Statistic": "Sum",
+      "Period": 3600,
+      "EvaluationPeriods": 2,
+      "Threshold": 25,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching",
+      "ActionsEnabled": true
+    }
+  ],
+  "deployment_script": "aws cloudwatch put-metric-alarm --cli-input-json file://alarm.json --profile pasha-eu --region eu-west-1"
+}

@@ -40,7 +40,7 @@ Compare customer selfie against ID document photo AND IPRS photo to verify ident
 - Metrics: false accept rate, false reject rate, review rate
 
 ### ESB Dependency
-⚠️ **Pending**: Confirm IPRS returns `photo` field (Base64 or URL)
+**Pending**: Confirm IPRS returns `photo` field (Base64 or URL)
 
 ---
 
@@ -74,7 +74,7 @@ Extracted Serial (Textract) → Normalize → Compare → IPRS Serial (API)
 - Metrics: MATCH/MISMATCH/INCONCLUSIVE rates
 
 ### ESB Status
-✅ **Confirmed**: IPRS `serialNumber` field is available
+**Confirmed**: IPRS `serialNumber` field is available
 
 ---
 
@@ -109,7 +109,7 @@ Extracted Gender (Textract) → Normalize → Compare → IPRS Gender (API)
 - Metrics: MATCH/MISMATCH/INCONCLUSIVE rates
 
 ### ESB Status
-✅ **Confirmed**: IPRS `gender` field is available
+**Confirmed**: IPRS `gender` field is available
 
 ---
 
